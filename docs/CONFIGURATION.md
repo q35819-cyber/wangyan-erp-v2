@@ -113,3 +113,5 @@ bootstrap-admin.ps1：先验证全新空库及迁移校验，再创建一个admi
 start.ps1：原Release启动脚本，在正式服务启动前先检查迁移状态。
 
 脚本不会下载或恢复原作者的私人数据。当前尚未在一台有独立PostgreSQL安装和真实浏览器测试账号的全新电脑完成第2—6步端到端演练，参见 docs/DEPLOYMENT_STATUS.md。
+
+API配置位置与部署风险：参见 docs/API_CONFIGURATION.md。重要：不要使用任何旧版本的configure-smtp.ps1，曾存在覆盖整个环境配置的缺陷；本版已只替换邮件字段并通过合成数据测试。生产启动模式及首次数据库全量验收尚未通过。
