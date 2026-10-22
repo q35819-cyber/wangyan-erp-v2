@@ -10,7 +10,10 @@ using System.Windows.Forms;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 class WyerpSetup : Form {
- static readonly string Version="0.1.0-preview";
+ static readonly string Version="0.1.0-preview7";
+ static bool qaGuiInstall=false;
+ static int qaGuiExitCode=3;
+ static readonly string qaBase=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa3-20261022";
  Label details,status;
  Button install,open;
  ProgressBar progress;
@@ -20,9 +23,11 @@ class WyerpSetup : Form {
    if(args.Length==1 && args[0]=="--verify-payload"){
       Console.WriteLine(VerifyEmbedded());return;
    }
-   Application.EnableVisualStyles();
+   qaGuiInstall=args.Length==1 && args[0]=="--qa-ui-install";
+    Application.EnableVisualStyles();
    Application.SetCompatibleTextRenderingDefault(false);
    Application.Run(new WyerpSetup());
+    if(qaGuiInstall)Environment.ExitCode=qaGuiExitCode;
  }
  static string VerifyEmbedded(){
    using(var raw=Assembly.GetExecutingAssembly().GetManifestResourceStream("WyerpPayload.zip")){
@@ -43,6 +48,7 @@ class WyerpSetup : Form {
  WyerpSetup() {
    root=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),"WyerpERP Community");
    data=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"WyerpERP-Community");
+   if(qaGuiInstall){root=Path.Combine(qaBase,"program");data=Path.Combine(qaBase,"data");}
    Text="网研ERP · Windows单机安装程序";
    Size=new Size(595,340);MaximumSize=new Size(595,340);MinimumSize=new Size(595,340);StartPosition=FormStartPosition.CenterScreen;
    Font=new Font("Microsoft YaHei UI",9);
@@ -57,11 +63,13 @@ class WyerpSetup : Form {
    Controls.Add(open);open.Click+=(s,e)=>{Process.Start(Path.Combine(root,"WyerpERP-Manager.exe"));};
    status=new Label{Text="单击「开始安装」，无需填写端口、数据库或管理员密码。",Bounds=new Rectangle(25,264,540,40),AutoSize=false};
    Controls.Add(status);
+   if(qaGuiInstall){Shown+=(s,e)=>BeginInvoke((Action)(()=>install.PerformClick()));}
  }
  void Clicked(object sender,EventArgs e){
    if(busy)return;
    if(Directory.Exists(data) || (Directory.Exists(root) && Directory.GetFileSystemEntries(root).Length>0)){
-     MessageBox.Show(this,"检测到安装目录或用户数据已经存在，为了保护现有数据库和密钥，不允许再次执行首次安装。请使用已经安装的管理器。","保护现有数据",MessageBoxButtons.OK,MessageBoxIcon.Warning);return;
+     if(qaGuiInstall){FinishQA(false,"existing-install");return;}
+      MessageBox.Show(this,"检测到安装目录或用户数据已经存在，为了保护现有数据库和密钥，不允许再次执行首次安装。请使用已经安装的管理器。","保护现有数据",MessageBoxButtons.OK,MessageBoxIcon.Warning);return;
    }
    busy=true;install.Enabled=false;progress.Style=ProgressBarStyle.Marquee;status.Text="正在释放组件并初始化独立数据库...";
    Task.Run(()=>{
@@ -84,7 +92,7 @@ class WyerpSetup : Form {
        string init=Path.Combine(root,"installer","Initialize.ps1");
        if(!File.Exists(init))throw new Exception("缺少数据库初始化脚本");
        var psi=new ProcessStartInfo("powershell.exe") {UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true};
-       psi.Arguments="-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \""+init+"\" -InstallRoot \""+root+"\" -DataRoot \""+data+"\"";
+       psi.Arguments="-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \""+init+"\" -InstallRoot \""+root+"\" -DataRoot \""+data+"\""+(qaGuiInstall?" -ServiceName WyerpCommunityPGUIQA3 -AppPort 18770 -PgPort 55446":"");
        using(var ps=Process.Start(psi)){
          var readOut=ps.StandardOutput.ReadToEndAsync();
          var readErr=ps.StandardError.ReadToEndAsync();
@@ -96,21 +104,49 @@ class WyerpSetup : Form {
            throw new Exception("初始化失败，请保留目录并检查日志："+message);
          }
        }
-       MakeShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),"网研 ERP.lnk"));
-       MakeShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms),"网研 ERP.lnk"));
-       BeginInvoke((Action)(()=>{progress.Style=ProgressBarStyle.Continuous;progress.Value=100;status.Text="安装完成。请用管理器启动ERP，并查看安全保存的admin密码。";open.Enabled=true;}));
+       string packagedUninstall=Path.Combine(root,"WyerpERP-Uninstall.exe");
+       if(!File.Exists(packagedUninstall))throw new Exception("安装包缺少安全卸载程序");
+       string durableFolder=Path.Combine(data,"tools");
+       Directory.CreateDirectory(durableFolder);
+       string durableUninstall=Path.Combine(durableFolder,"WyerpERP-Uninstall.exe");
+       File.Copy(packagedUninstall,durableUninstall,false);
+       MakeShortcut(qaGuiInstall?Path.Combine(qaBase,"shortcuts","desktop","网研 ERP.lnk"):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),"网研 ERP.lnk"));
+       MakeShortcut(qaGuiInstall?Path.Combine(qaBase,"shortcuts","startmenu","网研 ERP.lnk"):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms),"网研 ERP.lnk"));
+       MakeShortcut(qaGuiInstall?Path.Combine(qaBase,"shortcuts","startmenu","卸载网研 ERP.lnk"):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms),"卸载网研 ERP.lnk"),durableUninstall);
+       if(!qaGuiInstall){
+         string regPath=@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\WyerpERP-Community";
+         using(var key=Microsoft.Win32.Registry.LocalMachine.CreateSubKey(regPath)){
+           if(key==null)throw new Exception("无法注册Windows程序卸载入口");
+           key.SetValue("DisplayName","网研 ERP 社区单机版");
+           key.SetValue("DisplayVersion","0.1.0-preview7");
+           key.SetValue("Publisher","Wyerp Community");
+           key.SetValue("InstallLocation",root);
+           key.SetValue("UninstallString","\""+durableUninstall+"\"");
+           key.SetValue("NoModify",1,Microsoft.Win32.RegistryValueKind.DWord);
+           key.SetValue("NoRepair",1,Microsoft.Win32.RegistryValueKind.DWord);
+         }
+       }
+       BeginInvoke((Action)(()=>{progress.Style=ProgressBarStyle.Continuous;progress.Value=100;status.Text="安装完成。请用管理器启动ERP，并查看安全保存的admin密码。";open.Enabled=true;if(qaGuiInstall)FinishQA(true,"installed");}));
      }catch(Exception ex){
-       BeginInvoke((Action)(()=>{status.Text="安装没有完成。已保留现有文件，不会自动清除用户数据。";MessageBox.Show(this,ex.Message,"安装失败",MessageBoxButtons.OK,MessageBoxIcon.Error);}));
+       BeginInvoke((Action)(()=>{status.Text="安装没有完成。已保留现有文件，不会自动清除用户数据。";if(qaGuiInstall){FinishQA(false,ex.GetType().Name+":"+ex.Message);}else{MessageBox.Show(this,ex.Message,"安装失败",MessageBoxButtons.OK,MessageBoxIcon.Error);}}));
      }finally{BeginInvoke((Action)(()=>{busy=false;install.Enabled=true;progress.Style=ProgressBarStyle.Continuous;}));}
    });
  }
- void MakeShortcut(string path){
+ void FinishQA(bool success,string reason){
+   qaGuiExitCode=success?0:4;
+   try {
+     Directory.CreateDirectory(qaBase);
+     File.WriteAllText(Path.Combine(qaBase,"qa-gui-result.txt"),(success?"PASS":"FAIL")+" "+reason);
+   }catch{}
+   Close();
+ } void MakeShortcut(string path,string targetOverride=null){
+   Directory.CreateDirectory(Path.GetDirectoryName(path));
    Type t=Type.GetTypeFromProgID("WScript.Shell");
    if(t==null)throw new Exception("此Windows系统没有创建快捷方式的组件");
    object shell=Activator.CreateInstance(t);
    object link=t.InvokeMember("CreateShortcut",System.Reflection.BindingFlags.InvokeMethod,null,shell,new object[]{path});
    var linkType=link.GetType();
-   linkType.InvokeMember("TargetPath",System.Reflection.BindingFlags.SetProperty,null,link,new object[]{Path.Combine(root,"WyerpERP-Manager.exe")});
+   linkType.InvokeMember("TargetPath",System.Reflection.BindingFlags.SetProperty,null,link,new object[]{targetOverride??Path.Combine(root,"WyerpERP-Manager.exe")});
    linkType.InvokeMember("WorkingDirectory",System.Reflection.BindingFlags.SetProperty,null,link,new object[]{root});
    linkType.InvokeMember("Save",System.Reflection.BindingFlags.InvokeMethod,null,link,new object[]{});
  }

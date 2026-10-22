@@ -10,14 +10,16 @@ using System.Text;
 using System.Text.RegularExpressions;
 class WyerpManager : Form {
  static Mutex single;
+ static bool qaUiManager=false;
  Label headline, status;
  Button start, restart, stop, open, plugin, password;
 
  string root, data;
  bool busy=false;
- [STAThread] static int Main() {
+ [STAThread] static int Main(string[] args) {
+   qaUiManager=args.Length==1 && args[0]=="--qa-ui-manager";
    bool created=false;
-   single=new Mutex(true, "Local\\WyerpCommunityManager",out created);
+   single=new Mutex(true, qaUiManager?"Local\\WyerpCommunityManagerQA20261022":"Local\\WyerpCommunityManager",out created);
    if(!created) {
      try {
        string dataDir=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"WyerpERP-Community");
@@ -41,6 +43,11 @@ class WyerpManager : Form {
  WyerpManager() {
    root=AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
    data=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"WyerpERP-Community");
+   if(qaUiManager){
+     string b=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa3-20261022";
+     if(!root.Equals(Path.Combine(b,"program"),StringComparison.OrdinalIgnoreCase))throw new Exception("QA UI manager must run from verified isolated instance");
+     data=Path.Combine(b,"data");
+   }
    Text="网研 ERP · 单机管理器";
    Size=new Size(525,395); MinimumSize=new Size(525,395); MaximumSize=new Size(525,395);
    StartPosition=FormStartPosition.CenterScreen;
@@ -85,6 +92,7 @@ class WyerpManager : Form {
    Process.Start("notepad.exe","\""+f+"\"");
  }
  bool ConfirmStop(){
+   if(qaUiManager)return true;
    return MessageBox.Show(this,"现在关闭ERP后台会中断正在进行的同步或保存操作。确定已经完成操作并退出吗？","确认停止",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)==DialogResult.Yes;
  }
  void RunAction(string action,bool silent){

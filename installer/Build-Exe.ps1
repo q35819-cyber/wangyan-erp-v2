@@ -12,7 +12,7 @@ $deps=[IO.Path]::GetFullPath($DependenciesPath)
 $pg=[IO.Path]::GetFullPath($PostgresRoot)
 $node=[IO.Path]::GetFullPath($NodeExecutable)
 $dest=[IO.Path]::GetFullPath($OutputDir)
-$releaseName='WyerpERP-Community-Setup-v0.1.0-preview2.exe'
+$releaseName='WyerpERP-Community-Setup-v0.1.0-preview7.exe'
 $csc=Join-Path $env:windir 'Microsoft.NET\Framework64/v4.0.30319/csc.exe'
 if(!(Test-Path -LiteralPath $csc)){throw 'Windows .NET Framework C#编译器不可用'}
 & $csc '/nologo' '/target:winexe' ('/out:'+(Join-Path $PSScriptRoot 'WyerpERP-Manager.exe')) ('/win32manifest:'+(Join-Path $PSScriptRoot 'manager.manifest')) '/r:System.Windows.Forms.dll' '/r:System.Drawing.dll' (Join-Path $PSScriptRoot 'WyerpManager.cs')
@@ -30,6 +30,8 @@ foreach($ps in @('Initialize.ps1','Run-Server.ps1','Control.ps1')){
  if($errors.Count){throw ('安装器脚本有语法错误：'+$ps)}
 }
 New-Item -ItemType Directory -Force -Path $dest|Out-Null
+& $csc '/nologo' '/target:winexe' ('/out:'+(Join-Path $PSScriptRoot 'WyerpERP-Uninstall.exe')) ('/win32manifest:'+(Join-Path $PSScriptRoot 'setup.manifest')) '/r:System.Windows.Forms.dll' '/r:System.Drawing.dll' '/r:System.ServiceProcess.dll' '/r:System.Web.Extensions.dll' (Join-Path $PSScriptRoot 'WyerpUninstall.cs')
+if($LASTEXITCODE -ne 0){throw 'Windows安全卸载器编译失败'}
 $stage=Join-Path $env:TEMP ('wyerp-build-'+[Guid]::NewGuid().ToString('N'))
 $zip=Join-Path $env:TEMP ('wyerp-payload-'+[Guid]::NewGuid().ToString('N')+'.zip')
 try {
@@ -60,10 +62,19 @@ try {
  Copy-Item -LiteralPath (Join-Path $repo 'tools/Install-Collector.ps1') -Destination $helper
  Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'WyerpERP-Manager.exe') -Destination $stage
  Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'WyerpERP-Service.exe') -Destination $stage
+ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'WyerpERP-Uninstall.exe') -Destination $stage
  foreach($f in @('LICENSE','THIRD_PARTY_NOTICES.md','README.md','AGENTS.md')){Copy-Item (Join-Path $repo $f) -Destination $stage}
  $docs=Join-Path $stage 'docs'
  Copy-Item -LiteralPath (Join-Path $repo 'docs') -Destination $docs -Recurse
- $forbidden=@(Get-ChildItem -LiteralPath $stage -File -Recurse -Force|Where-Object{$_.FullName -match '(?i)\\(?:\.git|本机数据|secrets|backups|contracts|\.cache)\\|\\(?:wyerp\.env|initial-admin-password\.txt)$|\.pfx$|\.pem$'})
+ # Windows自带PowerShell5.1将没有BOM的UTF-8 .ps1按本机ANSI代码页解释，
+ # 含中文的单引号字符串会被错误解析。只修构建暂存目录，不修改业务源码。
+ $psCount=0
+ foreach($ps1 in @(Get-ChildItem -LiteralPath $stage -Recurse -File -Filter '*.ps1')){
+  $text=[IO.File]::ReadAllText($ps1.FullName,[Text.UTF8Encoding]::new($false))
+  [IO.File]::WriteAllText($ps1.FullName,$text,[Text.UTF8Encoding]::new($true))
+  $psCount++
+ }
+ Write-Output ('STAGED_POWERSHELL_UTF8_BOM_FILES='+$psCount) $forbidden=@(Get-ChildItem -LiteralPath $stage -File -Recurse -Force|Where-Object{$_.FullName -match '(?i)\\(?:\.git|本机数据|secrets|backups|contracts|\.cache)\\|\\(?:wyerp\.env|initial-admin-password\.txt)$|\.pfx$|\.pem$'})
  if($forbidden.Count){throw '检测到禁止打包的私有配置或敏感文件'}
  Add-Type -AssemblyName System.IO.Compression.FileSystem
  [IO.Compression.ZipFile]::CreateFromDirectory($stage,$zip,[IO.Compression.CompressionLevel]::Optimal,$false)

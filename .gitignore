@@ -37,3 +37,5 @@ dist/
 
 installer/WyerpERP-Manager.exe
 installer/WyerpERP-Service.exe
+installer/WyerpERP-Uninstall.exe
+installer/*.exe

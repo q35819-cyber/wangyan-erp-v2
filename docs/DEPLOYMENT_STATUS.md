@@ -33,3 +33,5 @@ API配置专项静态审查：店铺/Performance密钥和GRS AI可在ERP界面�
 2026-10-22独立部署记录：公开main b15ab88重新克隆；PostgreSQL17.4新集群127.0.0.1:55441；补齐硬编码PG兼容角色后67/67真实迁移通过；真实初始化admin通过；运行账号可登录PG；清空原错误HTTP PUBLIC_ORIGIN后，ERP独立端口18765的health/live、health/ready、首页、验证码均HTTP200。首次npm ci受本机旧缓存异常及外网下载超时影响，未独立全程PASS，但应用已安装的pg/exceljs/nodemailer模块可加载。浏览器网页登录、外部API、1688/Ozon真实采集与EXE仍待测。
 
 Windows EXE单机版预览：安装层源码及隔离验收详情请阅读installer/README.md。已验证EXE解包、新PostgreSQL17的67项迁移、随机admin、手动Windows服务启动/重启/停止及数据保护；图形安装真实点击、浏览器采集和正式卸载仍未完成。不可宣称正式安装包已通过全部验收。
+
+2026-10-22新增 Windows EXE 预览7：GUI安装/管理器真实按钮启动、重启、关闭/GUI卸载并保留数据库的独立QA已PASS。正式新机安装、采集插件入库、旧数据重装恢复、退出进行中业务任务的一致性仍待测试。安装、构建及换AI操作详见 installer/README.md。

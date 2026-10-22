@@ -1,53 +1,38 @@
-# 网研ERP Windows EXE单机版（预览候选，未正式发布）
+# 网研 ERP Windows EXE 安装器（0.1.0-preview7）
 
-本工程不修改现有ERP商品、订单及数据库业务逻辑。由系统自带.NET Framework C#编译器生成可自解压的Windows安装EXE，附带Node24、PostgreSQL17、ERP运行依赖、采集插件、桌面管理器和ERP后台服务。
+## 当前状态
 
-## 普通用户设计
+本仓库的 installer/Build-Exe.ps1 可以在 Windows 上编译单个 EXE，内含 ERP Node.js 业务代码、Node24、PostgreSQL17、浏览器采集插件、Windows 网研 ERP 管理器和独立卸载程序。保留现有 2 个 API 节点与 1 个后台节点架构，仍通过 Edge/Chrome 浏览器使用，不改动ERP商品/订单业务逻辑。
 
-EXE双击安装，需要一次Windows管理员授权。安装目录默认为Program Files下的WyerpERP Community；私有数据位于ProgramData的WyerpERP-Community。两者分离，避免升级时覆盖业务数据。
+2026-10-22 已通过 Windows WinForms GUI 安装和 GUI 卸载闭环的独立本机QA；尚未验证新Windows虚拟机、正式用户数据恢复/升级、真实浏览器采集，属于未公开的预览候选。
 
-自动选择本机ERP端口8765至8799，PG端口55441至55499，并分配集群内部独立端口。选定后写入私有install-settings.json，日后启动重启保持端口。
+## 安装与使用体验
 
-首次自动创建独立PG实例、角色和wyerp_community_local新库、执行67份迁移、唯一admin和安全随机43字符密码。密码仅保存于本机secrets/initial-admin-password.txt，不写入仓库或日志。
+- 双击安装 EXE，经管理员 UAC 许可，程序写入 Program Files/WyerpERP Community，数据、PostgreSQL和密钥写入 ProgramData/WyerpERP-Community，两个目录分离。
+- 优先选择 ERP 端口8765、PostgreSQL 端口55441，冲突时自动检查备用端口，并配置不会冲突的集群内部端口；记录在数据目录的 install-settings.json，重启保持端口不变。
+- 创建社区独立PG集群和角色，67项当前数据库迁移全部执行，唯一管理员 admin 的初始43字符随机密码只保存在本机 secrets/initial-admin-password.txt。用户应在成功网页登录后妥善保存密码，才可删除这个一次性文件。
+- 安装桌面和开始菜单的“网研 ERP”，打开Windows管理器可启动、重启、打开ERP网页、引导安装浏览器采集插件、查看一次性管理员密码、关闭后台。
+- 两个专用Windows服务（ERP和PostgreSQL）均为手动启动，不会开机自动启动。关闭网页不停止后台；点击管理器退出/停止才结束本实例服务。不能按系统全局进程名结束Node或PG。
+- 开始菜单增加“卸载网研 ERP”，在Windows应用卸载列表中登记入口。卸载器单独保存在数据目录 tools/WyerpERP-Uninstall.exe，程序及快捷方式可被同步清理，数据库、用户账号、API配置、加密密钥默认保留。
+- 浏览器采集扩展必须由用户在 Edge/Chrome 扩展管理页手动确认开启开发人员模式及加载已解压目录。EXE不能绕过浏览器的安全确认。
+- 退出运行中任务可能中断尚未完成的保存或订单同步，管理器会提示确认，不能宣称已验证无损退出。
 
-桌面管理器按钮：启动、重启、打开ERP网页、安装采集插件、查看一次性管理员密码、关闭后台。Node ERP和PG由两个仅手动启动的Windows专有服务管理；没有开机自动启动。重复点击启动不会新开第二套集群。关闭浏览器标签页不停止服务；点击管理器退出/停止才停服务。
+## 2026-10-22 真实本机隔离测试
 
-关闭操作先结束专属ERP节点树，再安全停止专属PG服务；会保留数据、密钥和管理员资料，不结束电脑上其他Node或PG服务。
+全部测试在 D:/WyerpIsolatedDeployQA-20261022 的专用全新PG实例/端口完成，未访问正式 Release 数据库。
 
-重要风险：Windows停止ERP服务时可能强制结束在途Node任务；不要在进行订单同步、保存或其他写入任务期间退出。已加退出确认，但尚未证明运行中任务完全无损退出，正式发布前必须验证。
+- PASS：同一预览7 EXE 中4749个文件完整，Windows WinForms安装窗口自动触发与用户点击相同的开始安装事件，建立空白PG17、67/67迁移、唯一admin、随机密钥；自动创建桌面、开始菜单及卸载快捷方式。
+- PASS：专属Windows ERP和PostgreSQL服务均为Manual，安装结束后均Stopped；桌面管理器实际Win32按钮点击启动、重启、关闭后台三步，HTTP健康检查与端口一致。
+- PASS：由同一安装器复制到数据目录的GUI卸载程序成功注销ERP/PG专属服务、删除程序目录与快捷方式，保留真实PG数据目录、管理员文件和加密密钥。
+- 已修复问题：Windows PowerShell5.1不支持不带UTF-8 BOM的中文脚本及部分新Join-Path参数格式；本机HTTP PUBLIC_ORIGIN必须为空；非默认ERP端口必须配置不重叠的集群端口；卸载程序必须位于数据目录才能同步删除安装目录。
+- 仍待验收：全新Win10/Win11独立虚拟机点击式安装/UAC、Windows设置卸载列表UI、真实Chrome/Edge管理员登录、1688/Ozon实际采集入PostgreSQL、已有数据重新安装/升级/备份恢复、运行中的订单任务无损退出、代码签名与第三方Node/PG及依赖再分发授权检查。
 
-浏览器采集插件自动放到稳定路径，用户仍须在Edge/Chrome开启开发人员模式并手动确认加载，安装器无法绕过浏览器权限。
+特别提醒：卸载后数据保留，当前EXE会拒绝将含原数据的目录当成空白首次安装覆盖。正式发布前需要补齐安全的“恢复已有数据/重装”功能，不能让普通用户删除数据目录。
 
-## 当前真实隔离测试（2026-10-22）
+## AI换机重新构建与安全要求
 
-源码基准：公开仓库64efda49，所有安装器源文件新增在installer下，原业务模块未改。
-候选EXE在本机路径 D:\WyerpIsolatedDeployQA-20261022\EXE发布候选\WyerpERP-Community-Setup-v0.1.0-preview2.exe
+Windows机器需.NET Framework4.x C#编译器、合法PG17发行组件、Node24，以及与公开erp/package-lock.json对应的node_modules。命令示例：
 
-已通过：
-- 完整EXE编译，大小94.77MB，内嵌4748文件，Node和PG/ERP组件完整。
-- 从EXE原始嵌入ZIP解压出一套独立QA3安装目录，不使用先前成功的QA数据库。
-- QA3真实PostgreSQL17 initdb与角色创建、67/67数据迁移、唯一admin和安全随机密码生成。
-- 注册两个手动启动的专属Windows服务，安装结束时均Stopped。
-- 启动服务后 /health/ready 返回200；跨不同工具运行窗口保持可用；不重复启动新实例。
-- 重启后保持18767端口，停止后ERP/PG专属端口18767与55443都已释放、数据库和密钥仍在。
-- 第一套独立QA服务与用户正式业务Release始终未碰触。
-- 发现并修复了打包后旧doctor对npm/源码布局的依赖，本机PUBLIC_ORIGIN换行匹配、ERP入口/集群内部端口冲突、Windows后台进程退出以及SC注册参数问题。
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\installer\Build-Exe.ps1 -DependenciesPath "<干净目录>\erp\node_modules" -PostgresRoot "<PG17发行目录>" -NodeExecutable "<Node24目录>\node.exe" -OutputDir "<安全输出目录>"
 
-仍未通过最终发布验收：
-- 尚未在全新Windows虚拟机中真实点击EXE GUI安装按钮，检验UAC及桌面快捷方式。
-- 真实Edge/Chrome管理员网页登录与1688/Ozon采集入PostgreSQL没有执行。
-- 正式卸载器、升级保留密钥/数据、数据库恢复演练尚未开发验收。
-- 生产HTTPS、安全签名/SmartScreen信誉、第三方组件再分发许可证与通知需要检查。
-- 当前停止ERP可能中断在途任务，不能宣称高并发/订单同步期间无损关闭。
-
-因此安装EXE只是本地预览候选文件，不得向普通用户宣传为正式可用，也不上传GitHub Releases。
-
-## 换AI从源码重新构建
-
-需要Windows 10/11、.NET Framework 4.x内置C#编译器、合法的PostgreSQL17运行组件及Node24的node.exe。先按仓库package-lock.json安装ERP npm依赖，再运行：
-
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\installer\Build-Exe.ps1 -DependenciesPath "<安全目录>\erp\node_modules" -PostgresRoot "<PostgreSQL17根目录>" -NodeExecutable "<Node24>\node.exe" -OutputDir "<输出目录>"
-
-Build-Exe.ps1自动编译Manager、Service、Setup三部分，读取源码构建内嵌ZIP，生成同名SHA256校验文件。installer下生成的可执行文件不应提交Git；重构源码时必须执行独立隔离数据库端到端测试，不允许复用真实业务数据库。
-
-不能单凭Node/PostgreSQL可用就推断包含它们的EXE允许公众再分发；发布前必须逐项确认第三方许可、署名和必要通知。
+构建会在临时暂存目录将PS1转换为带BOM UTF-8后打包，编译管理器、ERP服务、卸载程序和单文件安装EXE，生成SHA256。installer目录下的二进制被忽略，不上传GitHub源码分支；不要将数据库、私钥、作者原私人文件上传。EXE仍为本地预览候选，不得作为正式安装包向公众发布。

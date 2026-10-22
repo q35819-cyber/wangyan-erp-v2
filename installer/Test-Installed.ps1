@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 [CmdletBinding()]
 param([Parameter(Mandatory=$true)][string]$InstallRoot,[Parameter(Mandatory=$true)][string]$DataRoot,[switch]$CheckDatabase)
 $ErrorActionPreference='Stop'
@@ -16,7 +16,7 @@ $cfg=[IO.File]::ReadAllText($envfile)
 if($cfg -notmatch '(?m)^PGHOST=127\.0\.0\.1\r?$'){throw '数据库未限制为本机监听'}
 if($cfg -notmatch '(?m)^PUBLIC_ORIGIN=\r?$'){throw '本机模式公网地址必须留空'}
 foreach($k in @('credentials.key','csrf.key','private-object.key')){
- $v=[IO.File]::ReadAllText((Join-Path $data 'secrets' $k)).Trim()
+ $v=[IO.File]::ReadAllText((Join-Path (Join-Path $data 'secrets') $k)).Trim()
  if($v -notmatch '^[a-f0-9]{64}$'){throw ('本机密钥文件损坏：'+$k)}
 }
 $m=Get-Content -LiteralPath $manifest -Raw -Encoding UTF8|ConvertFrom-Json
