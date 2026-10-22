@@ -28,3 +28,5 @@
 首次管理员自动创建、密码保管和异常处理统一见 docs/ADMIN_SETUP.md。默认使用安全随机密码，禁止在聊天或日志输出。
 
 API配置专项静态审查：店铺/Performance密钥和GRS AI可在ERP界面填写；1688授权菜单尚未实现。旧SMTP覆盖wyerp.env的缺陷已修复，隔离验证非SMTP字段不丢失、重复SMTP字段拒绝、临时文件清理；真实邮件发送尚未验证。生产CSRF环境变量与脚本密钥文件兼容、整库恢复后的密钥一致性仍为P1/P0待测项。详见 docs/API_CONFIGURATION.md。
+
+新增安装引导检查：插件ZIP生成、自动版本一致性验证、ZIP解压后再执行Install-Collector.ps1 -CheckOnly，已经通过离线测试。未执行在真实Edge/Chrome里点击加载并安装扩展，也未执行1688/Ozon线上页面采集入库。浏览器插件不支持本项目目前这种未上架代码在普通用户电脑上静默安装；不能称完整EXE已完成。详见 docs/EXTENSION_INSTALL.md。

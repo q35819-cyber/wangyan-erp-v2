@@ -59,3 +59,12 @@ Windows 建议安装 Node.js 24、PostgreSQL 16+ 和 PowerShell 5.1。当前启�
 首次管理员自动创建、密码保管和异常处理统一见 docs/ADMIN_SETUP.md。默认使用安全随机密码，禁止在聊天或日志输出。
 
 - API填写位置、密钥加密、邮件覆盖修复与配置风险：docs/API_CONFIGURATION.md
+
+## 浏览器采集插件：用户安装
+
+当前公开插件版本由 extensions/wyerp-collector/manifest.json 管理，可从GitHub Releases下载同版本 WyerpCollector-v版本号.zip，解压后双击 Install-Collector.cmd 启动安装引导。下载完整源码也可直接双击仓库根目录同名CMD。
+
+安装助手会自动检查插件、打开Edge扩展管理页和插件目录、把选择路径复制到剪贴板；用户仍需要在Edge中开启开发人员模式，并点击加载解压缩的扩展确认。详细图文文字步骤请看 docs/EXTENSION_INSTALL.md。
+
+开发者打包运行 tools/Build-CollectorPackage.ps1，文件名自动使用manifest版本，绝不能混用版本。
+**目前尚未发布正式ERP EXE一键安装器**；未来集成要求见 docs/INSTALLER_PLUGIN_INTEGRATION.md。

@@ -41,3 +41,11 @@ erp/scripts/doctor-local.ps1 -CheckDatabase → erp/start.ps1 →
 首次管理员自动创建、密码保管和异常处理统一见 docs/ADMIN_SETUP.md。默认使用安全随机密码，禁止在聊天或日志输出。
 
 配置入口与风险强制检查：先阅读 docs/API_CONFIGURATION.md。店铺Seller/Performance API及GRS AI密钥由ERP用户界面配置，SMTP、PG和服务级Key在本机外部私密配置中管理。不得在升级/重装时重新生成旧实例加密密钥。
+
+## 插件安装和版本发布规则
+
+- 浏览器插件版本唯一来源 extensions/wyerp-collector/manifest.json，不能手工把源码、压缩包和文档写成不一致的版本。
+- 每次插件发布使用 tools/Build-CollectorPackage.ps1，生成 WyerpCollector-vX.Y.Z.zip 与 sha256，ZIP根目录必须有 Install-Collector.cmd 和 tools/Install-Collector.ps1。
+- 用户可双击 Install-Collector.cmd，打开Edge扩展管理页并复制正确目录；普通电脑的本地扩展仍需用户自己启用开发人员模式、选择加载解压缩的扩展并确认。绝不通过企业策略或注册表偷偷强装。
+- 后续EXE安装器应自动把插件放到长期固定目录，通过安装页面「安装浏览器插件」按钮调用 tools/Install-Collector.ps1 -PluginDir 该目录；不可把ZIP文件名的版本加入安装后的插件路径。
+- 不得把插件版本打包检查PASS，写成浏览器中实际安装PASS或1688/Ozon真实采集PASS。见 docs/EXTENSION_INSTALL.md 和 docs/INSTALLER_PLUGIN_INTEGRATION.md。

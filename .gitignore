@@ -31,3 +31,6 @@
 **/outputs/
 **/contracts/
 **/*wechat*qr*
+
+# Generated release archives
+dist/

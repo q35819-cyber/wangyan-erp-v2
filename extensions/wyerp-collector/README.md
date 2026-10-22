@@ -39,3 +39,9 @@
 
 仓库其他说明：docs/EXTENSION_INSTALL.md、docs/CONFIGURATION.md、docs/USER_GUIDE.md、docs/PLUGIN_PROVENANCE.md。
 未经独立真实浏览器验收，不能宣称完整兼容最新平台页面。
+
+## 用户安装入口
+
+推荐下载GitHub Releases中 WyerpCollector-v版本号.zip，完整解压后双击根目录的 Install-Collector.cmd，安装助手会打开Edge扩展管理页并自动复制目录。下载整个GitHub仓库则双击仓库根目录的 Install-Collector.cmd。
+
+详情参阅 docs/EXTENSION_INSTALL.md。浏览器仍需用户开启开发人员模式、点击加载解压缩的扩展并确认文件夹；不能用注册表或企业策略悄悄安装。插件升级版本号以 manifest.json 为准，ZIP名称由 tools/Build-CollectorPackage.ps1 自动生成。
