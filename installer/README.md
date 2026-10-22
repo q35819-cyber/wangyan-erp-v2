@@ -1,4 +1,4 @@
-# 网研 ERP Windows EXE 安装器（0.1.0-preview7）
+# 网研 ERP Windows EXE 安装器（0.1.0-preview8）
 
 ## 当前状态
 
@@ -21,7 +21,7 @@
 
 全部测试在 D:/WyerpIsolatedDeployQA-20261022 的专用全新PG实例/端口完成，未访问正式 Release 数据库。
 
-- PASS：同一预览7 EXE 中4749个文件完整，Windows WinForms安装窗口自动触发与用户点击相同的开始安装事件，建立空白PG17、67/67迁移、唯一admin、随机密钥；自动创建桌面、开始菜单及卸载快捷方式。
+- PASS：已验证的预览7 EXE 中4749个文件完整，Windows WinForms安装窗口自动触发与用户点击相同的开始安装事件，建立空白PG17、67/67迁移、唯一admin、随机密钥；自动创建桌面、开始菜单及卸载快捷方式。
 - PASS：专属Windows ERP和PostgreSQL服务均为Manual，安装结束后均Stopped；桌面管理器实际Win32按钮点击启动、重启、关闭后台三步，HTTP健康检查与端口一致。
 - PASS：由同一安装器复制到数据目录的GUI卸载程序成功注销ERP/PG专属服务、删除程序目录与快捷方式，保留真实PG数据目录、管理员文件和加密密钥。
 - 已修复问题：Windows PowerShell5.1不支持不带UTF-8 BOM的中文脚本及部分新Join-Path参数格式；本机HTTP PUBLIC_ORIGIN必须为空；非默认ERP端口必须配置不重叠的集群端口；卸载程序必须位于数据目录才能同步删除安装目录。
@@ -36,3 +36,5 @@ Windows机器需.NET Framework4.x C#编译器、合法PG17发行组件、Node24�
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\installer\Build-Exe.ps1 -DependenciesPath "<干净目录>\erp\node_modules" -PostgresRoot "<PG17发行目录>" -NodeExecutable "<Node24目录>\node.exe" -OutputDir "<安全输出目录>"
 
 构建会在临时暂存目录将PS1转换为带BOM UTF-8后打包，编译管理器、ERP服务、卸载程序和单文件安装EXE，生成SHA256。installer目录下的二进制被忽略，不上传GitHub源码分支；不要将数据库、私钥、作者原私人文件上传。EXE仍为本地预览候选，不得作为正式安装包向公众发布。
+## 2026-10-22 23:58+08:00 修复 cluster_unavailable 启动竞态
+用户报告集群服务节点尚未就绪。隔离检查发现旧安装器 Control.ps1 使用 /health/live 判断集群就绪，而负载均衡此端点即使 API/Worker 尚未准备好也返回200。新的 Control.ps1 改用 /health/ready，API、DB和后台Worker就绪后才允许向用户报告成功或打开浏览器。已有启动中进程可等候而不是立即提示失败。最多等待约60秒，超时提供专用日志路径，不清除数据也不影响其他软件。独立QA3于18767端口执行启动/健康检查ready200/重复启动/停止全部PASS。注意此修复是EXE启动判定，不代表已经诊断出用户报错时使用的真实服务器；当时本机8765端口未监听。

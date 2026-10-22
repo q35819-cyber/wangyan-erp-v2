@@ -20,7 +20,7 @@ if($appPort -lt 1024 -or $dbPort -lt 1024){throw '端口配置非法'}
 if([IO.Path]::GetFullPath([string]$settings.InstallRoot).TrimEnd('\') -ine $root.TrimEnd('\')){throw '安装目录与实例记录不一致，不接管其他软件'}
 function Health(){
  try{
-  $r=Invoke-WebRequest -Uri ('http://127.0.0.1:'+$appPort+'/health/live') -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+  $r=Invoke-WebRequest -Uri ('http://127.0.0.1:'+$appPort+'/health/ready') -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
   return ($r.StatusCode -eq 200)
  }catch{return $false}
 }
@@ -28,17 +28,17 @@ function Start-Own {
  $pg=Get-Service -Name $pgName -ErrorAction Stop
  $app=Get-Service -Name $appName -ErrorAction Stop
  if($pg.StartType -ne 'Manual' -or $app.StartType -ne 'Manual'){throw '专属服务必须为手动启动'}
- if($app.Status -eq 'Running'){
-  if(Health){Write-Output 'PASS ERP已运行，无需重复启动';return}
-  throw 'ERP服务正在启动或异常，请使用重启功能'
+ $alreadyRunning=($app.Status -eq 'Running')
+ if($alreadyRunning -and (Health)){Write-Output 'PASS ERP已就绪，无需重复启动';return}
+ if(!$alreadyRunning){
+  if(@(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue|Where-Object{$_.LocalPort -eq $appPort}).Count){throw 'ERP端口已被其他程序占用，拒绝关闭其他软件'}
+  if($pg.Status -ne 'Running'){Start-Service -Name $pgName -ErrorAction Stop}
+  $dbSockets=@(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue|Where-Object{$_.LocalPort -eq $dbPort -and $_.LocalAddress -in @('127.0.0.1','::1')})
+  if(!$dbSockets.Count){throw '专用数据库端口未准备好'}
+  Start-Service -Name $appName -ErrorAction Stop
  }
- if(@(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue|Where-Object{$_.LocalPort -eq $appPort}).Count){throw 'ERP端口已被其他程序占用，拒绝关闭其他软件'}
- if($pg.Status -ne 'Running'){Start-Service -Name $pgName -ErrorAction Stop}
- $dbSockets=@(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue|Where-Object{$_.LocalPort -eq $dbPort -and $_.LocalAddress -in @('127.0.0.1','::1')})
- if(!$dbSockets.Count){throw '专用数据库端口未准备好'}
- Start-Service -Name $appName -ErrorAction Stop
  $healthy=$false
- for($i=0;$i -lt 70;$i++){
+ for($i=0;$i -lt 110;$i++){
   Start-Sleep -Milliseconds 550
   if(Health){$healthy=$true;break}
   if((Get-Service -Name $appName).Status -ne 'Running'){break}

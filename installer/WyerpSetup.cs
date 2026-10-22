@@ -10,7 +10,7 @@ using System.Windows.Forms;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 class WyerpSetup : Form {
- static readonly string Version="0.1.0-preview7";
+ static readonly string Version="0.1.0-preview8";
  static bool qaGuiInstall=false;
  static int qaGuiExitCode=3;
  static readonly string qaBase=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa3-20261022";
@@ -118,7 +118,7 @@ class WyerpSetup : Form {
          using(var key=Microsoft.Win32.Registry.LocalMachine.CreateSubKey(regPath)){
            if(key==null)throw new Exception("无法注册Windows程序卸载入口");
            key.SetValue("DisplayName","网研 ERP 社区单机版");
-           key.SetValue("DisplayVersion","0.1.0-preview7");
+           key.SetValue("DisplayVersion","0.1.0-preview8");
            key.SetValue("Publisher","Wyerp Community");
            key.SetValue("InstallLocation",root);
            key.SetValue("UninstallString","\""+durableUninstall+"\"");

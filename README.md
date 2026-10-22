@@ -71,4 +71,4 @@ Windows 建议安装 Node.js 24、PostgreSQL 16+ 和 PowerShell 5.1。当前启�
 
 Windows EXE单机版预览：安装层源码及隔离验收详情请阅读installer/README.md。已验证EXE解包、新PostgreSQL17的67项迁移、随机admin、手动Windows服务启动/重启/停止及数据保护；图形安装真实点击、浏览器采集和正式卸载仍未完成。不可宣称正式安装包已通过全部验收。
 
-2026-10-22新增 Windows EXE 预览7：GUI安装/管理器真实按钮启动、重启、关闭/GUI卸载并保留数据库的独立QA已PASS。正式新机安装、采集插件入库、旧数据重装恢复、退出进行中业务任务的一致性仍待测试。安装、构建及换AI操作详见 installer/README.md。
+2026-10-22预览7已完成GUI安装/管理器真实按钮启动重启关闭/GUI卸载及保留数据的独立QA；预览8仅修改启动器API/Worker就绪检查，已由QA3实测readiness通过、并核对新EXE资源与SHA256，未重复进行完整GUI首次安装测试。正式新机安装、采集插件入库、旧数据重装恢复、退出进行中业务任务的一致性仍待测试。安装、构建及换AI操作详见 installer/README.md。
