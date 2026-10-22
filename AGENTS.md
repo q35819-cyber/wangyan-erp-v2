@@ -25,7 +25,7 @@
 ## 安装/测试顺序
 
 克隆仓库 → Node.js/npm ci → 新建隔离 PostgreSQL 角色和数据库 →
-erp/scripts/setup-local.ps1 → 数据库迁移 → erp/scripts/bootstrap-admin.ps1 →
+erp/scripts/setup-local.ps1 → 数据库迁移 → erp/scripts/bootstrap-admin.ps1（默认自动生成随机管理员密码到外部私有文件）→
 erp/scripts/doctor-local.ps1 -CheckDatabase → erp/start.ps1 →
 实际浏览器admin登录 → 扩展安装 → 1688商品采集并写入数据库 → Ozon合法页面采集。
 
@@ -38,3 +38,4 @@ erp/scripts/doctor-local.ps1 -CheckDatabase → erp/start.ps1 →
 - 核验插件与后端采集箱的真实持久化，而不是只看扩展图标或采集成功弹窗。
 - 公开前跑隐私审查与本机密钥/数据排除检查，并验证GitHub最新main源码。
 - 若没有独立 PostgreSQL 或平台账号，必须明确此限制，不能称为完整部署验收。
+首次管理员自动创建、密码保管和异常处理统一见 docs/ADMIN_SETUP.md。默认使用安全随机密码，禁止在聊天或日志输出。

@@ -76,7 +76,7 @@ npm ci 安装后不要把 node_modules 上传到 Git。插件并不需要 npm �
 
     .\scripts\bootstrap-admin.ps1 -DataRoot $root
 
-交互输入至少12位密码。脚本仅在数据库没有任何 users、tenants、tenant_members 时创建唯一 admin 和系统管理租户。第二次执行会拒绝，不会重置旧密码。
+默认自动生成43字符随机管理员密码，保存在新机外部 secrets/initial-admin-password.txt，用户名为admin。详情及查看/清理方法见 docs/ADMIN_SETUP.md。若要手工输入密码请加 -PromptForPassword。仅空库执行一次；第二次执行会拒绝。
 
 完整检查：
 

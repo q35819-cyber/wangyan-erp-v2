@@ -55,3 +55,5 @@ Windows 建议安装 Node.js 24、PostgreSQL 16+ 和 PowerShell 5.1。当前启�
 - docs/CONFIGURATION.md：空数据库、密钥、首次admin、命令执行顺序
 - docs/DEPLOYMENT_STATUS.md：已测试和缺少真实环境验证的功能
 - docs/FEATURE_PARITY.md：开源插件与活动插件的功能差异
+
+首次管理员自动创建、密码保管和异常处理统一见 docs/ADMIN_SETUP.md。默认使用安全随机密码，禁止在聊天或日志输出。
