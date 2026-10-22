@@ -46,3 +46,4 @@ P2 日志与费用：禁止打印Cookie、Authorization、SMTP授权码、API Ke
 - 系统级的SMTP、PG、Seerfar与官方AI密钥存放在Git仓库外部受限的secrets目录。
 - 新安装生成新密钥，老版本升级必须保留原密钥与数据库。
 - 按 docs/CONFIGURATION.md 和 docs/DEPLOYMENT_STATUS.md 完成真实新机验收，不得把静态测试误写为全面可用。
+本机安装防启动故障：PUBLIC_ORIGIN必须留空，避免图片发布模块将HTTP本机地址当作公网HTTPS地址而拒绝整个ERP启动。ERP_HOST=127.0.0.1和ERP_PORT仍负责本机监听；生产HTTPS公网域名须按独立生产部署流程验收。

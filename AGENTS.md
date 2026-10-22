@@ -49,3 +49,4 @@ erp/scripts/doctor-local.ps1 -CheckDatabase → erp/start.ps1 →
 - 用户可双击 Install-Collector.cmd，打开Edge扩展管理页并复制正确目录；普通电脑的本地扩展仍需用户自己启用开发人员模式、选择加载解压缩的扩展并确认。绝不通过企业策略或注册表偷偷强装。
 - 后续EXE安装器应自动把插件放到长期固定目录，通过安装页面「安装浏览器插件」按钮调用 tools/Install-Collector.ps1 -PluginDir 该目录；不可把ZIP文件名的版本加入安装后的插件路径。
 - 不得把插件版本打包检查PASS，写成浏览器中实际安装PASS或1688/Ozon真实采集PASS。见 docs/EXTENSION_INSTALL.md 和 docs/INSTALLER_PLUGIN_INTEGRATION.md。
+2026-10-22实测发现：迁移003和后续SQL要求wyerp_app与wyerp_migrator固定角色。独立PG集群须先创建NOLOGIN兼容角色并授权给当前运行和迁移账号。setup-local.ps1的PUBLIC_ORIGIN必须在本机模式留空，避免图片公网发布模块拒绝HTTP本机地址，公网HTTPS生产部署需要独立验收。

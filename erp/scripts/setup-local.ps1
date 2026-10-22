@@ -68,7 +68,7 @@ try{
   'NODE_ENV=development',
   'ERP_HOST=127.0.0.1',
   'ERP_PORT=8765',
-  'PUBLIC_ORIGIN=http://127.0.0.1:8765',
+  'PUBLIC_ORIGIN=',
   ('ERP_DATA_DIR='+(Join-Path $root 'data')),
   ('ERP_PRIVATE_OBJECT_DIR='+(Join-Path $root 'private-objects')),
   ('PGHOST='+$PgHostName),

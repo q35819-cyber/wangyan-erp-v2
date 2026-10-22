@@ -12,6 +12,8 @@
     cd wangyan-erp-v2\erp
     node --version
     npm ci
+
+如果npm缓存路径报ENOTDIR，可以在隔离缓存中重新安装，例如 npm ci --cache .\npm-cache；不可以把依赖安装超时标为成功。
     npm run check:syntax
 
 npm ci 安装后不要把 node_modules 上传到 Git。插件并不需要 npm 打包，位于仓库根目录 extensions/wyerp-collector。
@@ -22,10 +24,14 @@ npm ci 安装后不要把 node_modules 上传到 Git。插件并不需要 npm �
 
     psql -h 127.0.0.1 -U postgres -d postgres
 
-在 psql 交互命令行执行下面命令，每条以分号结尾。数据库和角色均为新名字，绝不可改为以前使用过的正式库：
+在新建的独立PostgreSQL实例执行以下命令。历史迁移脚本003及后续SQL仍依赖wyerp_app与wyerp_migrator两个固定角色，因此需要提前创建这两个NOLOGIN兼容角色，并赋予当前社区实例的独立运行/迁移账号。不可在已有正式PG集群中盲目修改同名角色：
 
     CREATE ROLE wyerp_community_migrator LOGIN;
     CREATE ROLE wyerp_community_app LOGIN;
+    CREATE ROLE wyerp_app NOLOGIN;
+    CREATE ROLE wyerp_migrator NOLOGIN;
+    GRANT wyerp_app TO wyerp_community_app;
+    GRANT wyerp_migrator TO wyerp_community_migrator;
     \password wyerp_community_migrator
     \password wyerp_community_app
     CREATE DATABASE wyerp_community_fresh OWNER wyerp_community_migrator;
@@ -86,7 +92,7 @@ npm ci 安装后不要把 node_modules 上传到 Git。插件并不需要 npm �
 
     .\start.ps1
 
-打开浏览器访问 http://127.0.0.1:8765 ，用 admin 及新密码登录。页面能打开和账号成功登录都需要实际验收。SMTP 默认不配置；如果需要使用邮件验证码、自助注册或BUG邮件通知，请另外申请自己的邮箱服务并在外部 secrets/wyerp.env 中配置自己的 SMTP_USER、SMTP_PASS、SMTP_FROM、BUG_REPORT_EMAIL，严禁上传 Git。
+本机模式PUBLIC_ORIGIN应该留空，不能填写HTTP本机地址，否则公网图片发布模块拒绝启动。生产HTTPS域名应另行配置和验收。然后打开浏览器访问 http://127.0.0.1:8765 ，用 admin 及新密码登录。页面能打开和账号成功登录都需要实际验收。SMTP 默认不配置；如果需要使用邮件验证码、自助注册或BUG邮件通知，请另外申请自己的邮箱服务并在外部 secrets/wyerp.env 中配置自己的 SMTP_USER、SMTP_PASS、SMTP_FROM、BUG_REPORT_EMAIL，严禁上传 Git。
 
 ## 第六步：安装采集插件并验证商品
 
@@ -112,7 +118,7 @@ doctor-local.ps1：只做环境、密钥和可选迁移状态查询，不修改�
 bootstrap-admin.ps1：先验证全新空库及迁移校验，再创建一个admin；只执行一次。
 start.ps1：原Release启动脚本，在正式服务启动前先检查迁移状态。
 
-脚本不会下载或恢复原作者的私人数据。当前尚未在一台有独立PostgreSQL安装和真实浏览器测试账号的全新电脑完成第2—6步端到端演练，参见 docs/DEPLOYMENT_STATUS.md。
+脚本不会下载或恢复原作者的私人数据。2026-10-22已在独立PostgreSQL17上完成67/67真实迁移、真实admin初始化，ERP健康检查及首页HTTP200；真实浏览器账号登录和1688/Ozon采集仍待验收，详见 docs/DEPLOYMENT_STATUS.md。
 
 API配置位置与部署风险：参见 docs/API_CONFIGURATION.md。重要：不要使用任何旧版本的configure-smtp.ps1，曾存在覆盖整个环境配置的缺陷；本版已只替换邮件字段并通过合成数据测试。生产启动模式及首次数据库全量验收尚未通过。
 
