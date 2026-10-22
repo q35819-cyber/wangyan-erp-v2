@@ -1,14 +1,12 @@
-# 部署准备（开发和测试用途）
+# ERP 部署指南入口
 
-1. 在隔离环境中安装 Node.js 20 或更高版本、PostgreSQL 和适用的系统工具。
-2. 进入 erp/ 后运行 npm ci，不要把 node_modules 提交仓库。
-3. 参考 erp/.env.example 和 erp/deploy/production.env.example 配置专用环境变量与 Secret。
-4. 在新的空 PostgreSQL 数据库中依照 erp/db/README.md 检查和执行适用的迁移。
-5. 仅在隔离测试环境运行 erp/start.ps1，默认本机端口通常为 8765。
-6. 如需公网部署，先完成独立安全审查、功能验收、最小权限、HTTPS、备份和恢复演练。
+所有全新 Windows 环境的部署步骤、PowerShell 可执行命令、PostgreSQL 创建角色及数据库、密钥管理和第一次 admin 初始化，统一见 docs/CONFIGURATION.md。请不要使用本项目以前的旧简略部署说明。
 
-重要：不得连接原开发者的业务数据。软件尚无零配置安装保证。
-任何 Ozon API 接入都需要开发者自己的合法账号和授权。
-已废止的无人值守订单自动同步、Seller/Cookie 自动同步和插件心跳方案不得恢复。
+顺序：安装Node.js24与PostgreSQL → npm ci → 新建隔离数据库及账号 →
+erp/scripts/setup-local.ps1 → db/migrate.js → erp/scripts/bootstrap-admin.ps1 →
+erp/scripts/doctor-local.ps1 -CheckDatabase → erp/start.ps1 → 登录 → 浏览器插件安装及采集箱持久化验证。
 
-补充配置步骤请阅读 docs/CONFIGURATION.md；独立开源插件按 docs/EXTENSION_INSTALL.md 加载。注意本项目不含第三方私有插件模块。
+禁止直接连接原作者已有业务库，禁止从本机私密目录导入旧数据库和店铺密钥，禁止恢复无人值守订单自动同步。
+
+开发、测试和实际发布目前默认只允许127.0.0.1:8765；公网生产部署尚未完成安全验收。
+当前通过npm ci与离线采集插件测试，但全新PostgreSQL+真实1688/Ozon网页端到端尚未完成独立测试，详见 docs/DEPLOYMENT_STATUS.md。

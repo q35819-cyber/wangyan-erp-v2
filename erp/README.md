@@ -8,3 +8,6 @@ Windows 标准启动入口：在本目录运行 PowerShell start.ps1。
 请阅读仓库根目录 docs/DEPLOYMENT.md，不要启用已废止的订单自动同步机制。
 
 社区浏览器采集插件位于仓库根目录 extensions/wyerp-collector，安装方法见 docs/EXTENSION_INSTALL.md。
+
+## 社区版全新部署
+先阅读仓库根目录AGENTS.md及docs/CONFIGURATION.md；新电脑使用scripts/setup-local.ps1、scripts/doctor-local.ps1、scripts/bootstrap-admin.ps1，不能复用原作者账号或数据库。

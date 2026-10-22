@@ -18,12 +18,12 @@
 
 ## 快速查看（隔离开发环境）
 
-Windows 建议安装 Node.js >=20、PostgreSQL 和 PowerShell。
+Windows 建议安装 Node.js 24、PostgreSQL 16+ 和 PowerShell 5.1。当前启动脚本要求 Node.js 至少 22.9.0。
 
-1. 进入 erp/ 目录运行 npm ci。
-2. 先阅读 docs/DEPLOYMENT.md（位于仓库根目录），设置独立的空数据库及必要环境变量。
-3. 在 erp/ 目录通过 PowerShell 执行 start.ps1。
-4. 默认本机端口通常为 8765。
+1. 首先阅读根目录 AGENTS.md（后续AI接手规则）和 docs/CONFIGURATION.md（全新电脑从零部署）。再进入 erp/ 目录运行 npm ci。
+2. 使用 erp/scripts/setup-local.ps1 创建全新的本机配置与随机密钥，在独立空 PostgreSQL 数据库执行迁移。
+3. 使用 erp/scripts/bootstrap-admin.ps1 仅在空库创建首个 admin，执行 doctor-local.ps1 通过检查后再启动 start.ps1。
+4. 用浏览器访问 127.0.0.1:8765 进行登录，并安装 extensions/wyerp-collector 采集助手；必须真实验收采集箱持久化。
 
 **未经安全评估、配置及测试，禁止直接把软件开放到公网，也不得连接原业务数据库。** 本仓库未保证零配置部署。
 
@@ -49,3 +49,9 @@ Windows 建议安装 Node.js >=20、PostgreSQL 和 PowerShell。
 - 用户使用说明：docs/USER_GUIDE.md
 - 浏览器插件安装：docs/EXTENSION_INSTALL.md
 - 插件源码与版权边界：docs/PLUGIN_PROVENANCE.md
+
+## 换电脑或换AI优先阅读
+- AGENTS.md：接手规则与禁止事项
+- docs/CONFIGURATION.md：空数据库、密钥、首次admin、命令执行顺序
+- docs/DEPLOYMENT_STATUS.md：已测试和缺少真实环境验证的功能
+- docs/FEATURE_PARITY.md：开源插件与活动插件的功能差异
