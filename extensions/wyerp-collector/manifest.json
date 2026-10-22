@@ -1,0 +1,138 @@
+{
+  "manifest_version": 3,
+  "name": "网研ERP · 开源采集助手",
+  "version": "0.4.44",
+  "description": "手动采集1688和Ozon公开商品信息，保存到已登录的本机网研ERP；不含第三方私有接口。",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "scripting",
+    "downloads",
+    "sidePanel",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://seller.ozonru.cn/*",
+    "https://seller.ozon.ru/*",
+    "http://127.0.0.1:8765/*",
+    "http://localhost:8765/*"
+  ],
+  "optional_permissions": [
+    "cookies"
+  ],
+  "side_panel": {
+    "default_path": "sidebar.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "采集当前1688 / Ozon商品"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://detail.1688.com/offer/*",
+        "https://m.1688.com/offer/*",
+        "https://www.ozon.ru/*",
+        "https://ozon.ru/*",
+        "https://www.ozon.by/*",
+        "https://ozon.by/*",
+        "https://www.ozon.kz/*",
+        "https://ozon.kz/*"
+      ],
+      "js": [
+        "shared.js",
+        "analytics.js",
+        "collector.js",
+        "ozon-public.js",
+        "launcher.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://seller.ozonru.cn/app/analytics/graphs*",
+        "https://seller.ozon.ru/app/analytics/graphs*"
+      ],
+      "js": [
+        "shared.js",
+        "tianyan.js",
+        "seller-binding.js",
+        "launcher.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://seller.ozonru.cn/*",
+        "https://seller.ozon.ru/*"
+      ],
+      "js": [
+        "shared.js",
+        "seller-binding.js",
+        "launcher.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle",
+      "exclude_matches": [
+        "https://seller.ozonru.cn/app/analytics/graphs*",
+        "https://seller.ozon.ru/app/analytics/graphs*"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.ozon.ru/search*",
+        "https://ozon.ru/search*",
+        "https://www.ozon.ru/category/*",
+        "https://ozon.ru/category/*",
+        "https://www.ozon.ru/seller/*",
+        "https://ozon.ru/seller/*",
+        "https://www.ozon.by/search*",
+        "https://ozon.by/search*",
+        "https://www.ozon.by/category/*",
+        "https://ozon.by/category/*",
+        "https://www.ozon.by/seller/*",
+        "https://ozon.by/seller/*",
+        "https://www.ozon.kz/search*",
+        "https://ozon.kz/search*",
+        "https://www.ozon.kz/category/*",
+        "https://ozon.kz/category/*",
+        "https://www.ozon.kz/seller/*",
+        "https://ozon.kz/seller/*"
+      ],
+      "js": [
+        "shared.js",
+        "analytics.js",
+        "ozon-public.js",
+        "ozon-listing.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "inject.js"
+      ],
+      "matches": [
+        "https://seller.ozonru.cn/*",
+        "https://seller.ozon.ru/*"
+      ]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://*.alicdn.com https://*.alicdn1688.com https://*.1688img.com https://*.ozone.ru https://*.ozonusercontent.com; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+  }
+}

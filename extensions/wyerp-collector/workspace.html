@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>网研ERP · 商品采集助手</title>
+  <link rel="stylesheet" href="workspace.css">
+  <script src="shared.js" defer></script><script src="workspace.js" defer></script>
+</head>
+<body>
+  <header><div class="brand"><span class="brand-mark">W</span><div><strong>网研ERP</strong><span class="subtitle">商品采集助手 / 1688 · OZON</span></div></div><span class="version">0.1.42 内测</span></header>
+  <main>
+    <div class="intro"><div><p class="eyebrow">SOURCE COLLECTION</p><h1>先采集，再核对</h1><p>打开商品页，点击浏览器里的插件图标。可见规格与已加载素材将汇总到这里。</p></div><button id="export-all" disabled>导出本次全部 JSON</button></div>
+    <div class="notice">资料仅保存在当前页面内存，关闭或刷新即清空，30分钟未操作也会清空。尚未接入ERP数据库，请及时导出。不会操作订单、库存、上架或修改商品。</div>
+    <div id="status" role="status" aria-live="polite">等待采集</div>
+    <div class="layout">
+      <aside><div class="aside-title"><h2>本次采集</h2><span id="count">0 / 20</span></div><div id="records"></div><p class="hint">同一平台商品重复采集会替换本次快照；人工备注保留。最多保留20件。</p></aside>
+      <section id="empty" class="empty"><span class="empty-mark">＋</span><h2>从一个商品开始</h2><p>在1688详情页或Ozon商城商品页点击插件图标。<br>先展开参数、规格、详情，有助于采集完整。</p><p class="hint">Ozon卖家后台不属于本期范围。登录和验证码请自行完成。</p></section>
+      <article id="detail" hidden>
+        <div class="product-heading"><span id="platform" class="tag"></span><h2 id="title"></h2><a id="source" target="_blank" rel="noopener noreferrer">查看来源商品 ↗</a><p id="captured" class="hint"></p><p id="store-binding" class="hint"></p></div>
+        <div class="toolbar"><button id="export-one" class="primary">导出当前 JSON</button><button id="export-csv">导出汇总 CSV</button><button id="export-sku-csv">导出SKU CSV</button><button id="export-links">导出素材链接</button><button id="open-sidebar" hidden>Ozon侧栏</button><button id="remove">移出本次列表</button></div>
+        <div class="metrics" id="metrics"></div>
+        <details open class="warnings"><summary>完整性与待核实项</summary><ul id="warnings"></ul></details>
+        <section class="block"><h3>价格与起订量</h3><p class="hint">保留币种、原文和价格类型；不自动换汇，不将卡价、阶梯价或页面价当作所有SKU的结算价。</p><div class="table-wrap"><table><thead><tr><th>类型</th><th>价格原文</th><th>币种</th><th>可解析金额 / 范围</th><th>数量条件</th></tr></thead><tbody id="prices"></tbody></table></div><p id="minimum" class="hint"></p></section>
+        <section class="block"><h3>规格 / 关联商品</h3><p id="options" class="hint"></p><div class="table-wrap"><table><thead><tr><th>规格名称</th><th>SKU / 商品ID</th><th>单独价格</th><th>库存原文</th><th>来源</th></tr></thead><tbody id="variants"></tbody></table></div></section>
+        <section class="block"><h3>商品属性</h3><p id="supplier" class="hint"></p><div class="table-wrap"><table><thead><tr><th>属性</th><th>原始值</th></tr></thead><tbody id="attributes"></tbody></table></div></section>
+        <section class="block"><h3>单件快递费与SKU包装重量</h3><p id="shipping"></p><p class="hint">只记录每个SKU买1件的运费，不计算多件。“运费起”不是所有SKU的运费。重量按SKU对应，尺寸没采到就保持未知。人工值单独保存，不覆盖源页原文。</p><form id="review-form"><div class="form-grid"><label>收货城市（不填详细地址）<input id="city" maxlength="80" autocomplete="off" placeholder="沿用页面地区，可补充城市"></label><label>核对数量<input id="quantity" type="number" value="1" readonly></label><label>全商品展示运费备注（非SKU值）<input id="shipping-amount" inputmode="decimal" maxlength="20" placeholder="可留空，不套用到SKU"></label><label>运费币种<select id="shipping-currency"><option value="">未确认</option><option>CNY</option><option>RUB</option><option>BYN</option><option>KZT</option></select></label></div><div class="table-wrap"><table class="sku-review-table"><thead><tr><th>规格</th><th>源页运费原文</th><th>源页包装重量</th><th>人工单件运费 / 币种</th><th>人工包装重量 / g</th><th>人工尺寸 / mm</th></tr></thead><tbody id="sku-review"></tbody></table></div><label>核对说明<textarea id="notes" rows="2" maxlength="2000" placeholder="例如：单件规格运费与包装重量已核对；不要填写账号、密码、详细地址。"></textarea></label><button type="submit">应用到本次导出</button><span id="review-status" class="hint" role="status"></span></form></section>
+        <section class="block"><div class="block-heading"><h3>图片与视频</h3><div><button id="select-images">选择全部图片</button><button id="clear-selection">取消选择</button><button id="download-media">下载选中素材</button></div></div><p class="hint">仅下载白名单的公开HTTPS素材地址；不导出临时blob或带签名的地址。下载任务提交不等于已下载成功，请查看浏览器下载列表。请确认素材使用权。</p><div id="media" class="media-grid"></div></section>
+        <details class="block"><summary>详情文字 / 包装信息</summary><pre id="description"></pre><pre id="measurements"></pre></details>
+      </article>
+    </div>
+  </main>
+  <footer>网研ERP · 来源资料待核实 · 无Cookie权限 / 无远程脚本 / 无自动上传</footer>
+</body>
+</html>

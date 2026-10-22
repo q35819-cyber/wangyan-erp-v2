@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>网研ERP · Ozon侧栏</title>
+  <link rel="stylesheet" href="sidebar.css">
+  <script src="shared.js" defer></script>
+  <script src="analytics.js" defer></script>
+  <script src="sidebar.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand-lockup">
+      <span class="mark" aria-hidden="true">W</span>
+      <div>
+        <strong>Ozon 商品侧栏</strong>
+        <small>网研ERP · 0.1.42 内测</small>
+      </div>
+    </div>
+    <span class="secure-badge">页面直读</span>
+  </header>
+  <main>
+    <p id="status" role="status" aria-live="polite">请在Ozon商品页点击“侧栏”；无需先采集商品。</p>
+    <section id="product" hidden>
+      <section class="product-card">
+        <span class="tag">页面快照 · 非结算依据</span>
+        <h1 id="title"></h1>
+        <div class="product-links"><a id="source" target="_blank" rel="noopener noreferrer">查看来源商品 ↗</a><button id="export" type="button">导出侧栏 JSON</button></div>
+        <p id="captured" class="hint"></p>
+        <p id="store-binding" class="notice"></p>
+      </section>
+
+      <section class="panel-section">
+        <div class="section-heading"><div><span class="section-kicker">MARKET SNAPSHOT</span><h2>佣金与销售表现</h2></div><span class="section-number">01</span></div>
+        <p id="metric-source" class="notice"></p>
+        <p class="hint">下表参考值不自动填入利润计算。未获取不等于0；月、日指标不互相换算。</p>
+        <dl id="metrics"></dl>
+      </section>
+
+      <section class="panel-section">
+        <div class="section-heading"><div><span class="section-kicker">PROFIT ESTIMATE</span><h2>单件利润试算</h2></div><span class="section-number">02</span></div>
+        <p class="hint">全部按同一币种填写。请填写已核实的适用佣金，不从多个参考费率中自动取最低值。</p>
+        <form id="calculator" novalidate>
+          <label class="currency-field">统一币种<select id="currency"><option value="">请选择</option><option>CNY</option><option>RUB</option><option>BYN</option><option>KZT</option></select></label>
+          <div class="grid">
+            <label>售价<input id="sale" inputmode="decimal" maxlength="15" placeholder="必填"></label>
+            <label>采购成本<input id="purchase" inputmode="decimal" maxlength="15" placeholder="必填，未知不填0"></label>
+            <label>国内单件运费<input id="domestic" inputmode="decimal" maxlength="15" placeholder="必填"></label>
+            <label>国际单件物流费<input id="international" inputmode="decimal" maxlength="15" placeholder="必填"></label>
+            <label>佣金率 %<input id="commission" inputmode="decimal" maxlength="6" placeholder="适用费率"></label>
+            <label>广告费率 %<input id="advertising" inputmode="decimal" maxlength="6" placeholder="确认没有才填0"></label>
+            <label class="wide-field">其他单件成本<input id="other" inputmode="decimal" maxlength="15" placeholder="税费等自行计入"></label>
+          </div>
+          <button type="submit">计算单件利润</button>
+        </form>
+        <div id="calculation" role="status">尚未计算</div>
+        <p class="hint footnote">仅供选品试算，不提供自动换汇、官方物流报价或保证收益。修改任意输入后原结果立即失效。</p>
+      </section>
+    </section>
+    <footer>仅当前内存 · 30分钟未操作自动清空<br>不保存Cookie，不代替Ozon官方结算</footer>
+  </main>
+</body>
+</html>

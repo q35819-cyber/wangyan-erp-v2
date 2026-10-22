@@ -6,3 +6,5 @@ Windows 标准启动入口：在本目录运行 PowerShell start.ps1。
 
 原软件尚未独立验证为安全的公网生产版本，本次开源未提供浏览器采集插件和真实业务数据。
 请阅读仓库根目录 docs/DEPLOYMENT.md，不要启用已废止的订单自动同步机制。
+
+社区浏览器采集插件位于仓库根目录 extensions/wyerp-collector，安装方法见 docs/EXTENSION_INSTALL.md。
