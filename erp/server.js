@@ -312,8 +312,8 @@ const HOST = process.env.ERP_HOST || (IS_PRODUCTION ? '127.0.0.1' : '0.0.0.0');
 const PORT = Number(process.env.ERP_PORT || 8765);
 const STANDALONE_MODE = process.env.WYERP_STANDALONE_MODE === '1' &&
   ['127.0.0.1', '::1', 'localhost'].includes(HOST);
-const STANDALONE_UNAVAILABLE_ROUTES = /^\/api\/(?:membership(?:\/|$)|agent(?:\/|$)|system\/(?:contracts?|agents|membership|agent-activation|activation)(?:\/|$)|auth\/(?:email\/|register$|recovery\/|login\/verify$))/;
-const STANDALONE_HIDDEN_PAGES = /^(?:pages\/)?(?:membership(?:-admin)?|contract-terms|agent(?:-[^/]*)?|activation(?:-[^/]*)?)\.html$/;
+const STANDALONE_UNAVAILABLE_ROUTES = /^\/api\/(?:membership(?:\/|$)|agent(?:\/|$)|payment-evidence(?:\/|$)|system\/(?:contracts?|agents|membership|agent-activation|activation|ai-beans|payment-evidence)(?:\/|$)|auth\/(?:email\/|register$|recovery\/|login\/verify$|profile\/email\/))/;
+const STANDALONE_HIDDEN_PAGES = /^(?:pages\/)?(?:membership(?:-admin)?|ai-beans|contract-terms|agent(?:-[^/]*)?|activation(?:-[^/]*)?|accounts|user-monitor)\.html$/;
 const ERP_NODE_ROLE = nodeRole(process.env);
 const RUN_BACKGROUND_JOBS = runsBackgroundJobs(ERP_NODE_ROLE);
 if (ERP_NODE_ROLE === 'worker' && !['127.0.0.1', '::1', 'localhost'].includes(HOST)) {
@@ -2690,7 +2690,7 @@ async function serveStatic(req, res, pathname) {
       const ext = path.extname(p).toLowerCase();
       // Standalone UI changes are injected into HTML only on localhost.
       const body = STANDALONE_MODE && ext === '.html'
-        ? Buffer.from(data.toString('utf8').replace('</head>', '<script src="/assets/standalone-ui.js" defer></script></head>'), 'utf8')
+        ? Buffer.from(data.toString('utf8').replace('</head>', '<meta name="wyerp-edition" content="standalone"><script src="/assets/standalone-ui.js" defer></script></head>'), 'utf8')
         : data;
       res.writeHead(200, Object.assign(securityHeaders(ext === '.html' ? data : null), {
         'Content-Type': MIME[ext] || 'application/octet-stream',

@@ -26,7 +26,7 @@ class WyerpManager : Form {
      try{
        string installedRoot=AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
        string privateData=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"WyerpERP-Community");
-       if(qaUiManager)privateData=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa10-20261023\data";
+       if(qaUiManager)privateData=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa12-20261023\data";
        string control=Path.Combine(installedRoot,"installer","Control.ps1");
        if(File.Exists(control)&&File.Exists(Path.Combine(privateData,"install-settings.json"))){
          var startInfo=new ProcessStartInfo("powershell.exe"){
@@ -49,7 +49,7 @@ class WyerpManager : Form {
    root=AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
    data=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"WyerpERP-Community");
    if(qaUiManager){
-     string b=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa10-20261023";
+     string b=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa12-20261023";
      if(!root.Equals(Path.Combine(b,"program"),StringComparison.OrdinalIgnoreCase))throw new Exception("QA UI manager must run from verified isolated instance");
      data=Path.Combine(b,"data");
    }

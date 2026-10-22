@@ -12,7 +12,7 @@ $deps=[IO.Path]::GetFullPath($DependenciesPath)
 $pg=[IO.Path]::GetFullPath($PostgresRoot)
 $node=[IO.Path]::GetFullPath($NodeExecutable)
 $dest=[IO.Path]::GetFullPath($OutputDir)
-$releaseName='WyerpERP-Community-Setup-v0.1.0-preview18.exe'
+$releaseName='WyerpERP-Community-Setup-v0.1.0-preview20.exe'
 $csc=Join-Path $env:windir 'Microsoft.NET\Framework64/v4.0.30319/csc.exe'
 if(!(Test-Path -LiteralPath $csc)){throw 'Windows .NET Framework C#编译器不可用'}
 & $csc '/nologo' '/target:winexe' ('/out:'+(Join-Path $PSScriptRoot 'WyerpERP-Manager.exe')) ('/win32manifest:'+(Join-Path $PSScriptRoot 'manager.manifest')) '/r:System.Windows.Forms.dll' '/r:System.Drawing.dll' (Join-Path $PSScriptRoot 'WyerpManager.cs')

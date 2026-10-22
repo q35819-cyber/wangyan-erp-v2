@@ -8,6 +8,9 @@
   }
   function simplify() {
     var isLogin = /\/login\.html$/.test(location.pathname);
+    // The workspace uses direct onclick bindings, not <a href>, for these SaaS controls.
+    hide(document.getElementById('headerMemberBtn'));
+    hide(document.getElementById('headerBeanBtn'));
     if (isLogin) {
       hide(document.getElementById('emailSuffixHelper'));
       hide(document.getElementById('switchMode'));
@@ -26,11 +29,16 @@
       var hint = document.getElementById('formHint');
       if (hint) hint.textContent = '单机版不需要邮箱、注册、会员或合同。请使用安装时创建的管理员密码和图形验证码登录。';
     }
-    var excluded = /(?:membership|contract-terms|agent-|agent\/|activation|referral|invite|email\/send|register)/i;
+    var excluded = /(?:membership|ai-beans|contract-terms|agent-|agent\/|activation|referral|invite|email\/send|register|\/accounts\.html|user-monitor)/i;
     document.querySelectorAll('a[href], button[data-href], [data-page], [data-route]').forEach(function (node) {
       var destination = node.getAttribute('href') || node.getAttribute('data-href') ||
         node.getAttribute('data-page') || node.getAttribute('data-route') || '';
       if (excluded.test(destination)) hide(node.closest('li') || node);
+    });
+    // Hide now-empty recharge/SaaS sidebar groups, not just their links.
+    document.querySelectorAll('.menu-group').forEach(function (group) {
+      var links = Array.prototype.slice.call(group.querySelectorAll('a.menu-item'));
+      if (links.length && links.every(function (link) { return link.dataset.standaloneHidden === '1'; })) hide(group);
     });
   }
   fetch('/api/local/standalone-mode', {credentials: 'same-origin', cache: 'no-store'})

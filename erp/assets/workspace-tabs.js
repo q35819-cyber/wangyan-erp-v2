@@ -357,7 +357,7 @@
   }
 
   function loadMembershipLabel() {
-    if (!memberBtn) return;
+    if (!memberBtn || document.querySelector('meta[name="wyerp-edition"][content="standalone"]')) return;
     fetch('/api/membership/current', { credentials: 'same-origin', headers: { Accept: 'application/json' } }).then(function (response) {
       if (!response.ok) throw new Error(String(response.status));
       return response.json();
@@ -398,8 +398,8 @@
       if (event.target.closest('[data-close]')) close(key);
       else activate(key, true);
     });
-    if (memberBtn) memberBtn.addEventListener('click', function () { open('/pages/membership.html', '会员中心'); });
-    if (beanBtn) beanBtn.addEventListener('click', function () { open('/pages/ai-beans.html', 'AI豆管理'); });
+    if (memberBtn && !document.querySelector('meta[name="wyerp-edition"][content="standalone"]')) memberBtn.addEventListener('click', function () { open('/pages/membership.html', '会员中心'); });
+    if (beanBtn && !document.querySelector('meta[name="wyerp-edition"][content="standalone"]')) beanBtn.addEventListener('click', function () { open('/pages/ai-beans.html', 'AI豆管理'); });
     if (navEl) navEl.addEventListener('click', function (event) {
       var link = event.target.closest('a.menu-item');
       if (!link || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
