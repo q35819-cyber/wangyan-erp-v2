@@ -56,3 +56,5 @@ Windows EXE单机版预览：安装层源码及隔离验收详情请阅读instal
 2026-10-22预览7已完成GUI安装/管理器真实按钮启动重启关闭/GUI卸载及保留数据的独立QA；预览8仅修改启动器API/Worker就绪检查，已由QA3实测readiness通过、并核对新EXE资源与SHA256，未重复进行完整GUI首次安装测试。正式新机安装、采集插件入库、旧数据重装恢复、退出进行中业务任务的一致性仍待测试。安装、构建及换AI操作详见 installer/README.md。
 
 preview13全量隔离回归：Windows GUI安装/启动/重启/退出/卸载/原数据恢复已PASS，密钥和数据库保持不变，内部端口冲突阻断已PASS。真实1688/Ozon采集入库、正式Windows全新机及在途订单任务无损退出仍未PASS；详见 installer/README.md 和D盘隔离测试报告。
+
+2026-10-23单机版规则：安装器内installer/WyerpService.cs是真正的Windows服务进程入口，Run-Server.ps1不是当前实际启动路径；切勿仅修改Run-Server.ps1就声称修复。单机版环境变量WYERP_STANDALONE_MODE=1并限127.0.0.1，关闭管理器窗口不得Stop Windows服务，禁止自动订单同步及无效总览自动刷新；单机隐藏并阻断注册/邮箱/会员/代理/合同入口。相关实测见installer/README.md。

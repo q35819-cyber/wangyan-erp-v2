@@ -10,10 +10,10 @@ using System.Windows.Forms;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 class WyerpSetup : Form {
- static readonly string Version="0.1.0-preview13";
+ static readonly string Version="0.1.0-preview18";
  static bool qaGuiInstall=false;
  static int qaGuiExitCode=3;
- static readonly string qaBase=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa6-20261023";
+ static readonly string qaBase=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa10-20261023";
  Label details,status;
  Button install,open;
  ProgressBar progress;
@@ -97,7 +97,7 @@ class WyerpSetup : Form {
        string init=Path.Combine(root,"installer",restoring?"Recover-Existing.ps1":"Initialize.ps1");
        if(!File.Exists(init))throw new Exception("缺少数据库初始化脚本");
        var psi=new ProcessStartInfo("powershell.exe") {UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true};
-       psi.Arguments="-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \""+init+"\" -InstallRoot \""+root+"\" -DataRoot \""+data+"\""+(!restoring && qaGuiInstall?" -ServiceName WyerpCommunityPGUIQA6 -AppPort 18776 -PgPort 55451":"");
+       psi.Arguments="-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \""+init+"\" -InstallRoot \""+root+"\" -DataRoot \""+data+"\""+(!restoring && qaGuiInstall?" -ServiceName WyerpCommunityPGUIQA10 -AppPort 18780 -PgPort 55455":"");
        using(var ps=Process.Start(psi)){
          var readOut=ps.StandardOutput.ReadToEndAsync();
          var readErr=ps.StandardError.ReadToEndAsync();
@@ -123,7 +123,7 @@ class WyerpSetup : Form {
          using(var key=Microsoft.Win32.Registry.LocalMachine.CreateSubKey(regPath)){
            if(key==null)throw new Exception("无法注册Windows程序卸载入口");
            key.SetValue("DisplayName","网研 ERP 社区单机版");
-           key.SetValue("DisplayVersion","0.1.0-preview13");
+           key.SetValue("DisplayVersion","0.1.0-preview18");
            key.SetValue("Publisher","Wyerp Community");
            key.SetValue("InstallLocation",root);
            key.SetValue("UninstallString","\""+durableUninstall+"\"");

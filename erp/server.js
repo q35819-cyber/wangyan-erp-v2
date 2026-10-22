@@ -310,6 +310,10 @@ const CONTRACT_SETTINGS_FILE = path.join(DATA_DIR, 'system-contract-settings.jso
 const CONTRACT_FILES = new Map();
 const HOST = process.env.ERP_HOST || (IS_PRODUCTION ? '127.0.0.1' : '0.0.0.0');
 const PORT = Number(process.env.ERP_PORT || 8765);
+const STANDALONE_MODE = process.env.WYERP_STANDALONE_MODE === '1' &&
+  ['127.0.0.1', '::1', 'localhost'].includes(HOST);
+const STANDALONE_UNAVAILABLE_ROUTES = /^\/api\/(?:membership(?:\/|$)|agent(?:\/|$)|system\/(?:contracts?|agents|membership|agent-activation|activation)(?:\/|$)|auth\/(?:email\/|register$|recovery\/|login\/verify$))/;
+const STANDALONE_HIDDEN_PAGES = /^(?:pages\/)?(?:membership(?:-admin)?|contract-terms|agent(?:-[^/]*)?|activation(?:-[^/]*)?)\.html$/;
 const ERP_NODE_ROLE = nodeRole(process.env);
 const RUN_BACKGROUND_JOBS = runsBackgroundJobs(ERP_NODE_ROLE);
 if (ERP_NODE_ROLE === 'worker' && !['127.0.0.1', '::1', 'localhost'].includes(HOST)) {
@@ -2619,6 +2623,9 @@ async function serveStatic(req, res, pathname) {
   catch (e) { sendJson(res, 400, { error: 'bad path', message: '请求地址不正确，请从页面内的正常入口重新操作。' }); return; }
   let rel = path.normalize(decoded).replace(/^[/\\]+/, '');
   if (!rel || rel === '.') rel = 'index.html';
+  if (STANDALONE_MODE && STANDALONE_HIDDEN_PAGES.test(rel.replace(/\\/g, '/'))) {
+    return sendJson(res, 404, { error: 'standalone_feature_disabled', message: '单机版不提供会员、代理或合同服务。' });
+  }
   const segments = rel.split(/[\\/]+/).filter(Boolean);
   const first = segments[0] || '';
   const allowed = segments.length === 1 ? STATIC_ROOT_FILES.has(first) : STATIC_ROOT_DIRS.has(first);
@@ -2681,12 +2688,16 @@ async function serveStatic(req, res, pathname) {
     fs.readFile(p, (err2, data) => {
       if (err2) { sendJson(res, 404, { error: 'not found', message: '未找到请求的内容，请刷新页面后重试。' }); return; }
       const ext = path.extname(p).toLowerCase();
+      // Standalone UI changes are injected into HTML only on localhost.
+      const body = STANDALONE_MODE && ext === '.html'
+        ? Buffer.from(data.toString('utf8').replace('</head>', '<script src="/assets/standalone-ui.js" defer></script></head>'), 'utf8')
+        : data;
       res.writeHead(200, Object.assign(securityHeaders(ext === '.html' ? data : null), {
         'Content-Type': MIME[ext] || 'application/octet-stream',
-        'Content-Length': data.length,
+        'Content-Length': body.length,
         'Cache-Control': 'no-cache'
       }));
-      res.end(data);
+      res.end(body);
     });
   });
 }
@@ -2731,6 +2742,15 @@ function maybeAutoSyncOverview() {
   });
 }
 async function handleApi(req, res, pathname) {
+  if (pathname === '/api/local/standalone-mode' && req.method === 'GET') {
+    return sendJson(res, 200, { standalone: STANDALONE_MODE, email: !STANDALONE_MODE,
+      membership: !STANDALONE_MODE, agents: !STANDALONE_MODE, contracts: !STANDALONE_MODE },
+      { 'Cache-Control': 'no-store' });
+  }
+  if (STANDALONE_MODE && STANDALONE_UNAVAILABLE_ROUTES.test(pathname)) {
+    return sendJson(res, 404, { error: 'standalone_feature_disabled',
+      message: '单机版不提供此项在线会员、代理、合同或邮箱服务。' });
+  }
   if (pathname === '/api/system/frontend-version' && req.method === 'GET') {
     const account = await authenticate(req);
     if (!account) return sendJson(res, 401, { error: 'unauthorized', message: '登录状态已失效或未登录，请重新登录后再试。' }, { 'Cache-Control': 'no-store' });
@@ -8041,8 +8061,11 @@ reportPrivateObjectStore();
       refreshGlobalCnyRubRate();
       setInterval(refreshGlobalCnyRubRate, 5 * 60 * 1000).unref();
       console.log('全部自动订单处理已暂停；订单页手动同步入口继续可用。');
-      maybeAutoSyncOverview();
-      setInterval(maybeAutoSyncOverview, 6 * 60 * 60 * 1000).unref();
+      // Standalone mode never runs the SaaS overview auto refresh.
+      if (!STANDALONE_MODE) {
+        maybeAutoSyncOverview();
+        setInterval(maybeAutoSyncOverview, 6 * 60 * 60 * 1000).unref();
+      }
       if (process.env.NODE_ENV !== 'test' || process.env.ERP_API_MONITOR_AUTOSTART === '1') {
         setTimeout(() => apiMonitor.tick().catch(error => console.error('接口监控启动检测失败:', error.message)), 10000).unref();
         setInterval(() => apiMonitor.tick().catch(error => console.error('接口监控定时检测失败:', error.message)), 60 * 1000).unref();

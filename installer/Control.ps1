@@ -61,10 +61,28 @@ function Stop-Own {
  if($pg.Status -eq 'Running'){Stop-Service -Name $pgName -ErrorAction Stop}
  Write-Output 'PASS 已停止本ERP和本机专属PostgreSQL，用户数据及密钥保留'
 }
+function Restart-Own {
+ $app=Get-Service -Name $appName -ErrorAction Stop
+ if($app.Status -eq 'Running'){
+  Stop-Service -Name $appName -ErrorAction Stop
+  $basePort=[int]$settings.ClusterBasePort
+  if($basePort -lt 1024 -or $basePort -gt 65530){throw '内部集群端口配置无效'}
+  $ports=@($appPort,$basePort,($basePort+1),($basePort+2))
+  $clear=$false
+  for($i=0;$i -lt 80;$i++){
+   $occupied=@(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue|Where-Object{$_.LocalPort -in $ports})
+   if(!$occupied.Count){$clear=$true;break}
+   Start-Sleep -Milliseconds 250
+  }
+  if(!$clear){throw '旧ERP后台端口仍被占用，拒绝重复启动。请查看本实例服务日志'}
+ }
+ # PostgreSQL正在工作时不重启它，以减少不必要的数据库停启。
+ Start-Own
+}
 switch($Action){
  'Start' {Start-Own}
  'Stop' {Stop-Own}
- 'Restart' {Stop-Own;Start-Own}
+ 'Restart' {Restart-Own}
  'Open' {Start-Own;Start-Process ('http://127.0.0.1:'+$appPort)}
  'Plugin' {
   & (Join-Path $root 'tools/Install-Collector.ps1') -PluginDir (Join-Path $root 'collector/wyerp-collector')

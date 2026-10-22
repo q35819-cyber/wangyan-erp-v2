@@ -26,7 +26,7 @@ class WyerpManager : Form {
      try{
        string installedRoot=AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
        string privateData=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"WyerpERP-Community");
-       if(qaUiManager)privateData=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa7-20261023\data";
+       if(qaUiManager)privateData=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa10-20261023\data";
        string control=Path.Combine(installedRoot,"installer","Control.ps1");
        if(File.Exists(control)&&File.Exists(Path.Combine(privateData,"install-settings.json"))){
          var startInfo=new ProcessStartInfo("powershell.exe"){
@@ -49,7 +49,7 @@ class WyerpManager : Form {
    root=AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
    data=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"WyerpERP-Community");
    if(qaUiManager){
-     string b=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa7-20261023";
+     string b=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa10-20261023";
      if(!root.Equals(Path.Combine(b,"program"),StringComparison.OrdinalIgnoreCase))throw new Exception("QA UI manager must run from verified isolated instance");
      data=Path.Combine(b,"data");
    }
@@ -68,7 +68,7 @@ class WyerpManager : Form {
    open=MakeButton("打开 ERP 网页",30,204,222,43,(s,e)=>RunAction("Open",false));
    plugin=MakeButton("安装浏览器插件",270,204,222,43,(s,e)=>RunAction("Plugin",false));
    password=MakeButton("查看初始管理员密码",30,264,462,43,(s,e)=>OpenPassword());
-   var hint=new Label{Text="关闭管理器时会先结束本实例后台。请先保存网页中的操作。",Bounds=new Rectangle(30,324,465,27),ForeColor=Color.FromArgb(95,104,120)};
+   var hint=new Label{Text="关闭这个窗口不会关闭ERP，后台会继续运行；仅“关闭后台服务”会停止。",Bounds=new Rectangle(30,324,465,27),ForeColor=Color.FromArgb(95,104,120)};
    Controls.Add(hint);
    Shown+=(s,e)=>{if(qaUiManager)RunAction("Status",true);else RunAction("Start",false);};
    FormClosing+=ClosingManager;
@@ -132,18 +132,8 @@ class WyerpManager : Form {
    });
  }
  void ClosingManager(object sender,FormClosingEventArgs e){
-   if(busy){e.Cancel=true;MessageBox.Show("后台操作还未结束，请完成后再退出。");return;}
-   if(!ConfirmStop()){e.Cancel=true;return;}
-   try{
-     string script=Path.Combine(root,"installer","Control.ps1");
-     if(File.Exists(script)&&File.Exists(Path.Combine(data,"install-settings.json"))){
-       using(var p=Process.Start(new ProcessStartInfo("powershell.exe"){
-         Arguments="-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \""+script+"\" -Action Stop -InstallRoot \""+root+"\" -DataRoot \""+data+"\"",
-         UseShellExecute=false,CreateNoWindow=true
-       })){
-         if(!p.WaitForExit(25000)||p.ExitCode!=0){e.Cancel=true;MessageBox.Show("后台尚未安全停止，请点击「关闭后台服务」检查后再退出。");}
-       }
-     }
-   }catch(Exception ex){e.Cancel=true;MessageBox.Show(ex.Message);}
+   // Window lifetime and Windows service lifetime are independent.
+   // Only the explicit "关闭后台服务" button is allowed to stop the backend.
+   // Closing or crashing the manager must NEVER call Control.ps1 Stop.
  }
 }

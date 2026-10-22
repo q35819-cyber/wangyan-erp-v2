@@ -38,9 +38,9 @@ class WyerpERPService : ServiceBase {
     string node=Path.Combine(root,"runtime","node","node.exe");
     string config=Path.Combine(data,"secrets","wyerp.env");
     string supervisor=Path.Combine(root,"erp","auth","runtime-supervisor.js");
-    string cluster=Path.Combine(root,"erp","cluster.js");
+    string singleServer=Path.Combine(root,"erp","server.js");
     var start=new ProcessStartInfo(node){
-     Arguments="--env-file-if-exists=\""+config+"\" \""+supervisor+"\" \""+cluster+"\"",
+     Arguments="--env-file-if-exists=\""+config+"\" \""+supervisor+"\" \""+singleServer+"\"",
      UseShellExecute=false,CreateNoWindow=true,RedirectStandardInput=true,RedirectStandardOutput=true,RedirectStandardError=true,WorkingDirectory=Path.Combine(root,"erp")
     };
     start.EnvironmentVariables["WYERP_LOCAL_DATA_ROOT"]=data;
@@ -51,7 +51,10 @@ class WyerpERPService : ServiceBase {
     start.EnvironmentVariables["ERP_PRIVATE_OBJECT_DIR"]=Path.Combine(data,"private-objects");
     start.EnvironmentVariables["ERP_LOGISTICS_TARIFF_DIR"]=Path.Combine(data,"logistics");
     start.EnvironmentVariables["ERP_BACKUP_DIR"]=Path.Combine(data,"backups");
-    start.EnvironmentVariables["ERP_CLUSTER_ENABLED"]="1";
+    start.EnvironmentVariables["ERP_CLUSTER_ENABLED"]="0";
+    start.EnvironmentVariables["ERP_NODE_ROLE"]="all";
+    start.EnvironmentVariables["WYERP_STANDALONE_MODE"]="1";
+    start.EnvironmentVariables["ERP_HOST"]="127.0.0.1";
     Process current=Process.Start(start);
     if(current==null)throw new Exception("ERP process failed to start");
     current.OutputDataReceived+=(s,e)=>{if(e.Data!=null)AppendAppLog(e.Data);};
