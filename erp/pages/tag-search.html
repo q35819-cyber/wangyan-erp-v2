@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>标签查询 - 网研ERP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .lookup-card { min-height: 430px; padding: 62px 28px; text-align: center; }
+  .lookup-title { margin: 0 0 26px; color: var(--text); font-size: 23px; font-weight: 600; }
+  .lookup-form { display: flex; justify-content: center; gap: 10px; max-width: 590px; margin: 0 auto; }
+  .lookup-form .input { width: min(430px, 72vw); height: 36px; }
+  .lookup-form .btn { min-width: 78px; }
+  .lookup-empty { padding-top: 64px; color: var(--text-faint); font-size: 13px; }
+  .lookup-illustration { position: relative; width: 110px; height: 78px; margin: 0 auto 18px; }
+  .lookup-illustration::before { content: ""; position: absolute; left: 20px; top: 8px; width: 66px; height: 54px; border: 2px solid var(--line); border-radius: 8px; transform: rotate(-4deg); background: var(--surface); }
+  .lookup-illustration::after { content: "⌕"; position: absolute; right: 2px; bottom: 0; width: 34px; height: 34px; line-height: 31px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 25px; }
+  .result { max-width: 720px; margin: 44px auto 0; text-align: left; border: 1px solid var(--line); border-radius: 8px; padding: 18px; background: var(--surface); }
+  .product { display: flex; gap: 14px; align-items: flex-start; }
+  .product-image { width: 68px; height: 68px; border-radius: 6px; object-fit: cover; background: var(--card); border: 1px solid var(--line); }
+  .product-name { color: var(--text); font-weight: 600; margin-bottom: 7px; }
+  .product-meta { color: var(--muted); font-size: 12px; line-height: 1.8; }
+  .tag-list { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .tag { display: inline-block; margin: 0 7px 7px 0; padding: 4px 10px; border-radius: 4px; background: var(--primary-light); color: var(--primary); font-size: 12px; }
+  .result-message { text-align: center; color: var(--muted); }
+  @media (max-width: 640px) { .lookup-card { padding: 38px 15px; } .lookup-form { align-items: stretch; } }
+</style>
+<link rel="stylesheet" href="../assets/ui.css">
+<script src="../assets/theme-restore.js"></script>
+</head>
+<body>
+  <div class="sidebar"><div class="logo">网研<span>ERP</span></div><nav class="menu"></nav></div>
+  <div class="main-content">
+    <div class="header">
+      <div class="header-left"><strong>标签查询</strong><span class="breadcrumb">网研ERP <span>/</span> 选品 <span>/</span> 标签查询</span></div>
+      <div class="header-right"><span class="user-name">管理员</span><button class="icon-btn">🔔</button><span class="avatar">管</span></div>
+    </div>
+    <div class="content ui-page">
+      <div class="card lookup-card">
+        <h1 class="lookup-title">Ozon 商品标签查询</h1>
+        <form class="lookup-form" id="lookupForm">
+          <input class="input" id="skuInput" aria-label="商品 SKU" autocomplete="off" placeholder="请输入商品 SKU">
+          <button class="btn btn-primary" type="submit">查询</button>
+        </form>
+        <div id="lookupOutput" class="lookup-empty">
+          <div class="lookup-illustration" aria-hidden="true"></div>
+          <div>输入 SKU 查询当前租户已同步商品的标签</div>
+        </div>
+      </div>
+    </div>
+  </div>
+<script src="../assets/brand.js"></script>
+<script src="../assets/storage.js"></script>
+<script src="../assets/selection-analysis.js"></script>
+<script src="../assets/sku-mask.js"></script>
+<script src="../assets/ozon-product-link.js?v=20261005-ozonlink01"></script>
+<script src="../assets/sidebar.js"></script>
+<script>
+(function () {
+  'use strict';
+  var output = document.getElementById('lookupOutput');
+  var input = document.getElementById('skuInput');
+  var analysis = window.WYERP_SELECTION_ANALYSIS;
+
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char];
+    });
+  }
+
+  function imageOf(product) {
+    return product.image || product.primaryImage || product.imageUrl || '';
+  }
+
+  function categoryOf(product) {
+    return product.category || product.cat3 || product.cat2 || product.cat1 || product.categoryName || '--';
+  }
+
+  function render(product, sku) {
+    output.className = product ? 'result' : 'lookup-empty';
+    if (!product) {
+      output.innerHTML = '<div class="lookup-illustration" aria-hidden="true"></div><div>当前租户在线商品中未找到 SKU：' + esc(window.WYERP_SKU_MASK.mask(sku)) + '</div>';
+      return;
+    }
+    var image = imageOf(product);
+    var tags = analysis.tagsOf(product);
+    output.innerHTML =
+      '<div class="product">' +
+        (image ? '<img class="product-image" src="' + esc(image) + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="product-image"></div>') +
+        '<div>' + window.WYERP_OZON_PRODUCT_LINK.titleHtml(product, product.name || product.title || '未命名商品', { className: 'product-name product-title-clamp-2 ozon-product-title-link' }) +
+        '<div class="product-meta">SKU：' + esc(window.WYERP_SKU_MASK.mask(analysis.skuOf(product))) + '<br>类目：' + esc(categoryOf(product)) + '<br>状态：' + esc(product.status || product.state || '--') + '</div></div>' +
+      '</div>' +
+      '<div class="tag-list">' +
+        (tags.length ? tags.map(function (tag) { return '<span class="tag">' + esc(tag) + '</span>'; }).join('') : '<div class="result-message">当前商品暂无标签数据</div>') +
+      '</div>';
+  }
+
+  document.getElementById('lookupForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    var sku = input.value.trim();
+    if (!sku) {
+      output.className = 'lookup-empty';
+      output.innerHTML = '<div class="lookup-illustration" aria-hidden="true"></div><div>请输入商品 SKU</div>';
+      input.focus();
+      return;
+    }
+    render(analysis.findBySku(erpStorage.get('erp_online_products'), sku), sku);
+  });
+
+  erpStorage.init(['erp_online_products']).then(function () { input.focus(); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI豆管理 - 网研ERP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/ui.css">
+<script src="../assets/theme-restore.js"></script>
+<style>
+.beans-page{display:flex;flex-direction:column;gap:24px;padding-bottom:48px}
+.beans-user-card{padding:15px 24px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.beans-user-field{display:flex;gap:7px;align-items:center;min-width:0;font-size:13px}
+.beans-user-field .field-label{color:var(--text-secondary,#6b7280);white-space:nowrap}
+.beans-user-field .field-value{color:var(--text-primary,#1f2937);overflow-wrap:anywhere}
+.beans-user-card .beans-user-title{font-size:14px;font-weight:600;flex-basis:100%;margin:0}
+.beans-balance-card{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;padding:28px 32px}
+.beans-stat{display:flex;flex-direction:column;gap:6px}
+.beans-stat-label{font-size:13px;color:var(--text-secondary,#6b7280)}
+.beans-stat-value{font-size:28px;font-weight:700;color:var(--text-primary,#1f2937);letter-spacing:-.02em}
+.beans-stat-value.beans-accent{color:var(--brand-gold,#c9a227)}
+.beans-stat-sub{font-size:12px;color:var(--text-tertiary,#9ca3af)}
+.beans-channel-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500}
+.beans-channel-badge.available{background:rgba(34,197,94,.12);color:#16a34a}
+.beans-channel-badge.unavailable{background:rgba(239,68,68,.10);color:#dc2626}
+.beans-section{display:flex;flex-direction:column;gap:12px}
+.beans-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.beans-section-head h2{font-size:16px;font-weight:600;color:var(--text-primary,#1f2937);margin:0}
+.beans-section-head p{font-size:13px;color:var(--text-secondary,#6b7280);margin:0}
+.beans-filter{display:flex;align-items:center;gap:8px}.beans-filter label{font-size:12px;color:var(--text-secondary,#6b7280)}.beans-filter select{height:34px;padding:0 10px;border:1px solid var(--border-primary,#d1d5db);border-radius:8px;background:var(--bg-card,#fff);color:var(--text-primary,#1f2937);font:inherit}
+.beans-table-wrap{border:1px solid var(--border-primary,#e5e7eb);border-radius:12px;overflow:hidden;background:var(--bg-card,#fff)}
+.beans-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px}
+.beans-table th:nth-child(1){width:116px}.beans-table th:nth-child(2){width:300px}.beans-table th:nth-child(3){width:120px}.beans-table th:nth-child(4){width:92px}.beans-table th:nth-child(5){width:64px}.beans-table th:nth-child(6),.beans-table th:nth-child(7),.beans-table th:nth-child(8){width:76px}
+.beans-table thead th{padding:10px 16px;text-align:left;font-weight:600;font-size:12px;color:var(--text-secondary,#6b7280);background:var(--bg-secondary,#f9fafb);border-bottom:1px solid var(--border-primary,#e5e7eb);white-space:nowrap}
+.beans-table tbody td{padding:10px 16px;border-bottom:1px solid var(--border-light,#f3f4f6);color:var(--text-primary,#1f2937);vertical-align:middle}
+.beans-table tbody tr:last-child td{border-bottom:none}
+.beans-table tbody tr:hover{background:var(--bg-hover,#f9fafb)}
+.beans-empty{padding:32px 16px;text-align:center;color:var(--text-secondary,#6b7280);font-size:13px}
+.beans-direction{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:500}
+.beans-direction.credit{background:rgba(34,197,94,.10);color:#16a34a}
+.beans-direction.debit{background:rgba(239,68,68,.10);color:#dc2626}
+.beans-event-type{font-size:12px;color:var(--text-secondary,#6b7280)}
+.beans-order-no{min-width:0;white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.35;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;color:var(--text-secondary,#6b7280)}
+.beans-reason{min-width:0;overflow-wrap:anywhere;white-space:normal;line-height:1.35}.beans-actor{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.beans-date-cell .date-line,.beans-date-cell .time-line{display:block;white-space:nowrap;line-height:1.25}.beans-date-cell .time-line{margin-top:2px;color:var(--text-secondary,#6b7280);font-size:12px}
+.beans-admin-section{display:flex;flex-direction:column;gap:16px;padding:20px 24px;border:1px solid var(--border-primary,#e5e7eb);border-radius:12px;background:var(--bg-card,#fff)}
+#beansTenantOverview[hidden]{display:none}
+.beans-admin-title{font-size:15px;font-weight:600;color:var(--text-primary,#1f2937);margin:0}
+.beans-admin-form{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.beans-admin-form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-secondary,#6b7280);font-weight:500}
+.beans-admin-form input,.beans-admin-form textarea,.beans-admin-form select{padding:8px 12px;border:1px solid var(--border-primary,#d1d5db);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text-primary,#1f2937);background:var(--bg-card,#fff)}
+.beans-admin-form input:focus,.beans-admin-form textarea:focus,.beans-admin-form select:focus{border-color:var(--brand-gold,#c9a227);outline:none;box-shadow:0 0 0 2px rgba(201,162,39,.15)}
+.beans-admin-form textarea{min-width:240px;min-height:36px;resize:vertical}
+.beans-admin-form .beans-form-actions{display:flex;gap:8px;align-items:flex-end}
+.beans-btn{padding:8px 20px;border-radius:8px;border:1px solid var(--border-primary,#d1d5db);background:var(--bg-card,#fff);color:var(--text-primary,#1f2937);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .15s ease}
+.beans-btn:hover{border-color:var(--brand-gold,#c9a227);color:var(--brand-gold,#c9a227)}
+.beans-btn:disabled{opacity:.5;cursor:not-allowed}
+.beans-btn-primary{background:var(--brand-gold,#c9a227);color:#fff;border-color:var(--brand-gold,#c9a227)}
+.beans-btn-primary:hover{background:#b8911f;color:#fff}
+.beans-status{font-size:13px;padding:8px 0;min-height:28px}
+.beans-status.error{color:#dc2626}
+.beans-status.success{color:#16a34a}
+.beans-status.loading{color:var(--text-secondary,#6b7280)}
+.beans-pager{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 0}
+.beans-pager button{height:30px;padding:0 14px;border-radius:6px;border:1px solid var(--border-primary,#d1d5db);background:var(--bg-card,#fff);color:var(--text-primary,#1f2937);font-size:12px;cursor:pointer;font-family:inherit}
+.beans-pager button:disabled{opacity:.4;cursor:not-allowed}
+.beans-pager button:hover:not(:disabled){border-color:var(--brand-gold,#c9a227);color:var(--brand-gold,#c9a227)}
+.beans-tenant-select{display:flex;align-items:center;gap:8px}
+.beans-tenant-select label{font-size:12px;color:var(--text-secondary,#6b7280);font-weight:500}
+.beans-tenant-select select{padding:6px 10px;border:1px solid var(--border-primary,#d1d5db);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text-primary,#1f2937);background:var(--bg-card,#fff)}
+</style>
+</head>
+<body>
+<aside class="sidebar"><div class="logo">网研<span>ERP</span></div><nav class="menu"></nav></aside>
+<div class="main-content">
+  <header class="header"><div class="header-left"><strong>AI豆管理</strong><span class="breadcrumb">网研ERP <span>/</span> AI豆管理</span></div><div class="header-right"><span class="user-name">管理员</span><button class="icon-btn" type="button">🔔</button><span class="avatar">管</span></div></header>
+  <main class="content ui-page beans-page">
+
+    <section class="card beans-admin-section" id="beansTenantOverview" hidden>
+      <div class="beans-section-head"><h2 class="beans-admin-title">租户 AI 豆账户总览</h2><button type="button" class="beans-btn" id="beansTenantRefresh">刷新全部租户</button></div>
+      <p class="beans-stat-sub">点击租户查看余额、冻结金额和下方历史流水；所有金额以服务器数据为准。</p>
+      <div class="beans-table-wrap"><table class="beans-table" style="table-layout:auto"><thead><tr><th>租户</th><th>主账号</th><th>租户状态</th><th>可用余额（AI豆）</th><th>冻结（AI豆）</th><th>钱包更新</th><th>操作</th></tr></thead><tbody id="beansTenantRows"><tr><td colspan="7">读取中…</td></tr></tbody></table></div>
+      <p class="beans-stat-sub" id="beansTenantSummary">—</p>
+    </section>
+
+    <section class="card beans-balance-card" aria-labelledby="beansBalanceTitle">
+      <div class="beans-stat">
+        <span class="beans-stat-label" id="beansBalanceTitle">可用余额</span>
+        <span class="beans-stat-value beans-accent" id="beansBalanceValue">--</span>
+        <span class="beans-stat-sub">AI豆</span>
+      </div>
+      <div class="beans-stat">
+        <span class="beans-stat-label">冻结中</span>
+        <span class="beans-stat-value" id="beansFrozenValue">--</span>
+        <span class="beans-stat-sub">处理中任务占用</span>
+      </div>
+      <div class="beans-stat">
+        <span class="beans-stat-label">图片单价</span>
+        <span class="beans-stat-value" id="beansCostValue">--</span>
+        <span class="beans-stat-sub">AI豆/张</span>
+      </div>
+      <div class="beans-stat">
+        <span class="beans-stat-label">官方AI通道</span>
+        <span class="beans-channel-badge unavailable" id="beansChannelBadge">检测中</span>
+        <span class="beans-stat-sub" id="beansChannelSub">正在检查…</span>
+      </div>
+    </section>
+
+    <section class="beans-section" aria-labelledby="beansEventsTitle">
+      <div class="beans-section-head">
+        <div><h2 id="beansEventsTitle">AI豆流水记录</h2><p>全部显示有效流水；处理中冻结直接显示，同一订单后续已消耗或已退回时冻结行自动隐藏</p></div>
+        <div class="beans-filter"><label for="beansEventTypeFilter">流水类型</label><select id="beansEventTypeFilter"><option value="">全部</option></select></div>
+      </div>
+      <div class="beans-table-wrap">
+        <table class="beans-table">
+          <thead><tr><th>时间</th><th>订单号</th><th>账号</th><th>类型</th><th>方向</th><th>数量</th><th>余额</th><th>冻结</th><th>原因</th></tr></thead>
+          <tbody id="beansEventRows"><tr><td class="beans-empty" colspan="9">正在读取流水记录…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="beans-pager" id="beansPager" hidden>
+        <button type="button" id="beansPrevBtn" disabled>上一页</button>
+        <span id="beansPageInfo">第 1 页</span>
+        <button type="button" id="beansNextBtn" disabled>下一页</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+<script src="../assets/brand.js"></script>
+<script src="../assets/identity-display.js"></script>
+<script src="../assets/storage.js"></script>
+<script src="../assets/sidebar.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var account = null;
+  var selectedAdminTenant = '';
+  var eventItems = [];
+  var eventHasMore = false;
+  var eventBeforeId = '';
+  var eventHistory = [];
+  var PAGE_SIZE = 50;
+
+  function $(id) { return document.getElementById(id); }
+
+  function dateTimeParts(value) {
+    if (!value) return { date: '--', time: '' };
+    var d = new Date(value);
+    if (isNaN(d.getTime())) return { date: String(value), time: '' };
+    var pad = function (n) { return String(n).padStart(2, '0'); };
+    return { date: d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()), time: pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) };
+  }
+
+  function appendDateTime(cell, value) {
+    var parts = dateTimeParts(value), dateLine = document.createElement('span');
+    cell.className = 'beans-date-cell'; dateLine.className = 'date-line'; dateLine.textContent = parts.date; cell.appendChild(dateLine);
+    if (parts.time) { var timeLine = document.createElement('span'); timeLine.className = 'time-line'; timeLine.textContent = parts.time; cell.appendChild(timeLine); }
+  }
+
+  function eventTypeName(type) {
+    var map = {
+      welcome_gift: '注册赠送', recharge: '充值', refund: '退款', freeze: '冻结', consume: '消耗', release: '解冻退回',
+      admin_adjust: '管理员调账', membership_reward: '会员赠送', agent_reward: '代理奖励', agent_reward_reversal: '奖励扣回'
+    };
+    return map[type] || type || '--';
+  }
+
+  function directionLabel(dir) {
+    return dir === 'credit' ? '收入' : '支出';
+  }
+
+  function amountText(ev) {
+    var sign = ev.direction === 'credit' ? '+' : '-';
+    return sign + String(Math.abs(Number(ev.amountBean) || 0));
+  }
+
+  function fetchJson(url) {
+    return fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } }).then(function (res) {
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    });
+  }
+
+  function configureEventTypeFilter(membership) {
+    var select = $('beansEventTypeFilter');
+    if (!select) return;
+    var current = select.value;
+    var options = [
+      ['', '全部'],
+      ['consume', '消耗'],
+      ['recharge', '充值'],
+      ['welcome_gift', '注册赠送'],
+      ['membership_reward', '会员赠送'],
+      ['release', '解冻退回']
+    ];
+    var isAgent = Boolean(account && account.memberType === 'owner' && membership && membership.agent);
+    if (isAgent || (account && account.isSystemAdmin)) {
+      options.push(['agent_reward', '代理奖励']);
+      options.push(['agent_reward_reversal', '奖励扣回']);
+    }
+    if (account && account.isSystemAdmin) {
+      options.push(['refund', '退款']);
+      options.push(['admin_adjust', '管理员调账']);
+    }
+    select.replaceChildren();
+    options.forEach(function (entry) {
+      var option = document.createElement('option');
+      option.value = entry[0]; option.textContent = entry[1]; select.appendChild(option);
+    });
+    select.value = options.some(function (entry) { return entry[0] === current; }) ? current : '';
+  }
+  function selectedTenantId() {
+    if (!account || !account.isSystemAdmin) return '';
+    if (selectedAdminTenant) return selectedAdminTenant;
+    return window.erpStorage && typeof window.erpStorage.getSelectedTenantId === 'function'
+      ? String(window.erpStorage.getSelectedTenantId() || '') : '';
+  }
+
+  function loadTenantOverview() {
+    if (!account || !account.isSystemAdmin) return Promise.resolve();
+    $('beansTenantOverview').hidden = false;
+    return fetchJson('/api/system/ai-beans/accounts').then(function (data) {
+      var items = Array.isArray(data.items) ? data.items : [];
+      var tbody = $('beansTenantRows');
+      tbody.replaceChildren();
+      if (!items.length) {
+        var empty = document.createElement('tr'), cell = document.createElement('td');
+        cell.colSpan = 7; cell.textContent = '暂无租户'; empty.appendChild(cell); tbody.appendChild(empty);
+        $('beansTenantSummary').textContent = '共 0 个租户'; return;
+      }
+      if (!items.some(function (row) { return row.tenantId === selectedTenantId(); })) selectedAdminTenant = items[0].tenantId;
+      items.forEach(function (row) {
+        var tr = document.createElement('tr');
+        [row.tenantName || ('租户 ' + row.tenantId), row.ownerUsername || '—', row.tenantStatus || '—',
+          Number(row.balanceBean).toLocaleString(), Number(row.frozenBean).toLocaleString(),
+          row.updatedAt ? String(row.updatedAt).slice(0,19).replace('T',' ') : '无记录'].forEach(function (value) {
+          var td = document.createElement('td'); td.textContent = value; tr.appendChild(td);
+        });
+        var td = document.createElement('td'), btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'beans-btn';
+        btn.textContent = row.tenantId === selectedTenantId() ? '当前查看' : '查看详情';
+        btn.addEventListener('click', function () {
+          selectedAdminTenant = row.tenantId; eventHistory = []; eventBeforeId = '';
+          loadTenantOverview(); loadBalance(); loadEvents(row.tenantId);
+        });
+        td.appendChild(btn); tr.appendChild(td); tbody.appendChild(tr);
+      });
+      var current = items.find(function (row) { return row.tenantId === selectedTenantId(); }) || items[0];
+      $('beansTenantSummary').textContent = '共 ' + items.length + ' 个租户，当前查看：' + current.tenantName;
+    }).catch(function () {
+      $('beansTenantRows').replaceChildren(); $('beansTenantSummary').textContent = '租户钱包数据读取失败，请刷新重试';
+      throw new Error('tenant_wallets_read_failed');
+    });
+  }
+
+  function loadBalance() {
+    var url = '/api/domain/ai-beans/balance', selected = selectedTenantId();
+    if (selected) url += '?tenantId=' + encodeURIComponent(selected);
+    fetchJson(url).then(function (data) {
+      $('beansBalanceValue').textContent = typeof data.balanceBean === 'number' && Number.isFinite(data.balanceBean) ? data.balanceBean.toLocaleString() : '读取失败';
+      $('beansFrozenValue').textContent = typeof data.frozenBean === 'number' && Number.isFinite(data.frozenBean) ? data.frozenBean.toLocaleString() : '读取失败';
+      $('beansCostValue').textContent = data.imageCostBean == null ? '—' : String(data.imageCostBean);
+      var badge = $('beansChannelBadge');
+      var sub = $('beansChannelSub');
+      if (data.officialChannelAvailable) {
+        badge.textContent = '已开通';
+        badge.className = 'beans-channel-badge available';
+        sub.textContent = '可使用官方AI通道';
+      } else {
+        badge.textContent = '未开通';
+        badge.className = 'beans-channel-badge unavailable';
+        sub.textContent = '需配置官方API密钥';
+      }
+    }).catch(function () {
+      $('beansBalanceValue').textContent = '读取失败';
+    });
+  }
+
+  function renderEvents(items) {
+    var tbody = $('beansEventRows');
+    tbody.replaceChildren();
+    if (!items || !items.length) {
+      var tr = document.createElement('tr');
+      var td = document.createElement('td');
+      td.className = 'beans-empty'; td.colSpan = 9; td.textContent = '暂无流水记录';
+      tr.appendChild(td); tbody.appendChild(tr);
+      return;
+    }
+    items.forEach(function (ev) {
+      var tr = document.createElement('tr');
+      var api = window.WYERP_IDENTITY_DISPLAY;
+      var identity = api && api.displayIdentity ? api.displayIdentity({ profileFullName: ev.actorProfileFullName, email: ev.actorEmail, isSystemAdmin: ev.actorIsSystemAdmin }) : { kind: 'unknown', raw: '', masked: '' };
+      var actorText = identity.kind === 'unknown' ? (ev.actorLabel || '历史未记录') : identity.masked;
+      var actorTitle = identity.raw || actorText;
+      var cells = ['', ev.orderNo || ev.businessRef || '--', actorText, eventTypeName(ev.eventType), '', amountText(ev), String(ev.balanceAfter || 0), String(ev.frozenAfter || 0), ev.reason || '--'];
+      cells.forEach(function (text, i) {
+        var td = document.createElement('td');
+        if (i === 0) {
+          appendDateTime(td, ev.createdAt);
+        } else if (i === 1) {
+          td.className = 'beans-order-no';
+          td.dataset.beansTip = String(text || '');
+          td.textContent = text;
+        } else if (i === 2) {
+          td.className = 'beans-actor'; td.dataset.beansTip = actorTitle; td.title = actorTitle; td.textContent = text;
+        } else if (i === 3) {
+          td.className = 'beans-event-type';
+          td.textContent = text;
+        } else if (i === 4) {
+          var span = document.createElement('span');
+          span.className = 'beans-direction ' + ev.direction;
+          span.textContent = directionLabel(ev.direction);
+          td.appendChild(span);
+        } else {
+          if (i === 8) { td.className = 'beans-reason'; td.dataset.beansTip = String(text || ''); }
+          td.textContent = text;
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+  function loadEvents(tenantId, beforeId) {
+    eventBeforeId = beforeId || '';
+    var url = account && account.isSystemAdmin
+      ? '/api/system/ai-beans/events?tenantId=' + encodeURIComponent(tenantId) + '&limit=' + PAGE_SIZE
+      : '/api/domain/ai-beans/events?limit=' + PAGE_SIZE;
+    if (beforeId) url += '&beforeId=' + encodeURIComponent(beforeId);
+    var eventType = $('beansEventTypeFilter').value;
+    if (eventType) url += '&eventType=' + encodeURIComponent(eventType);
+    return fetchJson(url).then(function (data) {
+      eventItems = data.items || [];
+      eventHasMore = !!data.hasMore;
+      renderEvents(eventItems);
+      updatePager();
+    });
+  }
+
+  function updatePager() {
+    var pager = $('beansPager');
+    pager.hidden = false;
+    $('beansPrevBtn').disabled = eventHistory.length < 1;
+    $('beansNextBtn').disabled = !eventHasMore || !eventItems.length;
+    $('beansPageInfo').textContent = '第 ' + (eventHistory.length + 1) + ' 页';
+  }
+
+  function currentEventTenantId() {
+    return selectedTenantId() || (account ? account.tenantId : '');
+  }
+
+  function init() {
+    var ready = window.erpStorage && typeof window.erpStorage.init === 'function' ? window.erpStorage.init([]) : Promise.resolve();
+    ready.then(function () { return Promise.all([fetchJson('/api/auth/me'), fetchJson('/api/membership/current').catch(function () { return null; })]); }).then(function (values) {
+      account = values[0];
+      configureEventTypeFilter(values[1] && values[1].membership);
+      if (account.isSystemAdmin) {
+        loadTenantOverview().then(function () { loadBalance(); loadEvents(currentEventTenantId()); });
+      } else { loadBalance(); loadEvents(currentEventTenantId()); }
+    }).catch(function () {
+      $('beansBalanceValue').textContent = account ? '租户数据读取失败' : '未登录';
+    });
+
+    $('beansTenantRefresh').addEventListener('click', function () { loadTenantOverview().then(function () { loadBalance(); loadEvents(currentEventTenantId()); }).catch(function () { $('beansBalanceValue').textContent = '租户数据读取失败'; }); });
+    $('beansEventTypeFilter').addEventListener('change', function () { eventHistory = []; eventBeforeId = ''; loadEvents(currentEventTenantId()); });
+
+    $('beansNextBtn').addEventListener('click', function () {
+      if (!eventHasMore || !eventItems.length) return;
+      var lastId = eventItems[eventItems.length - 1].id;
+      eventHistory.push(eventBeforeId);
+      loadEvents(currentEventTenantId(), lastId);
+    });
+    $('beansPrevBtn').addEventListener('click', function () {
+      if (!eventHistory.length) return;
+      var before = eventHistory.pop();
+      loadEvents(currentEventTenantId(), before);
+    });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

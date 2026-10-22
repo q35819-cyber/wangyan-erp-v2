@@ -1,0 +1,395 @@
+/* ============================================================
+ * 网研ERP — 统一组件层（ui-core · 2026-09-17）
+ * 设计基线：third_party/ui-reference/awesome-design-md
+ *           design-md/linear.app/DESIGN.md（紧凑、克制、毛发线）
+ * 作用范围：仅对带 .ui-page 作用域的页面生效；其它页面零影响。
+ * 规则：只使用 style.css 既有主题变量（深色主题自动联动），
+ *       禁止渐变、禁止缩放动效、禁止硬编码品牌色。
+ * 状态：试点（在线商品页），待用户视觉验收后再逐页迁移。
+ * ============================================================ */
+
+.ui-page {
+  /* 品牌标准色（来源：网研ERPLOGO/整套方案.png）：
+     品牌蓝 #2563EB · 辅助白 #F8FAFC · 深蓝 #0F2D68 · 中灰 #64748B。
+     仅在 .ui-page 作用域内重映射主色，不影响其它页面；
+     深色主题沿用 style.css 的金色体系（不覆盖）。 */
+  --primary: #2563eb;
+  --primary-deep: #1d4ed8;
+  --primary-light: #eff6ff;
+  --primary-muted: #bfdbfe;
+  --input-focus: #2563eb;
+
+  --ui-control-h: 36px;
+  --ui-radius: 8px;
+  --ui-radius-sm: 6px;
+  --ui-ring: color-mix(in srgb, var(--input-focus) 28%, transparent);
+  --ui-soft-danger: color-mix(in srgb, var(--red) 12%, var(--card));
+  --ui-soft-warn: color-mix(in srgb, var(--yellow) 14%, var(--card));
+  --ui-on-warn: #b45309;
+}
+body.theme-dark .ui-page {
+  /* 深色主题：恢复 style.css 的金色强调，保证深底对比度 */
+  --primary: #d2a15a;
+  --primary-deep: #b87935;
+  --primary-light: #302619;
+  --primary-muted: #6b4b25;
+  --input-focus: #d6a65e;
+  --ui-on-warn: #fbbf24;
+}
+
+.wy-list-datetime{white-space:normal!important;line-height:1.2!important}.wy-list-datetime .wy-list-date,.wy-list-datetime .wy-list-time{display:block;white-space:nowrap}.wy-list-datetime .wy-list-time{margin-top:2px;color:var(--text-muted);font-size:.92em}
+
+/* ── 统一文本框 / 原生下拉（基准：36px · 8px · 13px） ── */
+.ui-page .input,
+.ui-page select.select {
+  box-sizing: border-box;
+  height: var(--ui-control-h);
+  border: 1px solid var(--input-border);
+  border-radius: var(--ui-radius);
+  background: var(--input-bg);
+  color: var(--text);
+  padding: 0 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+/* 无类名裸 select / 常规 textarea 同步统一规格 */
+.ui-page select {
+  box-sizing: border-box;
+  height: var(--ui-control-h);
+  border: 1px solid var(--input-border);
+  border-radius: var(--ui-radius);
+  background: var(--input-bg);
+  color: var(--text);
+  padding: 0 10px;
+  font-size: 13px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.ui-page textarea {
+  box-sizing: border-box;
+  border: 1px solid var(--input-border);
+  border-radius: var(--ui-radius);
+  background: var(--input-bg);
+  color: var(--text);
+  padding: 9px 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+/* 多行文本框即使复用 .input 类也不压成单行高度 */
+.ui-page textarea.input {
+  height: auto;
+  min-height: 72px;
+  padding: 9px 12px;
+}
+/* 表单容器内控件占满列宽；筛选栏继续沿用全局固定宽度，不撑乱布局 */
+.ui-page .field input,
+.ui-page .field select,
+.ui-page .f-item .input,
+.ui-page .f-item select,
+.ui-page .form-grid .input,
+.ui-page .form-grid select,
+.ui-page .form-grid textarea { width: 100%; }
+.ui-page .input::placeholder,
+.ui-page textarea::placeholder { color: var(--text-faint); }
+.ui-page .input:hover,
+.ui-page select:hover,
+.ui-page textarea:hover { border-color: var(--line-strong); }
+.ui-page .input:focus,
+.ui-page .input:focus-visible,
+.ui-page select.select:focus,
+.ui-page select:focus,
+.ui-page textarea:focus {
+  outline: none;
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 3px var(--ui-ring);
+}
+.ui-page .input:disabled,
+.ui-page select.select:disabled,
+.ui-page select:disabled,
+.ui-page textarea:disabled,
+.ui-page .field input[readonly] {
+  background: var(--surface);
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+/* 筛选栏搜索框沿用全站统一宽度（style.css --search-field-width） */
+.ui-page .toolbar .input {
+  width: var(--search-field-width);
+  min-width: var(--search-field-width);
+  flex: 0 0 auto;
+}
+
+/* ── 统一按钮（基准：36px · 8px · 13px/500） ── */
+.ui-page .btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--ui-control-h);
+  padding: 0 14px;
+  border-radius: var(--ui-radius);
+  border: 1px solid transparent;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease,
+              color .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+.ui-page .btn:hover { background: var(--hover); }
+.ui-page .btn:active { filter: brightness(.97); }
+.ui-page .btn:focus-visible {
+  outline: none;
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 3px var(--ui-ring);
+}
+.ui-page .btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.ui-page .btn-primary:hover { background: var(--primary-deep); border-color: var(--primary-deep); color: #fff; }
+.ui-page .btn-outline {
+  background: var(--input-bg);
+  border-color: var(--line);
+  color: var(--text-muted);
+}
+.ui-page .btn-outline:hover { border-color: var(--primary); color: var(--primary); background: var(--input-bg); }
+.ui-page .btn-light {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+.ui-page .btn-light:hover { background: var(--primary-muted); color: var(--primary); }
+.ui-page .btn-danger {
+  background: var(--ui-soft-danger);
+  color: var(--red);
+}
+.ui-page .btn-danger:hover {
+  background: color-mix(in srgb, var(--red) 20%, var(--card));
+  color: var(--red);
+}
+.ui-page .btn-admin {
+  background: var(--ui-soft-warn);
+  color: var(--ui-on-warn);
+}
+.ui-page .btn-admin:hover {
+  background: color-mix(in srgb, var(--yellow) 24%, var(--card));
+  color: var(--ui-on-warn);
+}
+.ui-page .btn:disabled,
+.ui-page .btn.btn-primary:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ── 模糊搜索下拉（searchable-select，页面内通用样式） ──
+ * 组件实现见 assets/searchable-select.js；
+ * 此处为 #productForm 之外的通用外观，规格与统一控件一致。 */
+.ui-page .searchable-select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+.ui-page .toolbar .searchable-select {
+  width: 160px;
+  flex: 0 0 auto;
+}
+.ui-page .searchable-select-field {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: var(--ui-control-h);
+  box-sizing: border-box;
+  border: 1px solid var(--input-border);
+  border-radius: var(--ui-radius);
+  background: var(--input-bg);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.ui-page .searchable-select-field:hover { border-color: var(--line-strong); }
+.ui-page .searchable-select-field:focus-within {
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 3px var(--ui-ring);
+}
+.ui-page .searchable-select-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  padding: 0 8px;
+}
+.ui-page .searchable-select-input {
+  flex: 1 1 auto;
+  width: 0;
+  min-width: 24px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+}
+.ui-page .searchable-select-input::placeholder { color: var(--text-faint); }
+.ui-page .searchable-select-arrow,
+.ui-page .searchable-select-clear {
+  flex: none;
+  width: 28px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 14px;
+}
+.ui-page .searchable-select-clear { font-size: 18px; color: var(--text-muted); }
+.ui-page .searchable-select-arrow:focus-visible {
+  outline: 2px solid var(--input-focus);
+  outline-offset: -3px;
+}
+/* 单选场景：已选值以主题色浅色标签呈现，标签内不再显示 ×（清空走右侧按钮） */
+.ui-page .searchable-select-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+  max-width: 100%;
+  padding: 0 4px 0 8px;
+  border-radius: var(--ui-radius-sm);
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 12px;
+  line-height: 1;
+}
+.ui-page .searchable-select-tag-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ui-page .searchable-select-tag-remove { display: none; }
+
+/* ── 状态页签（毛发线下划线，选中主题色） ── */
+.ui-page .status-tab { transition: color .15s ease; }
+.ui-page .status-tab:hover { color: var(--text); }
+.ui-page .status-tab strong { border-radius: var(--ui-radius-sm); }
+.ui-page .status-tab.on { color: var(--primary); border-bottom-color: var(--primary); }
+.ui-page .status-tab.on strong { background: var(--primary); color: #fff; }
+
+/* ── 数据表格：扁平板式表头 + 毛发线行 ── */
+.ui-page .product-table th {
+  height: 40px;
+  background: var(--card);
+  color: var(--text-muted);
+  font-weight: 600;
+  text-align: center;
+}
+/* 其它列表页通用表头：白底、居中、1px 毛发线（id 级专用表如变体表不受影响） */
+.ui-page table thead th,
+.ui-page .table-wrap table th {
+  background: var(--card);
+  text-align: center;
+  font-weight: 600;
+  border-bottom: 1px solid var(--line);
+  box-shadow: none;
+}
+.ui-page .product-table tbody tr { transition: background-color .12s ease; }
+.ui-page .product-table tbody tr:hover td { background: var(--hover); }
+/* 创建日期列：年月日 / 时分秒 两行居中 */
+.ui-page .date-cell { text-align: center !important; }
+.ui-page .date-line { display: block; line-height: 1.6; white-space: nowrap; }
+/* 短内容列居中：店铺、状态与表头对齐（长文本列保持左对齐） */
+.ui-page .product-table .shop-cell,
+.ui-page .product-table .status-cell { text-align: center; }
+
+/* 普通数据表：表体默认居中（数字/状态/店铺/时间/操作与居中表头对齐）；
+   在线商品 product-table 有独立列对齐规则，明确排除。长文本块保持左对齐。 */
+.ui-page table:not(.product-table) tbody td { text-align: center; }
+.ui-page table:not(.product-table) tbody td .meta,
+.ui-page table:not(.product-table) tbody td.cell-text,
+.ui-page table:not(.product-table) tbody td.product { text-align: left; }
+
+/* ── 行内紧凑操作按钮（操作列，26px → 统一圆角/焦点） ── */
+.ui-page .action-btn {
+  border-radius: var(--ui-radius-sm);
+  transition: background-color .15s ease, border-color .15s ease,
+              color .15s ease, box-shadow .15s ease;
+}
+.ui-page .action-btn:focus-visible {
+  outline: none;
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 3px var(--ui-ring);
+}
+
+/* ── 分页 ── */
+.ui-page .page-btn { border-radius: var(--ui-radius-sm); transition: background-color .15s ease, border-color .15s ease, color .15s ease; }
+.ui-page .page-btn:hover:not(.on):not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.ui-page .page-btn:focus-visible {
+  outline: none;
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 3px var(--ui-ring);
+}
+.ui-page .page-btn.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.ui-page .footer .page-size-select {
+  height: 28px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--ui-radius-sm);
+  background: var(--input-bg);
+  color: var(--text);
+  padding: 0 6px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.ui-page .footer .page-size-select:hover { border-color: var(--line-strong); }
+.ui-page .footer .page-size-select:focus {
+  outline: none;
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 3px var(--ui-ring);
+}
+
+/* ── 弹窗内表单字段 ── */
+.ui-page .field input,
+.ui-page .field select {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--ui-control-h);
+  margin-top: 5px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--ui-radius);
+  background: var(--input-bg);
+  color: var(--text);
+  padding: 0 12px;
+  font-size: 13px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.ui-page .field input:hover,
+.ui-page .field select:hover { border-color: var(--line-strong); }
+.ui-page .field input:focus,
+.ui-page .field select:focus {
+  outline: none;
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 3px var(--ui-ring);
+}
+.ui-page .field .searchable-select { margin-top: 5px; }
+
+/* ── 批量操作下拉菜单：统一焦点态 ── */
+.ui-page .batch-menu button:focus-visible {
+  outline: none;
+  background: var(--surface-hover);
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+
+/* 尊重用户系统“减少动态效果”设置 */
+@media (prefers-reduced-motion: reduce) {
+  .ui-page *,
+  .ui-page *::before,
+  .ui-page *::after { transition-duration: .01ms !important; }
+}

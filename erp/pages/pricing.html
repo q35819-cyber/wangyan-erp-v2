@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>定价工具 - 网研ERP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .f-item { display: flex; flex-direction: column; gap: 6px; }
+  .f-item label { font-size: 12px; color: var(--muted); }
+  .f-item .input { width: 100%; }
+  .result-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 18px; }
+  .r-card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,.05); padding: 18px; text-align: center; }
+  .r-card h4 { font-size: 12px; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
+  .r-card .v { font-size: 24px; font-weight: 800; color: var(--primary); }
+  .r-card .v.plain { color: var(--text); }
+  .r-card .v.green { color: var(--green); }
+  .formula-tip { background: var(--primary-light); border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--line)); color: var(--primary-deep); border-radius: 10px; padding: 14px 18px; font-size: 13px; line-height: 1.8; margin-top: 16px; }
+  .quote-status{grid-column:1/-1;min-height:20px;color:var(--muted);font-size:12px;line-height:1.6}.quote-status[data-state="ok"]{color:var(--green)}.quote-status[data-state="error"]{color:var(--red)}.quote-status[data-state="manual"]{color:var(--yellow)}.freight-override{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;cursor:pointer}.freight-override input{margin:0}
+  @media (max-width: 900px) { .form-grid { grid-template-columns: 1fr; } .result-grid { grid-template-columns: repeat(2,1fr); } }
+</style>
+<link rel="stylesheet" href="../assets/ui.css">
+<script src="../assets/theme-restore.js"></script>
+</head>
+<body>
+
+    <div class="sidebar">
+    <div class="logo">网研<span>ERP</span></div>
+    <nav class="menu"></nav>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <div class="header-left">
+        <strong>定价工具</strong>
+        <span class="breadcrumb">网研ERP <span>/</span> 工具 <span>/</span> 定价工具</span>
+      </div>
+      <div class="header-right">
+        <span class="user-name">管理员</span>
+        <button class="icon-btn">🔔</button>
+        <span class="avatar">管</span>
+      </div>
+    </div>
+
+    <div class="content ui-page">
+      <div class="card">
+        <div class="card-title"><span>成本与目标</span><span style="font-size:12px;color: var(--muted);">支持 OZON 俄区计价（卢布结算）</span></div>
+        <div class="form-grid">
+          <div class="f-item"><label>进货价（¥）</label><input class="input" id="cost" type="number" min="0" step="0.01" placeholder="0.00"></div>
+          <div class="f-item"><label>国内运费（¥）</label><input class="input" id="domestic" type="number" min="0" step="0.01" placeholder="0.00"></div>
+          <div class="f-item"><label>商品重量（g）</label><input class="input" id="weightG" type="number" min="0.001" step="0.1" placeholder="例如 850"></div>
+          <div class="f-item"><label>包装长（mm）</label><input class="input" id="lengthMm" type="number" min="0.001" step="0.1" placeholder="例如 300"></div>
+          <div class="f-item"><label>包装宽（mm）</label><input class="input" id="widthMm" type="number" min="0.001" step="0.1" placeholder="例如 200"></div>
+          <div class="f-item"><label>包装高（mm）</label><input class="input" id="heightMm" type="number" min="0.001" step="0.1" placeholder="例如 100"></div>
+          <div class="f-item"><label>国际运费（¥，自动匹配物流表）</label><input class="input" id="shipping" type="number" min="0" step="0.01" placeholder="填写重量尺寸后自动计算" readonly><label class="freight-override"><input type="checkbox" id="shippingOverride">手动覆盖国际运费</label></div>
+          <div class="quote-status" id="logisticsQuoteStatus">请填写商品重量和包装长宽高，系统将按当前物流方案自动计算国际运费。</div>
+          <div class="f-item"><label>平台佣金（%）</label><input class="input" id="commission" type="number" min="0" max="100" step="0.1" placeholder="按实际类目填写"></div>
+          <div class="f-item"><label>目标利润率（%，主账号设置）</label><input class="input" id="margin" type="number" min="0" max="100" step="0.1" readonly></div>
+          <div class="f-item"><label>货损率（%，主账号设置）</label><input class="input" id="damageLossPct" type="number" min="0" max="100" step="0.1" readonly></div>
+          <div class="f-item"><label>广告费率（%，主账号设置）</label><input class="input" id="advertisingPct" type="number" min="0" max="100" step="0.1" readonly></div>
+          <div class="f-item" style="justify-content:flex-end;"><button class="btn btn-primary" onclick="calc()">计算建议售价</button></div>
+        </div>
+      </div>
+
+      <div class="result-grid">
+        <div class="r-card"><h4>最低价（¥）</h4><div class="v" id="r-minimum">--</div></div>
+        <div class="r-card"><h4>销售价（¥）</h4><div class="v" id="r-sale">--</div></div>
+        <div class="r-card"><h4>划线价（¥）</h4><div class="v" id="r-old">--</div></div>
+        <div class="r-card"><h4>最低价目标利润（¥）</h4><div class="v green" id="r-profit">--</div></div>
+        <div class="r-card"><h4>最低价目标利润率</h4><div class="v plain" id="r-margin">--</div></div>
+      </div>
+
+      <div class="formula-tip">
+        💡 计价说明：先按成本、佣金、货损、广告和目标利润率计算最低价；销售价 = 最低价 × 1.5；划线价 = 销售价 × 2。
+        国际运费默认按当前账号绑定的物流方案、商品实重/体积重、重量段和尺寸限制自动匹配；只有勾选“手动覆盖国际运费”后才使用手填金额。所有上架价格均按人民币计算和提交。
+      </div>
+    </div>
+  </div>
+
+<script src="../assets/commerce-calculators.js?v=20261004-pricingrisk02"></script><script src="../assets/logistics-quote.js?v=20261004-freight01"></script><script src="../assets/logistics-quote-form.js?v=20261004-freight01"></script><script>
+function calc() {
+  function value(id){return document.getElementById(id).value;}
+  var result = WYERP_COMMERCE_CALCULATORS.pricing({cost:value('cost'),domestic:value('domestic'),shipping:value('shipping'),commission:value('commission'),margin:value('margin'),damageLossPct:value('damageLossPct'),advertisingPct:value('advertisingPct')});
+  if(result.error){alert(result.error);return;}
+  function roundPrice(value){
+    if(value==null||!Number.isFinite(Number(value)))return null;
+    var rule=pricingSettings.roundingRule||'rub_integer_up',number=Number(value);
+    if(rule==='none')return Math.round(number*100)/100;
+    if(rule==='rub_10_up')return Math.ceil((number-1e-9)/10)*10;
+    return Math.ceil(number-1e-9);
+  }
+  var minimumCny=roundPrice(result.price);
+  var saleCny=minimumCny==null?null:roundPrice(minimumCny*1.5);
+  var oldCny=saleCny==null?null:roundPrice(saleCny*2);
+  document.getElementById('r-minimum').textContent = minimumCny==null?'--':'¥ ' + minimumCny.toFixed(2);
+  document.getElementById('r-sale').textContent = saleCny==null?'--':'¥ ' + saleCny.toFixed(2);
+  document.getElementById('r-old').textContent = oldCny==null?'--':'¥ ' + oldCny.toFixed(2);
+  document.getElementById('r-profit').textContent = '¥ ' + result.profit.toFixed(2);
+  document.getElementById('r-margin').textContent = result.margin.toFixed(1) + '%';
+}
+</script>
+<script src="../assets/brand.js"></script>
+<script src="../assets/sidebar.js"></script>
+<script src="../assets/storage.js"></script><script>
+var freightQuoteController=null,pricingSettings={market:'俄罗斯',logisticsScheme:'',targetMarginPct:30,defaultCommissionPct:15,damageLossPct:6,advertisingPct:2,roundingRule:'rub_integer_up'};
+function loadPricingSettings(){return erpStorage.request('/api/pricing-settings').then(function(r){return r.ok?r.json():null;}).then(function(data){var s=data&&data.settings||{};pricingSettings={market:s.market||'俄罗斯',logisticsScheme:s.logisticsScheme||'',targetMarginPct:s.targetMarginPct==null?30:Number(s.targetMarginPct),defaultCommissionPct:s.defaultCommissionPct==null?15:Number(s.defaultCommissionPct),damageLossPct:s.damageLossPct==null?6:Number(s.damageLossPct),advertisingPct:s.advertisingPct==null?2:Number(s.advertisingPct),roundingRule:s.roundingRule||'rub_integer_up'};if(!document.getElementById('commission').value&&Number.isFinite(pricingSettings.defaultCommissionPct))document.getElementById('commission').value=pricingSettings.defaultCommissionPct;document.getElementById('margin').value=Number.isFinite(pricingSettings.targetMarginPct)?pricingSettings.targetMarginPct:'';document.getElementById('damageLossPct').value=pricingSettings.damageLossPct;document.getElementById('advertisingPct').value=pricingSettings.advertisingPct;}).catch(function(){});}
+function initFreightQuote(){freightQuoteController=WYERP_LOGISTICS_QUOTE_FORM.init({ids:{weight:'weightG',length:'lengthMm',width:'widthMm',height:'heightMm',shipping:'shipping',override:'shippingOverride',status:'logisticsQuoteStatus'},market:function(){return pricingSettings.market||'俄罗斯';},scheme:function(){return pricingSettings.logisticsScheme||'';}});}
+erpStorage.init([]).then(loadPricingSettings).then(initFreightQuote);
+</script></body>
+</html>

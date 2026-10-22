@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>接口列表 - 网研ERP</title><link rel="stylesheet" href="../assets/style.css"><style>
+.monitor-summary{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px;margin-bottom:16px}.summary-card{padding:16px 18px}.summary-card span{display:block;color:var(--text-muted);font-size:12px}.summary-card b{display:block;margin-top:7px;font-size:22px}.monitor-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}.monitor-toolbar .search-input{flex:1;min-width:260px}.monitor-note{margin-left:auto;color:var(--text-muted);font-size:12px}.monitor-table-wrap{max-height:calc(100vh - 350px);min-height:360px;overflow:auto}.monitor-table{table-layout:fixed;width:100%;min-width:0}.monitor-table th:nth-child(1){width:46px}.monitor-table th:nth-child(2){width:80px}.monitor-table th:nth-child(3){width:58px}.monitor-table th:nth-child(4){width:20%}.monitor-table th:nth-child(5){width:20%}.monitor-table th:nth-child(6){width:72px}.monitor-table th:nth-child(7){width:76px}.monitor-table th:nth-child(8){width:70px}.monitor-table th:nth-child(9){width:112px}.monitor-table td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.monitor-table td.monitor-date-cell{white-space:normal;text-overflow:clip}.monitor-date-cell .date-line,.monitor-date-cell .time-line{display:block;white-space:nowrap;line-height:1.3}.monitor-date-cell .time-line{margin-top:2px;color:var(--text-muted);font-size:11px}.status-normal{color:var(--green)}.status-error{color:var(--red)}.status-pending{color:var(--text-muted)}.freq-hourly{color:var(--accent)}.freq-daily{color:var(--text-muted)}.freq-none{color:var(--text-muted)}.page-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:12px}.pager{display:flex;gap:6px}.pager button{min-width:32px}.rule-box{margin-top:14px;padding:13px 16px;font-size:12px;line-height:1.8;color:var(--text-muted)}@media(max-width:900px){.monitor-summary{grid-template-columns:repeat(2,1fr)}.monitor-note{width:100%;margin-left:0}}
+.ui-page .monitor-table td:nth-child(4),.ui-page .monitor-table td:nth-child(5){text-align:left}
+</style>
+<style>
+.content{display:flex;flex-direction:column;min-height:0;overflow:hidden;padding-bottom:0}.notice,.monitor-summary,.rule-box{flex:none}.monitor-list-card{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}.monitor-list-card .monitor-table-wrap{flex:1;min-height:0;max-height:none;overflow:auto;position:relative;bottom:auto}.monitor-list-card .page-foot{flex:none}
+</style>
+<link rel="stylesheet" href="../assets/ui.css">
+<script src="../assets/theme-restore.js">
+</script>
+</head>
+<body>
+<aside class="sidebar">
+<div class="logo">网研<span>ERP</span>
+</div>
+<nav class="menu">
+</nav>
+</aside>
+<div class="main-content">
+<header class="header">
+<div class="header-left">
+<strong>接口列表</strong>
+<span class="breadcrumb">网研ERP <span>/</span> 设置 <span>/</span> 接口列表</span>
+</div>
+<div class="header-right">
+<span class="user-name">系统管理员</span>
+<button class="icon-btn">🔔</button>
+<span class="avatar">管</span>
+</div>
+</header>
+<main class="content ui-page">
+<div class="notice" style="margin-bottom:16px">仅系统管理员可查看。检测按接口性质分周期执行：服务可用性、登录会话与业务读写链路每小时一次；静态配置与全部 OZON 接口每天一次。OZON 使用不带店铺凭证的 HEAD 路由存在性安全检测，不提交业务参数、不执行 POST，因此不会改价、改库存、归档商品或修改订单。只有接口异常才写入任务中心，并在任务中心明确写明“1 小时后重新验证该接口”。连续 10 次异常后停止重试并邮件通知系统管理邮箱。</div>
+<section class="monitor-summary"><div class="card summary-card"><span>接口总数</span><b id="totalCount">0</b></div><div class="card summary-card"><span>正常</span><b id="normalCount">0</b></div><div class="card summary-card"><span>异常</span><b id="errorCount">0</b></div><div class="card summary-card"><span>尚未检测/未配置</span><b id="pendingCount">0</b></div></section>
+<section class="card monitor-list-card" style="padding:16px">
+<div class="monitor-toolbar">
+<input class="input search-input" id="keyword" placeholder="模糊搜索接口地址或用途">
+<select class="select" id="providerFilter">
+<option value="">全部接口商</option>
+<option value="网研ERP">网研ERP</option>
+<option value="OZON">OZON</option>
+</select>
+<select class="select" id="statusFilter">
+<option value="">全部状态</option>
+<option value="正常">正常</option>
+<option value="异常">异常</option>
+<option value="尚未检测">尚未检测</option>
+<option value="未配置">未配置</option>
+</select>
+<button class="btn btn-primary" id="checkBtn" type="button">立即检测</button>
+<span class="monitor-note" id="scheduleText">正在读取检测计划…</span>
+</div>
+<div class="table-wrap monitor-table-wrap"><table class="monitor-table"><thead><tr><th>序号</th><th>接口商</th><th>方法</th><th>接口地址</th><th>用途说明</th><th>状态</th><th>检测周期</th><th>失败次数</th><th>最后检测</th></tr></thead><tbody id="apiBody"></tbody></table></div><div class="page-foot"><span id="pageInfo">共 0 条记录 · 每页 20 条</span><div class="pager" id="pager"></div></div></section>
+<section class="card rule-box"><b>监控规则</b><br>1. 每个接口按检测周期自动检测：动态业务与健康接口每小时一次，静态配置和 OZON 接口每天一次；OZON 只做 HEAD 路由存在性检测，不执行真实业务写操作。2. 正常接口只更新本页状态，禁止写入任务中心。3. 首次异常创建任务，任务文案必须包含“1 小时后重新验证该接口”。4. 每小时只重试异常接口，最多 10 次。5. 第 10 次仍异常时，整理接口、用途、原因和检测时间，发送至系统管理邮箱。</section>
+</main></div><script src="../assets/brand.js"></script><script src="../assets/storage.js?v=20260925-apimon1"></script><script src="../assets/sidebar.js"></script><script>
+(function(){'use strict';var items=[],page=1,size=20,timer=null;function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch]})}function dateParts(value){if(!value)return{date:'--',time:''};var date=new Date(value);if(isNaN(date.getTime()))return{date:'--',time:''};var pad=function(n){return String(n).padStart(2,'0')};return{date:date.getFullYear()+'-'+pad(date.getMonth()+1)+'-'+pad(date.getDate()),time:pad(date.getHours())+':'+pad(date.getMinutes())+':'+pad(date.getSeconds())}}function dateText(value){var parts=dateParts(value);return parts.time?parts.date+' '+parts.time:parts.date}function dateHtml(value){var parts=dateParts(value);return'<span class="date-line">'+parts.date+'</span>'+(parts.time?'<span class="time-line">'+parts.time+'</span>':'')}function frequencyText(value){return value==='hourly'?'每小时':value==='daily'?'每天':'未配置'}function filtered(){var word=document.getElementById('keyword').value.trim().toLowerCase(),provider=document.getElementById('providerFilter').value,status=document.getElementById('statusFilter').value;return items.filter(function(item){return(!provider||item.provider===provider)&&(!status||item.status===status)&&(!word||(item.endpoint+' '+item.purpose+' '+item.provider).toLowerCase().indexOf(word)>=0)})}function render(){var list=filtered(),pages=Math.max(1,Math.ceil(list.length/size));page=Math.min(page,pages);var rows=list.slice((page-1)*size,page*size);document.getElementById('apiBody').innerHTML=rows.length?rows.map(function(item,index){var cls=item.status==='正常'?'status-normal':item.status==='异常'?'status-error':'status-pending';var title=item.lastError||item.probeMode||'';var freqClass=item.checkFrequency==='hourly'?'freq-hourly':'freq-daily';return'<tr><td>'+((page-1)*size+index+1)+'</td><td>'+esc(item.provider)+'</td><td>'+esc(item.method)+'</td><td title="'+esc(item.endpoint)+'">'+esc(item.endpoint)+'</td><td title="'+esc(item.purpose)+'">'+esc(item.purpose)+'</td><td class="'+cls+'" title="'+esc(title)+'">'+esc(item.status||'尚未检测')+'</td><td class="'+freqClass+'" title="'+esc(item.probeMode||'按检测周期自动检测')+'">'+esc(frequencyText(item.checkFrequency))+'</td><td>'+(Number(item.consecutiveFailures)||0)+'/10</td><td class="monitor-date-cell" title="'+esc(dateText(item.lastCheckedAt))+'">'+dateHtml(item.lastCheckedAt)+'</td></tr>'}).join(''):'<tr><td colspan="9" class="empty">没有符合条件的接口</td></tr>';document.getElementById('pageInfo').textContent='共 '+list.length+' 条记录 · 每页 '+size+' 条';var nav='';for(var p=1;p<=pages;p++){if(pages>9&&Math.abs(p-page)>2&&p!==1&&p!==pages)continue;nav+='<button class="btn '+(p===page?'btn-primary':'btn-outline')+'" data-page="'+p+'">'+p+'</button>'}document.getElementById('pager').innerHTML=nav;document.querySelectorAll('#pager [data-page]').forEach(function(button){button.onclick=function(){page=Number(this.dataset.page);render()}})}function load(){if(timer){clearTimeout(timer);timer=null}return erpStorage.request('/api/system/api-monitor').then(function(response){if(!response.ok)throw new Error(response.status===403?'仅系统管理员可访问':'读取失败');return response.json()}).then(function(data){items=data.items||[];document.getElementById('totalCount').textContent=items.length;document.getElementById('normalCount').textContent=items.filter(function(x){return x.status==='正常'}).length;document.getElementById('errorCount').textContent=items.filter(function(x){return x.status==='异常'}).length;document.getElementById('pendingCount').textContent=items.filter(function(x){return x.status!=='正常'&&x.status!=='异常'}).length;var mail=data.email&&data.email.configured?data.email.recipient:'未配置';document.getElementById('scheduleText').textContent=(data.running?'检测进行中 · ':'下次时检：'+dateText(data.nextHourlyCheckAt)+' · 下次日检：'+dateText(data.nextDailyCheckAt)+' · ')+'告警邮箱：'+mail;document.getElementById('checkBtn').disabled=Boolean(data.running);document.getElementById('checkBtn').textContent=data.running?'检测进行中':'立即检测';render();if(data.running)timer=setTimeout(load,2000)}).catch(function(error){document.getElementById('scheduleText').textContent=error.message})}['keyword','providerFilter','statusFilter'].forEach(function(id){document.getElementById(id).addEventListener(id==='keyword'?'input':'change',function(){page=1;render()})});document.getElementById('checkBtn').onclick=function(){this.disabled=true;erpStorage.request('/api/system/api-monitor/check',{method:'POST'}).then(function(response){if(!response.ok)throw new Error('启动失败');return load()}).catch(function(){document.getElementById('scheduleText').textContent='启动接口检测失败';document.getElementById('checkBtn').disabled=false})};erpStorage.init([]).then(load);window.addEventListener('beforeunload',function(){if(timer)clearTimeout(timer)})})();
+</script></body></html>

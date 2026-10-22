@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>审计日志 - 网研ERP</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <style>
+    .empty{padding:70px;text-align:center;color:var(--muted)}
+    .meta{max-width:380px;white-space:pre-wrap;word-break:break-all;font-size:11px;color:var(--muted)}
+    .result-ok{color:var(--green)}.result-bad{color:var(--red)}
+    .pager{display:flex;justify-content:center;padding:16px}
+  </style>
+  <link rel="stylesheet" href="../assets/ui.css">
+  <script src="../assets/theme-restore.js"></script>
+</head>
+<body>
+  <div class="sidebar"><div class="logo">网研<span>ERP</span></div><nav class="menu"></nav></div>
+  <div class="main-content">
+    <div class="header">
+      <div class="header-left"><strong>审计日志</strong><span class="breadcrumb">网研ERP <span>/</span> 店铺 <span>/</span> 审计日志</span></div>
+      <div class="header-right"><span class="user-name">管理员</span><button class="icon-btn">🔔</button><span class="avatar">管</span></div>
+    </div>
+    <main class="content ui-page">
+      <div class="filter-bar">
+        <input class="input" id="keyword" placeholder="搜索操作、账号或资源">
+        <button class="btn" id="searchBtn">搜索当前页</button>
+        <a class="btn" id="exportBtn" href="/api/tenant/audit/export">导出 CSV</a>
+        <span class="spacer"></span><span id="summary">最近 0 条</span>
+      </div>
+      <section class="card" style="padding:0">
+        <div class="table-wrap"><table><thead><tr><th>时间</th><th>操作账号</th><th>动作</th><th>资源</th><th>结果</th><th>附加信息</th></tr></thead><tbody id="body"></tbody></table></div>
+        <div class="pager"><button class="btn" id="moreBtn" disabled>加载更早记录</button></div>
+      </section>
+    </main>
+  </div>
+  <script src="../assets/brand.js"></script>
+  <script src="../assets/identity-display.js"></script>
+  <script src="../assets/storage.js"></script>
+  <script src="../assets/sidebar.js"></script>
+  <script>
+  (function(){
+    'use strict';
+    var rows=[],nextId=null;
+    function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
+    function resultClass(value){return value==='成功'?'result-ok':'result-bad';}
+    function metaValue(value){if(Array.isArray(value))return value.length?value.map(metaValue).join('、'):'无';if(value&&typeof value==='object')return metaText(value);return value==null||value===''?'无':String(value);}
+    function metaText(metadata){var entries=Object.entries(metadata||{});return entries.length?entries.map(function(item){return item[0]+'：'+metaValue(item[1]);}).join('；'):'无';}
+    function actorIdentity(v){var api=window.WYERP_IDENTITY_DISPLAY;var identity=api&&api.displayIdentity?api.displayIdentity({profileFullName:v.actorProfileFullName,email:v.actorEmail,isSystemAdmin:v.actorIsSystemAdmin}):{kind:'unknown',raw:'',masked:''};return identity.kind==='unknown'?{raw:'',masked:v.actorLabel||'历史未记录'}:identity;}
+    function render(){
+      var q=keyword.value.trim().toLowerCase();
+      var list=rows.filter(function(v){var identity=actorIdentity(v);return!q||(v.action+' '+identity.raw+' '+identity.masked+' '+v.resourceType+' '+v.resourceId).toLowerCase().includes(q);});
+      summary.textContent='已加载 '+rows.length+' 条';
+      body.innerHTML=list.length?list.map(function(v){
+        var resource=[v.resourceType,v.resourceId].filter(Boolean).join(' / ')||'--';
+        var meta=metaText(v.metadata),identity=actorIdentity(v);
+        return '<tr><td>'+esc(new Date(v.createdAt).toLocaleString())+'</td><td><span class="username-ellipsis" title="'+esc(identity.raw||identity.masked)+'">'+esc(identity.masked)+'</span></td><td>'+esc(v.action)+'</td><td>'+esc(resource)+'</td><td><span class="'+resultClass(v.result)+'">'+esc(v.result)+'</span></td><td><div class="meta">'+esc(meta)+'</div></td></tr>';
+      }).join(''):'<tr><td colspan="6"><div class="empty">暂无审计记录</div></td></tr>';
+      moreBtn.disabled=!nextId;
+    }
+    function load(append){
+      var url='/api/tenant/audit?limit=50'+(append&&nextId?'&beforeId='+encodeURIComponent(nextId):'');
+      return erpStorage.request(url).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||('HTTP '+r.status));return d;});}).then(function(d){rows=append?rows.concat(d.items||[]):(d.items||[]);nextId=d.nextBeforeId||null;render();});
+    }
+    searchBtn.onclick=render;
+    keyword.onkeydown=function(e){if(e.key==='Enter')render();};
+    moreBtn.onclick=function(){load(true).catch(function(err){alert(err.message);});};
+    erpStorage.init([]).then(function(){var tenantId=erpStorage.getSelectedTenantId();if(tenantId)exportBtn.href='/api/tenant/audit/export?tenantId='+encodeURIComponent(tenantId);return load(false);}).catch(function(err){body.innerHTML='<tr><td colspan="6"><div class="empty">'+esc(err.message)+'</div></td></tr>';});
+  })();
+  </script>
+</body>
+</html>

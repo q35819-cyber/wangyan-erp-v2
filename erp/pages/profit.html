@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>利润计算器 - 网研ERP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .f-item { display: flex; flex-direction: column; gap: 6px; }
+  .f-item label { font-size: 12px; color: var(--muted); }
+  .f-item .input { width: 100%; }
+  .result-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 18px; }
+  .r-card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,.05); padding: 18px; text-align: center; }
+  .r-card h4 { font-size: 12px; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
+  .r-card .v { font-size: 24px; font-weight: 800; color: var(--primary); }
+  .r-card .v.plain { color: var(--text); }
+  .r-card .v.green { color: var(--green); }
+  .formula-tip { background: var(--primary-light); border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--line)); color: var(--primary-deep); border-radius: 10px; padding: 14px 18px; font-size: 13px; line-height: 1.8; margin-top: 16px; }
+  .quote-status{grid-column:1/-1;min-height:20px;color:var(--muted);font-size:12px;line-height:1.6}.quote-status[data-state="ok"]{color:var(--green)}.quote-status[data-state="error"]{color:var(--red)}.quote-status[data-state="manual"]{color:var(--yellow)}.freight-override{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;cursor:pointer}.freight-override input{margin:0}
+  @media (max-width: 900px) { .form-grid { grid-template-columns: 1fr; } .result-grid { grid-template-columns: repeat(2,1fr); } }
+</style>
+<link rel="stylesheet" href="../assets/ui.css">
+<script src="../assets/theme-restore.js"></script>
+</head>
+<body>
+
+    <div class="sidebar">
+    <div class="logo">网研<span>ERP</span></div>
+    <nav class="menu"></nav>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <div class="header-left">
+        <strong>利润计算器</strong>
+        <span class="breadcrumb">网研ERP <span>/</span> 工具 <span>/</span> 利润计算器</span>
+      </div>
+      <div class="header-right">
+        <span class="user-name">管理员</span>
+        <button class="icon-btn">🔔</button>
+        <span class="avatar">管</span>
+      </div>
+    </div>
+
+    <div class="content ui-page">
+      <div class="card">
+        <div class="card-title"><span>输入销售参数</span><span style="font-size:12px;color: var(--muted);">按实际数据填写，不再预设月销量</span></div>
+        <div class="form-grid">
+          <div class="f-item"><label>售价（¥）</label><input class="input" id="price" type="number" min="0" step="0.01" placeholder="0.00"></div>
+          <div class="f-item"><label>成本（¥）</label><input class="input" id="cost" type="number" min="0" step="0.01" placeholder="0.00"></div>
+          <div class="f-item"><label>国内运费（¥）</label><input class="input" id="domestic" type="number" min="0" step="0.01" placeholder="0.00"></div>
+          <div class="f-item"><label>商品重量（g）</label><input class="input" id="weightG" type="number" min="0.001" step="0.1" placeholder="例如 850"></div>
+          <div class="f-item"><label>包装长（mm）</label><input class="input" id="lengthMm" type="number" min="0.001" step="0.1" placeholder="例如 300"></div>
+          <div class="f-item"><label>包装宽（mm）</label><input class="input" id="widthMm" type="number" min="0.001" step="0.1" placeholder="例如 200"></div>
+          <div class="f-item"><label>包装高（mm）</label><input class="input" id="heightMm" type="number" min="0.001" step="0.1" placeholder="例如 100"></div>
+          <div class="f-item"><label>国际运费（¥，自动匹配物流表）</label><input class="input" id="shipping" type="number" min="0" step="0.01" placeholder="填写重量尺寸后自动计算" readonly><label class="freight-override"><input type="checkbox" id="shippingOverride">手动覆盖国际运费</label></div>
+          <div class="quote-status" id="logisticsQuoteStatus">请填写商品重量和包装长宽高，系统将按当前物流方案自动计算国际运费。</div>
+          <div class="f-item"><label>平台佣金（%）</label><input class="input" id="commission" type="number" min="0" max="100" step="0.1"></div>
+          <div class="f-item"><label>退货率（%）</label><input class="input" id="refund" type="number" min="0" max="100" step="0.1"></div>
+          <div class="f-item"><label>月销量（件）</label><input class="input" id="quantity" type="number" min="0" step="1"></div>
+          <div class="f-item"><label>货损率（%，主账号设置）</label><input class="input" id="damageLossPct" type="number" min="0" max="100" step="0.1" readonly></div>
+          <div class="f-item"><label>广告费率（%，主账号设置）</label><input class="input" id="advertisingPct" type="number" min="0" max="100" step="0.1" readonly></div>
+          <div class="f-item"><label>单件其他费用（¥）</label><input class="input" id="other" type="number" min="0" step="0.01" value="0"></div>
+          <div class="f-item" style="justify-content:flex-end;"><button class="btn btn-primary" onclick="calc()">计算利润</button></div>
+        </div>
+      </div>
+
+      <div class="result-grid">
+        <div class="r-card"><h4>单件利润（¥）</h4><div class="v green" id="r-unit">--</div></div>
+        <div class="r-card"><h4>月预估利润（¥）</h4><div class="v" id="r-month">--</div></div>
+        <div class="r-card"><h4>考虑退货后月利润</h4><div class="v plain" id="r-month-refund">--</div></div>
+        <div class="r-card"><h4>年预估利润（¥）</h4><div class="v" id="r-year">--</div></div>
+      </div>
+
+      <div class="formula-tip">
+        💡 说明：单件利润 = 售价 − 成本 − 国内运费 − 国际运费 − 佣金 − 货损预估 − 广告费预估 − 其他费用。货损率和广告费率读取主账号“定价设置”。国际运费默认按当前账号绑定的物流方案、实重/体积重、重量段和尺寸限制自动匹配。退货损失仍按「退货率 × 售价」估算，结果用于预算而非财务入账。
+      </div>
+    </div>
+  </div>
+
+<script src="../assets/commerce-calculators.js?v=20261004-pricingrisk02"></script><script src="../assets/logistics-quote.js?v=20261004-freight01"></script><script src="../assets/logistics-quote-form.js?v=20261004-freight01"></script><script>
+function calc() {
+  function value(id){return document.getElementById(id).value;}
+  var result = WYERP_COMMERCE_CALCULATORS.profit({price:value('price'),cost:value('cost'),domestic:value('domestic'),shipping:value('shipping'),commission:value('commission'),refund:value('refund'),quantity:value('quantity'),damageLossPct:value('damageLossPct'),advertisingPct:value('advertisingPct'),other:value('other')});
+  if(result.error){alert(result.error);return;}
+  document.getElementById('r-unit').textContent = '¥ ' + result.unit.toFixed(2);
+  document.getElementById('r-month').textContent = '¥ ' + result.monthly.toFixed(0);
+  document.getElementById('r-month-refund').textContent = '¥ ' + result.afterRefund.toFixed(0);
+  document.getElementById('r-year').textContent = '¥ ' + result.yearly.toFixed(0);
+}
+</script>
+<script src="../assets/brand.js"></script>
+<script src="../assets/sidebar.js"></script>
+<script src="../assets/storage.js"></script><script>var freightQuoteController=null,pricingSettings={market:'俄罗斯',logisticsScheme:'',defaultCommissionPct:null,damageLossPct:6,advertisingPct:2};function loadPricingSettings(){return erpStorage.request('/api/pricing-settings').then(function(r){return r.ok?r.json():null;}).then(function(data){var s=data&&data.settings||{};pricingSettings={market:s.market||'俄罗斯',logisticsScheme:s.logisticsScheme||'',defaultCommissionPct:s.defaultCommissionPct==null?null:Number(s.defaultCommissionPct),damageLossPct:s.damageLossPct==null?6:Number(s.damageLossPct),advertisingPct:s.advertisingPct==null?2:Number(s.advertisingPct)};if(!document.getElementById('commission').value&&Number.isFinite(pricingSettings.defaultCommissionPct))document.getElementById('commission').value=pricingSettings.defaultCommissionPct;document.getElementById('damageLossPct').value=pricingSettings.damageLossPct;document.getElementById('advertisingPct').value=pricingSettings.advertisingPct;}).catch(function(){});}erpStorage.init([]).then(loadPricingSettings).then(function(){freightQuoteController=WYERP_LOGISTICS_QUOTE_FORM.init({ids:{weight:'weightG',length:'lengthMm',width:'widthMm',height:'heightMm',shipping:'shipping',override:'shippingOverride',status:'logisticsQuoteStatus'},market:function(){return pricingSettings.market||'俄罗斯';},scheme:function(){return pricingSettings.logisticsScheme||'';}});});</script></body>
+</html>

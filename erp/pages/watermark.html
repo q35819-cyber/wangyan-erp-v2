@@ -1,0 +1,631 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>水印管理 - 网研ERP</title><link rel="stylesheet" href="../assets/style.css"><style>
+.ui-page .table-wrap table tbody td:nth-child(2),.ui-page .table-wrap table tbody td:nth-child(3){text-align:left}
+.wm-date{display:flex;align-items:center;gap:6px}
+.wm-date input[type="date"]{height:34px;padding:0 10px;border:1px solid var(--input-border);border-radius:8px;background:var(--input-bg);color:var(--text);font-size:13px;outline:none;transition:border-color .15s}
+.wm-date input[type="date"]:focus{border-color:var(--input-focus)}
+.wm-date .sep{color:var(--text-faint)}
+.wm-col-check{width:38px;text-align:center}
+.wm-col-idx{width:56px}
+.wm-col-kind{width:96px}
+.wm-col-pos{width:88px}
+.wm-col-time{width:152px}
+.wm-col-act{width:170px}
+.wm-logo-cell{text-align:center}
+.wm-logo-thumb{max-width:120px;max-height:46px;object-fit:contain;display:block;margin:0 auto}
+.wm-text-line{text-align:center;font-size:13px}
+.wm-text-meta{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:3px;color:var(--text-faint);font-size:11px}
+.wm-swatch{width:12px;height:12px;border-radius:3px;border:1px solid var(--popup-border);display:inline-block;flex:0 0 12px}
+.wm-act{border:0;background:none;padding:0;font-size:12px;cursor:pointer;color:var(--primary)}
+.wm-act:hover{text-decoration:underline}
+.wm-act.danger{color:var(--red)}
+.wm-act+.wm-act{margin-left:10px}
+.wm-empty{padding:56px 20px;text-align:center;color:var(--muted)}
+.wm-status-row td{text-align:center}
+.wm-status-row span{font-size:12px}
+.wm-dialog{box-sizing:border-box;width:min(640px,calc(100vw - 32px));max-height:calc(100vh - 48px);margin:auto;padding:0;display:flex;flex-direction:column;border-radius:14px;background:var(--card);color:var(--text)}
+/* 必须显式隐藏未打开的弹窗：本文件给 .wm-dialog 写了 display:flex（作者样式优先级高于浏览器默认的 dialog:not([open])），否则关闭的弹窗仍留在页面上挡住工具栏全部点击 */
+.wm-dialog:not([open]){display:none}
+/* 同理收口 [hidden]：.wm-field/.btn/.wm-upload-tile 都写死了 display:flex，作者样式会压过 UA 的 [hidden]{display:none}，
+   没有这条时切换"图片水印"仍会把文字内容/字体/字体大小/字体颜色画在弹窗里（2026-09-21 用户两次打回） */
+.wm-dialog [hidden]{display:none !important}
+#toolbarLogoBtn[hidden],#toolbarBaseBtn[hidden]{display:none !important}
+.wm-dialog::backdrop{background:rgba(15,23,42,.46)}
+/* 两个弹窗必须留在 <main class="content ui-page"> 内部：ui.css 的按钮基准和 --ui-control-h/--ui-radius/--primary 等自定义属性全部定义在 .ui-page 作用域里，
+   弹窗一旦放到 .ui-page 外面，这些 var() 会整体解析失败并被丢弃，按钮就会塌成浏览器原生的 15px/0px 圆角。showModal() 仍会把弹窗提到顶层，不受父级 overflow 裁剪。 */
+.wm-dlg-head{display:flex;align-items:center;gap:10px;flex:0 0 auto;padding:15px 20px;border-bottom:1px solid var(--line)}
+.wm-dlg-head strong{font-size:16px}
+.wm-ver{align-self:center;font-size:11px;color:var(--text-faint)}
+.wm-dlg-close{margin-left:auto;width:30px;height:30px;flex:0 0 30px;border:0;border-radius:7px;background:transparent;color:var(--text-muted);font-size:20px;line-height:1;cursor:pointer}
+.wm-dlg-close:hover{background:var(--surface-hover);color:var(--text)}
+.wm-dlg-body{flex:1 1 auto;min-height:0;overflow:auto;padding:18px 20px 6px}
+.wm-dlg-foot{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:0 0 auto;padding:14px 20px;border-top:1px solid var(--line)}
+.wm-foot-note{margin-right:auto;color:var(--text-faint);font-size:11px;line-height:1.6}
+.wm-field{display:flex;align-items:flex-start;gap:12px;margin-bottom:13px}
+.wm-field>label{flex:0 0 84px;padding-top:8px;text-align:right;font-size:13px;color:var(--text-muted)}
+.wm-field.required>label::before{content:'* ';color:var(--red)}
+.wm-field .ctl{flex:1 1 auto;min-width:0}
+.wm-field .ctl .input,.wm-field .ctl .select{box-sizing:border-box;width:100%}
+.wm-color-row{display:flex;align-items:center;gap:10px}
+.wm-color-row .input{max-width:150px}
+.wm-color-row input[type="color"]{width:42px;height:34px;padding:2px;border:1px solid var(--input-border);border-radius:8px;background:var(--input-bg);cursor:pointer}
+.wm-range{display:flex;align-items:center;gap:10px;padding-top:6px}
+.wm-range input[type="range"]{flex:1 1 auto;min-width:0;accent-color:var(--primary);height:20px}
+.wm-range output{flex:0 0 48px;text-align:right;font-size:12px;color:var(--text-muted)}
+.wm-pos-row{display:flex;align-items:center;gap:14px;padding-top:2px}
+.wm-grid{display:grid;grid-template-columns:repeat(3,42px);grid-auto-rows:42px;gap:6px}
+.wm-grid button{border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;padding:0;transition:border-color .15s,background .15s}
+.wm-grid button:hover{border-color:var(--primary)}
+.wm-grid button.on{border-color:var(--primary);background:var(--primary-light);box-shadow:inset 0 0 0 1px var(--primary)}
+.wm-pos-label{font-size:12px;color:var(--text-muted)}
+.wm-upload{display:flex;align-items:center;gap:14px}
+.wm-upload-tile{width:92px;height:84px;flex:0 0 92px;border:1px dashed var(--line);border-radius:10px;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;color:var(--text-muted);cursor:pointer}
+.wm-upload-tile:hover{border-color:var(--primary);color:var(--primary)}
+.wm-upload-tile i{font-style:normal;font-size:20px;line-height:1}
+.wm-upload-thumb{width:84px;height:84px;flex:0 0 84px;object-fit:contain;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.wm-hint{margin-top:6px;font-size:11px;color:var(--text-faint)}
+.wm-preview{box-sizing:border-box;width:100%;height:300px;border:1px dashed var(--line);border-radius:8px;background:repeating-conic-gradient(var(--surface-hover) 0% 25%,var(--card) 0% 50%) 50%/16px 16px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.wm-preview canvas,.wm-preview img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block}
+.wm-preview span{padding:0 10px;font-size:12px;color:var(--text-faint);text-align:center}
+.wm-preview-lg{height:460px}
+.wm-base{display:flex;align-items:center;gap:12px}
+.wm-base-thumb{width:64px;height:64px;flex:0 0 64px;object-fit:contain;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.wm-base-actions{display:flex;align-items:center;gap:8px;margin-top:6px}
+.wm-base-meta{font-size:12px;color:var(--text-muted);line-height:1.6}
+.wm-check-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted)}
+.wm-field-plain{align-items:center;padding-left:96px}
+.wm-field-plain label{font-size:13px;color:var(--text-muted);cursor:pointer}
+.wm-tip{font-size:11px;color:var(--text-faint);line-height:1.6}
+</style><link rel="stylesheet" href="../assets/ui.css"><script src="../assets/theme-restore.js"></script></head><body><div class="sidebar"><div class="logo">网研<span>ERP</span></div><nav class="menu"></nav></div><div class="main-content"><div class="header"><div class="header-left"><strong>水印管理</strong><span class="breadcrumb">网研ERP <span>/</span> 工具 <span>/</span> 水印管理</span></div><div class="header-right"><span class="user-name">管理员</span><button class="icon-btn">🔔</button><span class="avatar">管</span></div></div><main class="content ui-page"><div class="filter-bar"><select class="select" id="kindFilter" aria-label="水印类型筛选"><option value="">全部类型</option><option value="text">文字水印</option><option value="image">图片水印</option></select><input class="input" id="keyword" placeholder="请输入模板名称" aria-label="模板名称搜索"><span class="wm-date"><input type="date" id="dateFrom" aria-label="开始日期"><span class="sep">→</span><input type="date" id="dateTo" aria-label="结束日期"></span><button class="btn btn-primary" id="searchBtn" type="button">⌕ 查询</button><button class="btn" id="resetBtn" type="button">重置</button><span class="spacer"></span><button class="btn btn-primary" id="addBtn" type="button">⊕ 添加模板</button><button class="btn" id="toolbarLogoBtn" type="button" hidden title="直接选择水印图片并新建图片水印模板（仅系统管理员）">↑ 上传水印图片</button><button class="btn" id="toolbarBaseBtn" type="button" hidden title="更换所有客户预览时看到的底图（仅系统管理员）">🖼 更换预览底图</button><button class="btn" id="batchDeleteBtn" type="button" disabled>批量删除</button><button class="icon-btn" id="refreshBtn" type="button" title="刷新列表">↻</button></div><div class="card" style="padding:0"><div class="table-wrap"><table><thead><tr><th class="wm-col-check"><input type="checkbox" id="checkAll" aria-label="全选本页模板"></th><th class="wm-col-idx">序号</th><th>模板名称</th><th class="wm-col-kind">水印类型</th><th>水印内容</th><th class="wm-col-pos">水印位置</th><th class="wm-col-time">创建时间</th><th class="wm-col-act">操作</th></tr></thead><tbody id="body"></tbody></table></div></div><dialog class="wm-dialog" id="editorDialog"><div class="wm-dlg-head"><strong id="dlgTitle">创建水印模板</strong><span class="wm-ver" id="dlgVersion" title="本页界面版本，用于确认浏览器已加载最新页面">0921-4</span><button class="wm-dlg-close" id="dlgClose" type="button" aria-label="关闭">×</button></div><div class="wm-dlg-body"><div class="wm-field required"><label for="fName">模板名称</label><div class="ctl"><input class="input" id="fName" maxlength="80" placeholder="请输入模板名称"></div></div><div class="wm-field"><label for="fKind">水印类型</label><div class="ctl"><select class="select" id="fKind"><option value="text">文字水印</option><option value="image">图片水印</option></select></div></div><div class="wm-field" data-set="image"><label>上传图片</label><div class="ctl"><div class="wm-upload"><button class="wm-upload-tile" id="uploadTile" type="button"><i>↑</i><span>上传</span></button><img class="wm-upload-thumb" id="logoThumb" alt="水印图片预览" hidden><button class="btn btn-outline" id="logoRemoveBtn" type="button" hidden>移除</button></div><input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp" hidden><div class="wm-hint" id="logoLimitHint"></div></div></div><div class="wm-field" data-set="image"><label for="fScale">图片缩放</label><div class="ctl"><div class="wm-range"><input type="range" id="fScale" min="3" max="90" step="1"><output id="fScaleOut">15%</output></div></div></div><div class="wm-field required" data-set="text"><label for="fContent">文字内容</label><div class="ctl"><input class="input" id="fContent" maxlength="60" placeholder="请输入水印内容"><div class="wm-tip">水印文字最多 60 个字符（与本机加水印引擎一致，超出会导致出图失败）</div></div></div><div class="wm-field" data-set="text"><label for="fFont">字体</label><div class="ctl"><select class="select" id="fFont"></select></div></div><div class="wm-field" data-set="text"><label for="fSize">字体大小</label><div class="ctl"><select class="select" id="fSize"></select><div class="wm-tip">字号按 1000px 图宽基准等比换算，出图时随原图尺寸缩放</div></div></div><div class="wm-field" data-set="text"><label for="fColor">字体颜色</label><div class="ctl"><div class="wm-color-row"><input class="input" id="fColor" maxlength="7" placeholder="#ffffff"><input type="color" id="fColorPick" aria-label="选择字体颜色" value="#ffffff"></div></div></div><div class="wm-field"><label for="fOpacity">不透明度</label><div class="ctl"><div class="wm-range"><input type="range" id="fOpacity" min="5" max="100" step="1"><output id="fOpacityOut">45%</output></div></div></div><div class="wm-field"><label>水印位置</label><div class="ctl"><div class="wm-pos-row"><div class="wm-grid" id="fPosition"></div><span class="wm-pos-label" id="positionLabel">右下角</span></div></div></div><div class="wm-field"><label>预览底图</label><div class="ctl"><div class="wm-base"><img class="wm-base-thumb" id="baseThumb" alt="当前预览底图"><div><div class="wm-base-meta" id="baseMeta"></div><div class="wm-base-actions" id="baseActions" hidden><button class="btn btn-outline" id="basePickBtn" type="button">更换底图</button><button class="btn" id="baseResetBtn" type="button">恢复默认底图</button></div></div></div><div class="wm-hint">ⓘ 底图只用于预览，由系统管理员统一维护；预览时水印直接叠在底图上，实际给商品图加水印时使用商品原图。</div></div></div><div class="wm-field"><label>预览效果</label><div class="ctl"><div class="wm-preview" id="previewHost" data-preview-max-side="480"><span>填写内容后可在此预览实际出图效果</span></div></div></div><div class="wm-field wm-field-plain"><input type="checkbox" id="fDefault"><label for="fDefault">设为该类水印的默认模板</label></div></div><div class="wm-dlg-foot"><span class="wm-foot-note">预览把水印直接叠在当前预览底图上，画面按弹窗等比缩小显示；实际给商品图加水印时按原图大小等比例换算</span><button class="btn" id="dlgCancel" type="button">取消</button><button class="btn btn-primary" id="dlgOk" type="button">确定</button></div></dialog><dialog class="wm-dialog" id="previewDialog"><div class="wm-dlg-head"><strong id="previewTitle">查看效果</strong><button class="wm-dlg-close" id="previewClose" type="button" aria-label="关闭">×</button></div><div class="wm-dlg-body"><div class="wm-field"><label>模板</label><div class="ctl" id="previewSummary" style="padding-top:8px;font-size:13px"></div></div><div class="wm-field"><label>预览效果</label><div class="ctl"><div class="wm-preview wm-preview-lg" id="previewViewHost" data-preview-max-side="720"><span>正在生成预览…</span></div></div></div></div><div class="wm-dlg-foot"><span class="wm-foot-note">预览把水印直接叠在当前预览底图上，画面按弹窗等比缩小显示；实际给商品图加水印时按原图大小等比例换算</span><button class="btn" id="previewOk" type="button">关闭</button></div></dialog></main></div><input type="file" id="baseFile" accept="image/png,image/jpeg,image/webp" hidden><script src="../assets/brand.js"></script><script src="../assets/storage.js"></script><script src="../assets/watermark-templates.js"></script><script src="../assets/watermark-local.js"></script><script src="../assets/table-pagination.js?v=20261002-b07b2"></script><script src="../assets/sidebar.js"></script><script>
+(function () {
+'use strict';
+var model = window.WYERP_WATERMARK_TEMPLATES;
+var engine = window.WYERP_WATERMARK_LOCAL;
+var STORAGE_KEY = 'erp_watermark_templates';
+var BASE_KEY = 'erp_watermark_preview_base';
+var BASE_WIDTH = 900, BASE_HEIGHT = 1200;
+var FONT_SIZES = [12, 16, 20, 24, 30, 48, 64, 80, 100];
+// 上限数字只在模型 LOGO_MAX_BYTES 定义一份，页面提示与拒绝文案都由它换算，避免"提示与实拒口径分裂"
+var LOGO_LIMIT_LABEL = model.LOGO_MAX_BYTES >= 1024 * 1024
+  ? (Math.round(model.LOGO_MAX_BYTES / 104857.6) / 10) + 'MB' : Math.ceil(model.LOGO_MAX_BYTES / 1024) + 'KB';
+document.getElementById('logoLimitHint').textContent = 'ⓘ 推荐使用带透明度的 PNG 格式图片，单张不超过 ' + LOGO_LIMIT_LABEL;
+var allRows = [], selected = Object.create(null), statusTimer = null, previewTimer = null;
+// baseDoc 是当前租户保存的预览底图；basePromise 按 dataUrl 缓存解码结果，换图后必须作废。
+var baseDoc = model.blankBase(), basePromise = null, isSystemAdmin = false;
+var body = document.getElementById('body');
+var kindFilter = document.getElementById('kindFilter'), keyword = document.getElementById('keyword');
+var dateFrom = document.getElementById('dateFrom'), dateTo = document.getElementById('dateTo');
+var checkAll = document.getElementById('checkAll'), batchDeleteBtn = document.getElementById('batchDeleteBtn');
+var editorDialog = document.getElementById('editorDialog'), previewDialog = document.getElementById('previewDialog');
+var fName = document.getElementById('fName'), fKind = document.getElementById('fKind'), fContent = document.getElementById('fContent');
+var fFont = document.getElementById('fFont'), fSize = document.getElementById('fSize'), fColor = document.getElementById('fColor');
+var fColorPick = document.getElementById('fColorPick'), fScale = document.getElementById('fScale'), fScaleOut = document.getElementById('fScaleOut');
+var fOpacity = document.getElementById('fOpacity'), fOpacityOut = document.getElementById('fOpacityOut');
+var fDefault = document.getElementById('fDefault'), positionGrid = document.getElementById('fPosition'), positionLabel = document.getElementById('positionLabel');
+var logoFile = document.getElementById('logoFile'), logoThumb = document.getElementById('logoThumb'), logoRemoveBtn = document.getElementById('logoRemoveBtn');
+var previewHost = document.getElementById('previewHost');
+var baseThumb = document.getElementById('baseThumb'), baseMeta = document.getElementById('baseMeta');
+var baseActions = document.getElementById('baseActions'), basePickBtn = document.getElementById('basePickBtn');
+var baseResetBtn = document.getElementById('baseResetBtn'), baseFile = document.getElementById('baseFile');
+// draft 只保存"当前弹窗里正在编辑的东西"，确定后才合并写回全量列表，取消不影响任何已存模板。
+var draft = blankDraft();
+
+function blankDraft() { return { id: '', kind: 'text', name: '', content: '', fontFamily: 'yahei', fontSize: 30, color: '#ffffff', opacity: 45, position: 'bottom-right', widthRatio: 15, logoDataUrl: '', logoContentType: '', logoSizeBytes: 0, logoWidth: 0, logoHeight: 0, isDefault: false }; }
+function el(tag, cls, textContent) { var node = document.createElement(tag); if (cls) node.className = cls; if (textContent != null) node.textContent = textContent; return node; }
+function formatBytes(bytes) { return bytes >= 1024 * 1024 ? (Math.round(bytes / 104857.6) / 10) + 'MB' : Math.ceil(bytes / 1024) + 'KB'; }
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function localStamp(iso) {
+  var date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return '';
+  return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds());
+}
+function localDate(iso) { return localStamp(iso).slice(0, 10); }
+function kindLabel(kind) { return model.KIND_LABELS[kind === 'image' ? 'image' : 'text']; }
+function positionLabelOf(position) { return model.POSITION_LABELS[position] || position; }
+function status(text, isError) {
+  var row = body.querySelector('tr.wm-status-row');
+  if (!text) { if (row) row.remove(); return; }
+  if (!row) {
+    row = el('tr', 'wm-status-row');
+    row.dataset.paginationFixed = '1';
+    var cell = el('td'); cell.colSpan = 8;
+    cell.append(el('span')); row.append(cell);
+    body.insertBefore(row, body.firstChild);
+  }
+  row.firstChild.firstChild.textContent = text;
+  row.firstChild.firstChild.style.color = isError ? 'var(--red)' : 'var(--text-muted)';
+  if (isError) { clearTimeout(statusTimer); statusTimer = setTimeout(function () { status(''); }, 8000); }
+}
+function save() {
+  return window.erpStorage.set(STORAGE_KEY, allRows).then(function (result) {
+    if (result && result.ok === false) throw new Error(result.error || '保存失败');
+    return result;
+  });
+}
+function filtered() {
+  var q = keyword.value.trim().toLowerCase(), from = dateFrom.value, to = dateTo.value;
+  return allRows.filter(function (item) {
+    if (kindFilter.value && item.kind !== kindFilter.value) return false;
+    if (q && item.name.toLowerCase().indexOf(q) < 0) return false;
+    var day = localDate(item.createdAt);
+    if (from && day < from) return false;
+    if (to && day > to) return false;
+    return true;
+  });
+}
+function render() {
+  var list = filtered();
+  body.replaceChildren();
+  if (!list.length) {
+    var row = el('tr', 'wm-empty-row'), cell = el('td');
+    cell.colSpan = 8;
+    cell.append(el('div', 'wm-empty', allRows.length ? '没有符合筛选条件的水印模板' : '暂无水印模板，点右上角"添加模板"创建第一个'));
+    row.append(cell); body.append(row);
+  }
+  list.forEach(function (item, index) {
+    var tr = el('tr');
+    var checkCell = el('td'); checkCell.className = 'wm-col-check';
+    var box = el('input'); box.type = 'checkbox'; box.dataset.id = item.id; box.checked = Boolean(selected[item.id]);
+    box.setAttribute('aria-label', '选择模板 ' + item.name);
+    checkCell.append(box);
+    var idxCell = el('td', 'wm-col-idx', String(index + 1));
+    var nameCell = el('td'); var strong = el('b', null, item.name); nameCell.append(strong);
+    if (item.isDefault) { nameCell.append(document.createTextNode(' '), el('span', 'badge badge-green', '默认')); }
+    var kindCell = el('td', 'wm-col-kind');
+    kindCell.append(el('span', 'badge ' + (item.kind === 'image' ? 'badge-green' : 'badge-blue'), kindLabel(item.kind)));
+    var contentCell = el('td', 'wm-logo-cell');
+    if (item.kind === 'image') {
+      if (item.logoDataUrl) { var img = el('img', 'wm-logo-thumb'); img.alt = item.name + ' 的水印图片'; img.src = item.logoDataUrl; contentCell.append(img); }
+      else contentCell.append(el('span', 'wm-text-meta', '水印图片缺失（可能被清理或超过 ' + LOGO_LIMIT_LABEL + '）'));
+    } else {
+      contentCell.append(el('div', 'wm-text-line', item.content || '未填写文字'));
+      var meta = el('div', 'wm-text-meta');
+      meta.append(el('span', null, (model.FONT_LABELS[item.fontFamily] || item.fontFamily) + ', ' + item.fontSize + 'px'));
+      var swatch = el('span', 'wm-swatch'); swatch.style.background = item.color;
+      meta.append(swatch);
+      contentCell.append(meta);
+    }
+    var posCell = el('td', 'wm-col-pos', positionLabelOf(item.position));
+    var timeCell = el('td', 'wm-col-time', localStamp(item.createdAt) || '—');
+    var actCell = el('td', 'wm-col-act');
+    [['查看效果', 'preview', ''], ['编辑', 'edit', ''], ['删除', 'delete', 'danger']].forEach(function (spec) {
+      var button = el('button', 'wm-act' + (spec[2] ? ' ' + spec[2] : ''), spec[0]);
+      button.type = 'button'; button.dataset.action = spec[1]; button.dataset.id = item.id;
+      actCell.append(button);
+    });
+    tr.append(checkCell, idxCell, nameCell, kindCell, contentCell, posCell, timeCell, actCell);
+    body.append(tr);
+  });
+  syncSelection(list);
+  schedulePageSelectionSync();
+}
+function visiblePageIds() {
+  return Array.from(body.querySelectorAll('input[type="checkbox"][data-id]')).filter(function (box) {
+    var row = box.closest('tr');
+    return row && !row.hidden && row.dataset.wyPaginationHidden !== '1';
+  }).map(function (box) { return box.dataset.id; });
+}
+function schedulePageSelectionSync() {
+  requestAnimationFrame(function () { requestAnimationFrame(function () { syncSelection(); }); });
+}
+function syncSelection(list) {
+  var table = body.closest('table'), paged = table && table.dataset.wyAutoPagination === '1';
+  var ids = paged ? visiblePageIds() : (list || filtered()).map(function (item) { return item.id; });
+  var picked = ids.filter(function (id) { return selected[id]; });
+  checkAll.checked = Boolean(ids.length) && picked.length === ids.length;
+  checkAll.indeterminate = Boolean(picked.length) && picked.length < ids.length;
+  batchDeleteBtn.disabled = !Object.keys(selected).filter(function (id) { return allRows.some(function (row) { return row.id === id; }); }).length;
+}
+function reload() { allRows = model.normalizeAll(window.erpStorage.get(STORAGE_KEY)); render(); }
+function countText() { return '共 ' + allRows.length + ' 个模板，当前显示 ' + filtered().length + ' 个'; }
+
+/* ───────── 预览底图：系统管理员维护一次，所有账号预览共用 ───────── */
+function defaultBaseThumbUrl() {
+  if (defaultBaseThumbUrl.cached) return defaultBaseThumbUrl.cached;
+  var canvas = document.createElement('canvas');
+  canvas.width = 64; canvas.height = 64;
+  var ctx = canvas.getContext('2d');
+  var gradient = ctx.createLinearGradient(0, 0, 64, 64);
+  gradient.addColorStop(0, '#f3f6fa'); gradient.addColorStop(1, '#cfd8e6');
+  ctx.fillStyle = gradient; ctx.fillRect(0, 0, 64, 64);
+  ctx.strokeStyle = 'rgba(148,163,184,.45)'; ctx.lineWidth = 1;
+  for (var i = 8; i < 64; i += 8) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 64); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(64, i); ctx.stroke(); }
+  defaultBaseThumbUrl.cached = canvas.toDataURL('image/png');
+  return defaultBaseThumbUrl.cached;
+}
+function paintBase() {
+  var has = Boolean(baseDoc.dataUrl);
+  baseThumb.src = has ? baseDoc.dataUrl : defaultBaseThumbUrl();
+  baseThumb.alt = has ? '当前预览底图' : '内置默认预览底图';
+  baseMeta.textContent = has
+    ? '已保存底图：' + baseDoc.width + '×' + baseDoc.height + ' · 约 ' + Math.ceil(baseDoc.sizeBytes / 1024) + 'KB'
+      + (baseDoc.updatedAt ? ' · 更新于 ' + (localStamp(baseDoc.updatedAt) || '—') : '')
+    : '当前使用内置默认底图（灰色网格）；更换后所有账号的预览都会用这张图。';
+  baseActions.hidden = !isSystemAdmin;
+  document.getElementById('toolbarLogoBtn').hidden = !isSystemAdmin;
+  document.getElementById('toolbarBaseBtn').hidden = !isSystemAdmin;
+  baseResetBtn.disabled = !baseDoc.dataUrl;
+}
+function loadBase() {
+  baseDoc = model.normalizeBase(window.erpStorage.get(BASE_KEY));
+  basePromise = null;
+  paintBase();
+}
+function saveBase(next) {
+  // 归一化后整体入库：让服务器上的文档自带 contentType / sizeBytes，换机或审计时不必再靠前端重算
+  var clean = model.normalizeBase(next);
+  return window.erpStorage.set(BASE_KEY, clean).then(function () {
+    baseDoc = clean;
+    basePromise = null;
+    paintBase();
+    if (editorDialog.open) schedulePreview();
+  });
+}
+
+/* ───────── 弹窗表单 ───────── */
+function fillSelect(select, options) {
+  select.replaceChildren();
+  options.forEach(function (option) {
+    var node = el('option', null, option.label); node.value = option.value; select.append(node);
+  });
+}
+function buildPositionGrid() {
+  positionGrid.replaceChildren();
+  model.POSITIONS.forEach(function (position) {
+    var button = el('button'); button.type = 'button'; button.dataset.position = position;
+    button.title = positionLabelOf(position); button.setAttribute('aria-label', '水印位置：' + positionLabelOf(position));
+    positionGrid.append(button);
+  });
+}
+function showSet(kind) {
+  Array.prototype.forEach.call(document.querySelectorAll('#editorDialog [data-set]'), function (node) {
+    node.hidden = node.dataset.set !== (kind === 'image' ? 'image' : 'text');
+  });
+}
+function paintForm() {
+  fName.value = draft.name; fKind.value = draft.kind; fContent.value = draft.content;
+  fFont.value = draft.fontFamily;
+  fillSelect(fSize, sizeOptions());
+  fSize.value = String(draft.fontSize);
+  fColor.value = draft.color; fColorPick.value = /^#[0-9a-f]{6}$/i.test(draft.color) ? draft.color : '#ffffff';
+  fScale.value = String(draft.widthRatio); fScaleOut.value = draft.widthRatio + '%';
+  fOpacity.value = String(draft.opacity); fOpacityOut.value = draft.opacity + '%';
+  fDefault.checked = Boolean(draft.isDefault);
+  positionLabel.textContent = positionLabelOf(draft.position);
+  Array.prototype.forEach.call(positionGrid.children, function (button) { button.classList.toggle('on', button.dataset.position === draft.position); });
+  showSet(draft.kind);
+  paintLogo();
+}
+function fontOptions() { return model.FONTS.map(function (key) { return { value: key, label: model.FONT_LABELS[key] }; }); }
+function sizeOptions() {
+  var sizes = FONT_SIZES.slice();
+  if (sizes.indexOf(Number(draft.fontSize)) < 0) sizes.push(Number(draft.fontSize) || 30);
+  return sizes.sort(function (a, b) { return a - b; }).map(function (size) { return { value: String(size), label: size + 'px' }; });
+}
+function paintLogo() {
+  var has = Boolean(draft.logoDataUrl);
+  logoThumb.hidden = !has; logoRemoveBtn.hidden = !has;
+  document.getElementById('uploadTile').hidden = has;
+  if (has) { logoThumb.src = draft.logoDataUrl; logoThumb.alt = draft.name + ' 的水印图片'; }
+}
+function draftFromForm() {
+  return Object.assign({}, draft, {
+    kind: fKind.value === 'image' ? 'image' : 'text',
+    name: fName.value.trim(), content: fContent.value.trim(),
+    fontFamily: fFont.value, fontSize: Number(fSize.value) || 30,
+    color: /^#[0-9a-f]{6}$/i.test(fColor.value.trim()) ? fColor.value.trim().toLowerCase() : fColorPick.value,
+    opacity: Number(fOpacity.value), widthRatio: Number(fScale.value), position: draft.position,
+    isDefault: fDefault.checked
+  });
+}
+// 两个弹窗共用浏览器顶层：任何时候只允许一个打开，否则会叠在一起并遮住工具栏。
+function showModalDialog(next) {
+  [editorDialog, previewDialog].forEach(function (node) {
+    if (node !== next && node.open) { node.close(); clearTimeout(previewTimer); }
+  });
+  if (!next.open) next.showModal();
+}
+function openEditor(item, presetKind) {
+  draft = item ? Object.assign(blankDraft(), item) : blankDraft();
+  if (presetKind === 'image') draft.kind = 'image';
+  document.getElementById('dlgTitle').textContent = item ? '编辑水印模板' : '创建水印模板';
+  paintForm();
+  showModalDialog(editorDialog);
+  schedulePreview();
+  fName.focus();
+}
+function closeEditor() { clearTimeout(previewTimer); if (editorDialog.open) editorDialog.close(); }
+function validateDraft(item) {
+  if (!item.name) return '请填写模板名称';
+  if (item.kind === 'text') {
+    if (!item.content) return '请填写文字内容';
+    if (item.content.length > 60) return '水印文字最多 60 个字符';
+  } else if (!item.logoDataUrl) return '请上传水印图片';
+  return '';
+}
+function submitDraft() {
+  var item = draftFromForm(), reason = validateDraft(item);
+  if (reason) { status(reason, true); return; }
+  var isNew = !draft.id;
+  allRows = model.upsert(allRows, model.normalize(Object.assign({}, item, { id: draft.id })));
+  save().then(function () {
+    reload(); render(); closeEditor();
+    status((isNew ? '已创建' : '已保存') + kindLabel(item.kind) + '模板“' + item.name + '”（' + countText() + '）');
+  }).catch(function (error) { status((error && error.message) || '保存失败，模板未写入', true); });
+}
+
+/* ───────── 预览：与 SKU 编辑器共用本机水印引擎，预览即实际出图 ───────── */
+function engineConfigOf(item) {
+  var base = { position: item.position, opacity: Math.min(1, Math.max(0.05, Number(item.opacity) / 100)), marginRatio: 0.02 };
+  if (item.kind === 'image') {
+    return Object.assign({
+      type: 'image', watermarkImage: String(item.logoDataUrl || ''),
+      watermarkWidthRatio: Math.min(0.9, Math.max(0.03, (Number(item.widthRatio) || 15) / 100))
+    }, base);
+  }
+  return Object.assign({
+    type: 'text', text: String(item.content || '').trim(),
+    textStyle: { fontSizeRatio: Math.min(0.3, Math.max(0.005, Number(item.fontSize) || 40) / 1000), color: item.color || '#ffffff', fontFamily: item.fontFamily || 'yahei' }
+  }, base);
+}
+function dataUrlToFile(dataUrl, name) {
+  var match = /^data:([^;]+);base64,([A-Za-z0-9+/=]+)$/i.exec(String(dataUrl || ''));
+  if (!match) return Promise.reject(new Error('底图数据无法识别'));
+  var binary;
+  try { binary = window.atob(match[2]); } catch (error) { return Promise.reject(new Error('底图数据已损坏，请重新上传')); }
+  var bytes = new Uint8Array(binary.length);
+  for (var i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return Promise.resolve(new File([bytes], name, { type: match[1] }));
+}
+function syntheticBaseFile() {
+  var canvas = document.createElement('canvas');
+  canvas.width = BASE_WIDTH; canvas.height = BASE_HEIGHT;
+  var ctx = canvas.getContext('2d');
+  if (!ctx) return Promise.reject(new Error('浏览器无法创建预览画布'));
+  var gradient = ctx.createLinearGradient(0, 0, BASE_WIDTH, BASE_HEIGHT);
+  gradient.addColorStop(0, '#f3f6fa'); gradient.addColorStop(1, '#cfd8e6');
+  ctx.fillStyle = gradient; ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
+  ctx.strokeStyle = 'rgba(148,163,184,.35)'; ctx.lineWidth = 1;
+  for (var x = 60; x < BASE_WIDTH; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, BASE_HEIGHT); ctx.stroke(); }
+  for (var y = 60; y < BASE_HEIGHT; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(BASE_WIDTH, y); ctx.stroke(); }
+  return new Promise(function (resolve, reject) {
+    canvas.toBlob(function (blob) {
+      if (!blob) { reject(new Error('生成默认底图失败')); return; }
+      resolve(new File([blob], 'preview-base.png', { type: 'image/png' }));
+    }, 'image/png');
+  });
+}
+// 底图与内置网格图都缓存成 File：每次预览重画 900×1200 并编码 PNG 在这台 2 核机器上要几秒，用户看到的就是"正在生成预览…"卡住
+function baseImageFile() {
+  if (basePromise) return basePromise;
+  basePromise = (baseDoc.dataUrl ? dataUrlToFile(baseDoc.dataUrl, 'preview-base.jpg') : syntheticBaseFile())
+    .catch(function (error) { basePromise = null; throw error; });
+  return basePromise;
+}
+function encodeBaseFromImage(image) {
+  var sourceWidth = Number(image.naturalWidth || image.width || 0), sourceHeight = Number(image.naturalHeight || image.height || 0);
+  var longest = Math.max(sourceWidth, sourceHeight);
+  if (!longest) return Promise.reject(new Error('底图尺寸无法识别'));
+  var scale = longest > model.BASE_MAX_SIDE ? model.BASE_MAX_SIDE / longest : 1;
+  var canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+  canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+  var ctx = canvas.getContext('2d');
+  if (!ctx) return Promise.reject(new Error('浏览器无法处理底图'));
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  var qualities = [0.9, 0.78, 0.62, 0.48];
+  function attempt(index) {
+    if (index >= qualities.length) return Promise.reject(new Error('底图压缩后仍超过 1MB，请换一张更小或更简单的图片'));
+    var dataUrl = canvas.toDataURL('image/jpeg', qualities[index]);
+    var sizeBytes = Math.floor(String(dataUrl).length * 3 / 4);
+    if (sizeBytes > model.BASE_MAX_BYTES) return attempt(index + 1);
+    return Promise.resolve({ dataUrl: dataUrl, sizeBytes: sizeBytes, width: canvas.width, height: canvas.height });
+  }
+  return attempt(0);
+}
+function withTimeout(promise, ms, message) {
+  return new Promise(function (resolve, reject) {
+    var timer = setTimeout(function () { reject(new Error(message)); }, ms);
+    promise.then(function (value) { clearTimeout(timer); resolve(value); }, function (error) { clearTimeout(timer); reject(error); });
+  });
+}
+function renderPreview(host, item, emptyText) {
+  // 序号必须按宿主独立计数：编辑弹窗与"查看效果"共用一个全局序号时，关掉的编辑弹窗残留的防抖预览会顶掉查看效果的令牌，画面永久停在"正在生成预览…"
+  var token = (host.dataset.wmSeq ? Number(host.dataset.wmSeq) : 0) + 1;
+  host.dataset.wmSeq = String(token);
+  host.replaceChildren();
+  if (validateDraft(item)) {
+    host.append(el('span', null, emptyText));
+    return Promise.resolve();
+  }
+  host.append(el('span', null, '正在生成预览…'));
+  return withTimeout(baseImageFile().then(function (file) {
+    return engine.processImage(file, engineConfigOf(item), { preview: true, previewMaxSide: Number(host.dataset.previewMaxSide) || 0, fileName: file.name });
+  }).then(function (result) {
+    return engine.loadImage(result.blob).then(function (image) {
+      if (String(token) !== host.dataset.wmSeq) return;
+      var canvas = el('canvas');
+      canvas.width = result.width; canvas.height = result.height;
+      canvas.getContext('2d').drawImage(image, 0, 0, result.width, result.height);
+      host.replaceChildren();
+      host.append(canvas);
+    });
+  }), 15000, '预览生成超时，请重试').catch(function (error) {
+    if (String(token) !== host.dataset.wmSeq) return;
+    host.replaceChildren();
+    host.append(el('span', null, '预览失败：' + ((error && error.message) || '未知错误')));
+  });
+}
+function schedulePreview() {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(function () {
+    var item = draftFromForm();
+    renderPreview(previewHost, item, item.kind === 'image' ? '上传图片后在此处预览' : '填写文字内容后在此处预览');
+  }, 260);
+}
+function openPreview(item) {
+  document.getElementById('previewTitle').textContent = '查看效果 · ' + item.name;
+  document.getElementById('previewSummary').textContent = kindLabel(item.kind) + ' · ' + positionLabelOf(item.position) + ' · 不透明度 ' + item.opacity + '%'
+    + (item.kind === 'image' ? ' · 图片缩放 ' + item.widthRatio + '%' : ' · ' + item.content + ' · ' + (model.FONT_LABELS[item.fontFamily] || item.fontFamily) + ' ' + item.fontSize + 'px');
+  showModalDialog(previewDialog);
+  renderPreview(document.getElementById('previewViewHost'), item, '模板内容缺失，无法预览');
+}
+
+/* ───────── 事件 ───────── */
+document.getElementById('addBtn').onclick = function () { openEditor(null); };
+// 用户直令"上传图片放到这里""添加一个可以修改底图的按钮"：两个高频动作不必先进弹窗再找控件
+document.getElementById('toolbarLogoBtn').onclick = function () { openEditor(null, 'image'); logoFile.click(); };
+document.getElementById('toolbarBaseBtn').onclick = function () { baseFile.click(); };
+document.getElementById('searchBtn').onclick = function () { render(); status('已按当前条件筛选（' + countText() + '）'); };
+document.getElementById('resetBtn').onclick = function () {
+  kindFilter.value = ''; keyword.value = ''; dateFrom.value = ''; dateTo.value = '';
+  selected = Object.create(null); render(); status('筛选条件已重置（' + countText() + '）');
+};
+document.getElementById('refreshBtn').onclick = function () {
+  window.erpStorage.init([STORAGE_KEY, BASE_KEY]).then(function () {
+    reload(); loadBase();
+    status('模板列表与预览底图已刷新（' + countText() + '）');
+  }).catch(function () { status('刷新失败，请检查服务连接后重试', true); });
+};
+keyword.onkeydown = function (event) { if (event.key === 'Enter') document.getElementById('searchBtn').click(); };
+kindFilter.onchange = render;
+dateFrom.onchange = render;
+dateTo.onchange = render;
+checkAll.onchange = function () {
+  visiblePageIds().forEach(function (id) { if (checkAll.checked) selected[id] = true; else delete selected[id]; });
+  render();
+};
+document.addEventListener('click', function (event) { if (event.target.closest('.wy-table-pagination')) schedulePageSelectionSync(); });
+document.addEventListener('change', function (event) { if (event.target.closest('.wy-table-pagination')) schedulePageSelectionSync(); });
+batchDeleteBtn.onclick = function () {
+  var ids = Object.keys(selected).filter(function (id) { return allRows.some(function (row) { return row.id === id; }); });
+  if (!ids.length) return;
+  var names = allRows.filter(function (row) { return ids.indexOf(row.id) >= 0; }).map(function (row) { return row.name; });
+  if (!window.confirm('确定删除选中的 ' + ids.length + ' 个水印模板？\n' + names.join('、'))) return;
+  ids.forEach(function (id) { allRows = model.remove(allRows, id); delete selected[id]; });
+  save().then(function () { reload(); status('已删除 ' + ids.length + ' 个模板（' + countText() + '）'); })
+    .catch(function (error) { reload(); status((error && error.message) || '批量删除失败', true); });
+};
+body.onchange = function (event) {
+  var box = event.target.closest('input[type="checkbox"]');
+  if (!box) return;
+  if (box.checked) selected[box.dataset.id] = true; else delete selected[box.dataset.id];
+  syncSelection();
+};
+body.onclick = function (event) {
+  var button = event.target.closest('button[data-action]');
+  if (!button) return;
+  var item = allRows.filter(function (row) { return row.id === button.dataset.id; })[0];
+  if (!item) return;
+  if (button.dataset.action === 'preview') { openPreview(item); return; }
+  if (button.dataset.action === 'edit') { openEditor(item); return; }
+  if (button.dataset.action === 'delete') {
+    if (!window.confirm('确定删除' + kindLabel(item.kind) + '模板“' + item.name + '”？')) return;
+    allRows = model.remove(allRows, item.id); delete selected[item.id];
+    save().then(function () { reload(); status('模板“' + item.name + '”已删除（' + countText() + '）'); })
+      .catch(function (error) { reload(); status((error && error.message) || '删除失败', true); });
+  }
+};
+fKind.onchange = function () { draft = Object.assign({}, draft, { kind: fKind.value }); showSet(fKind.value); schedulePreview(); };
+fName.oninput = paintLogo;
+fContent.oninput = schedulePreview;
+fFont.onchange = schedulePreview;
+fSize.onchange = schedulePreview;
+fColor.oninput = function () { if (/^#[0-9a-f]{6}$/i.test(fColor.value.trim())) fColorPick.value = fColor.value.trim(); schedulePreview(); };
+fColorPick.oninput = function () { fColor.value = fColorPick.value; schedulePreview(); };
+fOpacity.oninput = function () { fOpacityOut.value = fOpacity.value + '%'; schedulePreview(); };
+fScale.oninput = function () { fScaleOut.value = fScale.value + '%'; schedulePreview(); };
+positionGrid.onclick = function (event) {
+  var button = event.target.closest('button[data-position]');
+  if (!button) return;
+  draft = Object.assign({}, draft, { position: button.dataset.position });
+  positionLabel.textContent = positionLabelOf(draft.position);
+  Array.prototype.forEach.call(positionGrid.children, function (node) { node.classList.toggle('on', node === button); });
+  schedulePreview();
+};
+document.getElementById('uploadTile').onclick = function () { logoFile.click(); };
+logoFile.onchange = function () {
+  var file = logoFile.files && logoFile.files[0];
+  if (!file) return;
+  if (model.LOGO_TYPES.indexOf(file.type) < 0) { status('水印图片只支持 PNG、JPEG、WebP 格式', true); logoFile.value = ''; return; }
+  if (file.size > model.LOGO_MAX_BYTES) { status('水印图片不能超过 ' + LOGO_LIMIT_LABEL + '（当前 ' + formatBytes(file.size) + '）', true); logoFile.value = ''; return; }
+  var reader = new FileReader();
+  reader.onerror = function () { status('读取图片失败，请重试', true); };
+  reader.onload = function () {
+    engine.loadImage(String(reader.result || '')).then(function (image) {
+      draft = Object.assign({}, draft, {
+        logoDataUrl: String(reader.result || ''), logoContentType: file.type, logoSizeBytes: file.size,
+        logoWidth: image.naturalWidth || image.width || 0, logoHeight: image.naturalHeight || image.height || 0
+      });
+      paintLogo(); schedulePreview();
+      status('已读取水印图片：' + (image.naturalWidth || image.width) + '×' + (image.naturalHeight || image.height) + ' · ' + Math.ceil(file.size / 1024) + 'KB');
+    }).catch(function (error) { status((error && error.message) || '图片无法解码', true); });
+  };
+  reader.readAsDataURL(file);
+  logoFile.value = '';
+};
+logoRemoveBtn.onclick = function () {
+  draft = Object.assign({}, draft, { logoDataUrl: '', logoContentType: '', logoSizeBytes: 0, logoWidth: 0, logoHeight: 0 });
+  paintLogo(); schedulePreview();
+};
+// 原图只限制到 8MB，真正入库的是按最长边 1200、质量递减压出来的 JPEG data URL。
+var BASE_UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
+basePickBtn.onclick = function () { baseFile.click(); };
+baseFile.onchange = function () {
+  var file = baseFile.files && baseFile.files[0];
+  baseFile.value = '';
+  if (!file) return;
+  if (model.BASE_TYPES.indexOf(String(file.type)) < 0) { status('预览底图只支持 PNG、JPEG、WebP 格式', true); return; }
+  if (file.size > BASE_UPLOAD_MAX_BYTES) { status('预览底图原图不得超过 8MB（当前 ' + Math.ceil(file.size / 1024 / 1024) + 'MB）', true); return; }
+  var reader = new FileReader();
+  reader.onerror = function () { status('读取底图失败，请重试', true); };
+  reader.onload = function () {
+    engine.loadImage(String(reader.result || '')).then(function (image) {
+      return encodeBaseFromImage(image).then(function (encoded) {
+        return saveBase({ dataUrl: encoded.dataUrl, width: encoded.width, height: encoded.height, updatedAt: new Date().toISOString() })
+          .then(function () {
+            status('预览底图已更新为 ' + encoded.width + '×' + encoded.height + '（约 ' + Math.ceil(encoded.sizeBytes / 1024) + 'KB），当前预览已改用新底图');
+          });
+      });
+    }).catch(function (error) { status((error && error.message) || '底图处理失败，未保存', true); });
+  };
+  reader.readAsDataURL(file);
+};
+baseResetBtn.onclick = function () {
+  if (!window.confirm('恢复内置默认预览底图？当前保存的底图会被清除。')) return;
+  saveBase(model.blankBase()).then(function () { status('已恢复内置默认预览底图'); })
+    .catch(function (error) { status((error && error.message) || '恢复默认底图失败', true); });
+};
+document.getElementById('dlgClose').onclick = closeEditor;
+document.getElementById('dlgCancel').onclick = closeEditor;
+document.getElementById('dlgOk').onclick = submitDraft;
+editorDialog.oncancel = function (event) { event.preventDefault(); closeEditor(); };
+document.getElementById('previewClose').onclick = function () { previewDialog.close(); };
+document.getElementById('previewOk').onclick = function () { previewDialog.close(); };
+document.addEventListener('erp-storage-audit-updated', function (event) {
+  var key = event.detail && event.detail.key;
+  if (key === BASE_KEY) { loadBase(); return; }
+  if (key === STORAGE_KEY) { reload(); status('模板列表已按最新保存结果刷新（' + countText() + '）'); }
+});
+
+fillSelect(fFont, fontOptions());
+fillSelect(fSize, sizeOptions());
+buildPositionGrid();
+paintBase();
+Promise.all([
+  window.erpStorage.init([STORAGE_KEY, BASE_KEY]),
+  window.erpStorage.request('/api/auth/me', { credentials: 'same-origin' }).then(function (response) {
+    return response && response.ok ? response.json() : null;
+  }).catch(function () { return null; })
+]).then(function (values) {
+  isSystemAdmin = Boolean(values[1] && values[1].isSystemAdmin);
+  reload();
+  loadBase();
+  status(countText());
+}).catch(function () {
+  reload();
+  status('模板列表加载失败，请刷新重试', true);
+});
+})();
+</script></body></html>

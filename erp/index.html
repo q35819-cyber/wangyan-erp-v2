@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>概览 - 网研ERP</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+    .welcome-banner {
+    background: var(--card); border-radius: 14px; padding: 22px 26px; margin-bottom: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.05); border: 1px solid var(--primary-light);
+    display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap;
+  }
+  .welcome-note { text-align: left; }
+  .welcome-note .note-title { font-size: 15px; font-weight: 700; color: var(--primary); margin-bottom: 10px; }
+  .welcome-note .note-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
+  .welcome-avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(100deg,#1E40AF,#60A5FA); color:#fff; font-size: 26px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .welcome-text h2 { font-size: 20px; margin-bottom: 6px; color: var(--text); }
+  .welcome-text p { font-size: 13px; color: var(--text-muted); }
+  .welcome-stats { display: flex; align-items: center; }
+  .kpi { padding: 2px 22px; text-align: center; border-left: 1px solid var(--primary-light); }
+  .kpi:first-child { border-left: none; padding-left: 0; }
+  .kpi span { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; white-space: nowrap; }
+  .kpi b { font-size: 22px; color: var(--text); font-weight: 700; }
+  @media (max-width: 900px) { .welcome-stats { width: 100%; justify-content: space-between; flex-wrap: wrap; gap: 10px 0; } .kpi { border-left: none; padding: 0 8px; } }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+  .step-card { background: var(--card); border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,.05); padding: 20px; }
+  .step-num { width: 30px; height: 30px; border-radius: 50%; background: var(--primary-light); color: var(--primary); font-weight: 800; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+  .step-card h4 { font-size: 15px; margin-bottom: 6px; }
+  .step-card p { font-size: 12px; color: var(--text-muted); line-height: 1.7; }
+  .quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
+  .quick-item { background: var(--card); border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,.05); padding: 18px; text-decoration: none; color: var(--text); display: flex; align-items: center; gap: 12px; }
+  .quick-item:hover { box-shadow: 0 4px 12px rgba(30,64,175,.18); transform: translateY(-2px); }
+  .quick-ico { width: 40px; height: 40px; border-radius: 10px; background: var(--primary-light); color: var(--primary); display: inline-flex; align-items: center; justify-content: center; font-size: 20px; }
+  .quick-item b { font-size: 14px; display: block; }
+  .quick-item span { font-size: 12px; color: var(--text-muted); }
+  .promo-banner {
+    background: linear-gradient(90deg, var(--accent-soft), var(--surface-hover)); border: 1px solid var(--accent-soft);
+    border-radius: 12px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  }
+  .promo-banner b { color: var(--accent); font-size: 15px; }
+  .promo-banner p { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+  @media (max-width: 1100px) { .quick-grid { grid-template-columns: repeat(2, 1fr); } .steps { grid-template-columns: 1fr; } }
+</style>
+<script src="assets/theme-restore.js"></script>
+</head>
+<body>
+        <div class="sidebar">
+    <div class="logo">网研<span>ERP</span></div>
+    <nav class="menu"></nav>
+  </div>
+  <div class="main-content">
+    <div class="header">
+      <div class="header-left">
+        <strong>概览</strong>
+        <span class="breadcrumb">网研ERP <span>/</span> 概览</span>
+      </div>
+      <div class="header-right">
+        <span class="user-name">管理员</span>
+        <button class="icon-btn">🔔</button>
+        <span class="avatar">管</span>
+      </div>
+    </div>
+    <div class="content">
+      <div class="welcome-banner">
+        <div class="welcome-note">
+          <div class="note-title" id="welcomeTitle">你好，欢迎回来！</div>
+          <div class="note-sub" id="welcomeSub">销售额与订单数均来自已同步订单数据</div>
+        </div>
+        <div class="welcome-stats">
+          <div class="kpi"><span>今日销售额</span><b id="kpiTodaySales">--</b></div>
+          <div class="kpi"><span>本月销售额</span><b id="kpiMonthSales">--</b></div>
+          <div class="kpi"><span>上月销售额</span><b id="kpiLastMonthSales">--</b></div>
+          <div class="kpi"><span>今日订单</span><b id="kpiTodayOrders">--</b></div>
+          <div class="kpi"><span>等待备货</span><b id="kpiWaitPrep">--</b></div>
+          <div class="kpi"><span>店铺</span><b id="kpiShops">--</b></div>
+        </div>
+      </div>
+      <div class="quick-grid">
+        <a class="quick-item" href="/pages/goods.html"><div class="quick-ico">📦</div><div><b>添加商品</b><span>快速上架新品</span></div></a>
+        <a class="quick-item" href="/pages/orders.html"><div class="quick-ico">🚚</div><div><b>订单发货</b><span id="quickPendingOrders">0 单待处理</span></div></a>
+        <a class="quick-item" href="/pages/analytics.html"><div class="quick-ico">📈</div><div><b>经营报表</b><span>查看经营数据</span></div></a>
+        <a class="quick-item" href="/pages/orders.html"><div class="quick-ico">💬</div><div><b>订单管理</b><span>查看订单明细</span></div></a>
+      </div>
+      <div class="promo-banner">
+        <div>
+          <b>🎉 网研ERP × OZON 俄罗斯市场</b>
+          <p>订单数据保存到本地文件，换电脑登录同一账号即可继续使用。</p>
+        </div>
+        <a class="btn btn-gold" href="/pages/orders.html">立即同步</a>
+      </div>
+    </div>
+  </div>
+<script src="assets/brand.js"></script>
+<script src="assets/storage.js"></script>
+<script>
+(function () {
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function ym(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1); }
+  function moneyCny(v) {
+    if (v == null || isNaN(v)) return '--';
+    var c = Math.round(v * 100) / 100;
+    var s = c.toFixed(2);
+    if (s.slice(-3) === '.00') s = s.slice(0, -3);
+    return '¥' + s;
+  }
+  function isPrep(s) { return s === '等待备货' || s === '等待打包'; }
+  function hourGreet() {
+    var h = new Date().getHours();
+    if (h < 6) return '凌晨好';
+    if (h < 12) return '早上好';
+    if (h < 18) return '下午好';
+    return '晚上好';
+  }
+  function fmtNum(n) { if (n == null || isNaN(n)) return '--'; return String(Math.round(n)); }
+  function rateValue() {
+    var raw = erpStorage.get('erp_rate');
+    var rate = parseFloat(raw);
+    return (rate > 0) ? rate : 1 / 12;
+  }
+  function compute(orders, shops) {
+    var rate = rateValue();
+    var now = new Date();
+    var today = ymd(now);
+    var thisMonth = ym(now);
+    var last = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    var lastMonth = ym(last);
+    var todayOrders = 0, todaySales = 0, monthSales = 0, lastMonthSales = 0, waitPrep = 0;
+    (orders || []).forEach(function (o) {
+      var m = String(o.orderTime || '').match(/(\d{4})-(\d{2})-(\d{2})/);
+      if (!m) return;
+      var day = m[1] + '-' + m[2] + '-' + m[3];
+      var month = m[1] + '-' + m[2];
+      if (isPrep(o.status)) waitPrep++;
+      if (day === today) todayOrders++;
+      if (o.status === '已取消') return;
+      var fin = o.finance || {};
+      var rub = Number(fin.orderAmountRub);
+      if (!(rub > 0)) return;
+      var cny = (fin.cnyTotal != null && Number(fin.cnyTotal) > 0) ? Number(fin.cnyTotal) : rub * rate;
+      if (day === today) todaySales += cny;
+      if (month === thisMonth) monthSales += cny;
+      if (month === lastMonth) lastMonthSales += cny;
+    });
+    return {
+      todaySales: moneyCny(todaySales),
+      monthSales: moneyCny(monthSales),
+      lastMonthSales: moneyCny(lastMonthSales),
+      todayOrders: fmtNum(todayOrders),
+      waitPrep: fmtNum(waitPrep),
+      shops: fmtNum((shops || []).length)
+    };
+  }
+  function render() {
+    var orders = erpStorage.get('erp_orders_data') || [];
+    var shops = erpStorage.get('erp_shops_data') || [];
+    var s = compute(orders, shops);
+    var el = function (id) { return document.getElementById(id); };
+    if (el('kpiTodaySales')) el('kpiTodaySales').textContent = s.todaySales;
+    if (el('kpiMonthSales')) el('kpiMonthSales').textContent = s.monthSales;
+    if (el('kpiLastMonthSales')) el('kpiLastMonthSales').textContent = s.lastMonthSales;
+    if (el('kpiTodayOrders')) el('kpiTodayOrders').textContent = s.todayOrders;
+    if (el('kpiWaitPrep')) el('kpiWaitPrep').textContent = s.waitPrep;
+    if (el('kpiShops')) el('kpiShops').textContent = s.shops;
+    if (el('quickPendingOrders')) el('quickPendingOrders').textContent = s.waitPrep + ' 单待处理';
+    if (el('welcomeTitle')) {
+      var name = erpStorage.getCurrentUser() || '管理员';
+      el('welcomeTitle').textContent = hourGreet() + '，' + name + '，欢迎回来！';
+    }
+  }
+  document.addEventListener('erp-storage-audit-updated', function (event) { if (event.detail && event.detail.key === 'erp_rate') render(); });
+  erpStorage.init(['erp_rate', 'erp_orders_data', 'erp_shops_data']).then(render);
+})();
+</script>
+<script src="assets/sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>收藏夹 - 网研ERP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .fav-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:16px; }
+  .summary-card { padding:17px 20px; border:1px solid var(--line); border-radius:8px; background:var(--card); }
+  .summary-label { color:var(--muted); font-size:12px; }.summary-value{margin-top:8px;color:var(--text);font-size:25px;font-weight:700}
+  .fav-grid { display:grid; grid-template-columns:repeat(3,minmax(230px,1fr)); gap:14px; }
+  .fav-card { min-width:0; padding:15px; border:1px solid var(--line); border-radius:8px; background:var(--card); }
+  .thumb { width:100%; height:128px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:var(--surface); }
+  .fav-name { margin-top:12px; min-height:40px; color:var(--text); font-weight:600; line-height:1.45; }
+  .fav-meta { margin-top:7px; color:var(--muted); font-size:12px; line-height:1.8; }
+  .fav-price { margin:10px 0; color:var(--primary); font-size:17px; font-weight:700; }
+  .fav-actions { display:flex; justify-content:flex-end; }.empty { grid-column:1/-1;padding:86px 20px;text-align:center;color:var(--text-faint);line-height:1.9;border:1px solid var(--line);border-radius:8px;background:var(--card); }
+  @media(max-width:1050px){.fav-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:680px){.fav-summary,.fav-grid{grid-template-columns:1fr}}
+</style>
+<link rel="stylesheet" href="../assets/ui.css">
+<script src="../assets/theme-restore.js"></script>
+</head>
+<body>
+  <div class="sidebar"><div class="logo">网研<span>ERP</span></div><nav class="menu"></nav></div>
+  <div class="main-content">
+    <div class="header"><div class="header-left"><strong>收藏夹</strong><span class="breadcrumb">网研ERP <span>/</span> 商品 <span>/</span> 收藏夹</span></div><div class="header-right"><span class="user-name">管理员</span><button class="icon-btn">🔔</button><span class="avatar">管</span></div></div>
+    <main class="content ui-page">
+      <div class="fav-summary"><div class="summary-card"><div class="summary-label">收藏总数 / 会员上限</div><div class="summary-value" id="allCount">0/0</div><div id="favoriteMembershipQuota"></div></div><div class="summary-card"><div class="summary-label">未上架</div><div class="summary-value" id="pendingCount">0</div></div><div class="summary-card"><div class="summary-label">已上架</div><div class="summary-value" id="listedCount">0</div></div></div>
+      <div class="filter-bar"><input class="input" id="keyword" placeholder="搜索收藏商品 / SKU"><select class="select" id="category"><option value="">全部类目</option></select><select class="select" id="status"><option value="">全部状态</option><option>未上架</option><option>已上架</option></select><button class="btn btn-primary" id="searchBtn">搜索</button></div>
+      <div class="fav-grid" id="favoriteGrid"></div>
+    </main>
+  </div>
+<script src="../assets/brand.js"></script><script src="../assets/identity-display.js?v=20261006-id02"></script><script src="../assets/storage.js"></script><script src="../assets/membership-quota.js?v=20261005-quota01"></script><script src="../assets/product-favorites.js"></script><script src="../assets/sku-mask.js"></script><script src="../assets/ozon-product-link.js?v=20261005-ozonlink01"></script><script src="../assets/sidebar.js"></script>
+<script>
+(function(){
+  'use strict'; var KEY='erp_favorite_products',model=window.WYERP_PRODUCT_FAVORITES,list=[],favoriteLimit=0,favoriteQuota=null,quotaApi=window.WYERP_MEMBERSHIP_QUOTA;
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
+  function identity(p){var v=p&&p.favoritedByIdentity;return v&&v.masked?v:{masked:'历史未记录',raw:''};}
+  function renderCategories(){var select=document.getElementById('category'),current=select.value,cats=list.map(function(p){return p.category;}).filter(Boolean).filter(function(v,i,a){return a.indexOf(v)===i;});select.innerHTML='<option value="">全部类目</option>'+cats.map(function(v){return '<option>'+esc(v)+'</option>';}).join('');if(cats.indexOf(current)>=0)select.value=current;}
+  function applyFavoriteQuota(payload){
+    var quota=payload&&payload.quotas&&payload.quotas.favorites;
+    if(quota){favoriteQuota=Object.assign({},quota);favoriteLimit=quota.unlimited||quota.limit===null?null:Number(quota.limit||0);return;}
+    var plan=payload&&payload.membership&&payload.membership.activePlan;
+    favoriteQuota=null;favoriteLimit=plan&&plan.benefits&&Object.prototype.hasOwnProperty.call(plan.benefits,'favoriteLimit')?plan.benefits.favoriteLimit:0;
+  }
+  function renderFavoriteQuota(){
+    if(!favoriteQuota)return;
+    favoriteQuota.usage=list.length;
+    quotaApi.render(document.getElementById('favoriteMembershipQuota'),favoriteQuota,{compact:true,label:'会员收藏额度'});
+  }
+  function render(){
+    document.getElementById('allCount').textContent=list.length+'/'+(favoriteLimit===null?'不限':favoriteLimit);renderFavoriteQuota();document.getElementById('pendingCount').textContent=list.filter(function(p){return p.status==='未上架';}).length;document.getElementById('listedCount').textContent=list.filter(function(p){return p.status==='已上架';}).length;
+    var rows=model.filter(list,{keyword:document.getElementById('keyword').value,category:document.getElementById('category').value,status:document.getElementById('status').value}),grid=document.getElementById('favoriteGrid');
+    if(!rows.length){grid.innerHTML='<div class="empty">暂无符合条件的收藏商品<br>可在「榜单选品」中收藏真实市场商品。</div>';return;}
+    grid.innerHTML=rows.map(function(p){var who=identity(p);return '<article class="fav-card">'+(p.image?'<img class="thumb" src="'+esc(p.image)+'" alt="" onerror="this.style.display=\'none\'">':'<div class="thumb"></div>')+''+window.WYERP_OZON_PRODUCT_LINK.titleHtml(p,p.name||'未命名商品',{className:'fav-name product-title-clamp-2 ozon-product-title-link'})+'<div class="fav-meta">SKU：'+esc(window.WYERP_SKU_MASK.mask(p.sku))+'<br>类目：'+esc(p.category||'--')+' · 状态：'+esc(p.status)+'<br>收藏账号：<span class="username-ellipsis" title="'+esc(who.raw||who.masked)+'">'+esc(who.masked)+'</span><br>收藏时间：'+esc(p.favoritedAt||'--')+'</div><div class="fav-price">'+(p.price==null?'价格 --':'¥ '+esc(p.price))+'</div><div class="fav-actions"><button class="btn remove-btn" type="button" data-sku="'+esc(p.sku)+'">移除</button></div></article>';}).join('');
+  }
+  document.getElementById('searchBtn').addEventListener('click',render);document.getElementById('keyword').addEventListener('keydown',function(e){if(e.key==='Enter')render();});
+  document.getElementById('favoriteGrid').addEventListener('click',function(e){var btn=e.target.closest('.remove-btn');if(!btn)return;if(confirm('确定从收藏夹移除这个商品？')){list=model.remove(list,btn.dataset.sku);erpStorage.set(KEY,list);renderCategories();render();}});
+  erpStorage.init([KEY]).then(function(){return quotaApi.load().then(applyFavoriteQuota).catch(function(){favoriteLimit=0;favoriteQuota=null;});}).then(function(){list=model.normalizeAll(erpStorage.get(KEY));renderCategories();render();});
+})();
+</script>
+</body></html>

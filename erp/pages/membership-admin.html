@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>统一激活码管理 - 网研ERP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/membership.css">
+<link rel="stylesheet" href="../assets/membership-admin.css?v=20260920-acp02">
+<link rel="stylesheet" href="../assets/ui.css">
+<script src="../assets/theme-restore.js"></script>
+</head>
+<body>
+<aside class="sidebar"><div class="logo">网研<span>ERP</span></div><nav class="menu"></nav></aside>
+<div class="main-content">
+  <header class="header"><div class="header-left"><strong>统一激活码管理</strong><span class="breadcrumb">系统管理 <span>/</span> 统一激活码</span></div><div class="header-right"><span class="user-name">系统管理员</span><button class="icon-btn" type="button">🔔</button><span class="avatar">管</span></div></header>
+  <main class="content membership-page ui-page">
+    <section class="card membership-profile">
+      <div class="membership-avatar" aria-hidden="true"><img id="adminMembershipAvatarImage" alt="" hidden><span id="adminMembershipAvatarFallback">管</span></div>
+      <div class="membership-profile-copy"><span class="membership-eyebrow">会员与AI豆统一发码</span><h1>统一激活码管理</h1><p>前期仅由系统管理员向目标客户单张发放会员或AI豆激活码。</p></div>
+      <span class="static-preview-badge" id="agentAdminModeBadge">管理员单张发码</span>
+    </section>
+    <section class="membership-records"><div class="membership-section-head"><div><h2>管理员生成激活码</h2><p>前期仅由系统管理员向目标客户单张发放会员或AI豆激活码。</p></div><span class="admin-risk-note">一次只生成一张</span></div>
+      <form id="systemActivationForm" class="payment-review-form">
+        <label><span>激活码类型</span><select id="systemActivationBenefit"><option value="membership">会员激活码</option><option value="bean_recharge">AI豆充值码</option></select></label>
+        <label><span>客户空间</span><select id="systemActivationTenant" required><option value="">正在读取…</option></select></label>
+        <label data-membership-plan><span>会员方案</span><select id="systemActivationPlan"><option value="month">月卡</option><option value="quarter">季卡</option><option value="year">年卡</option></select></label>
+        <label data-bean-amount hidden><span>AI豆面额</span><select id="systemActivationBeanAmount"><option value="1000">1000豆</option><option value="2000">2000豆</option><option value="5000">5000豆</option><option value="10000">10000豆</option><option value="50000">50000豆</option></select></label>
+        <label class="payment-review-wide"><span>申请理由（选填）</span><textarea id="systemActivationReason" maxlength="500" placeholder="最多500字"></textarea></label>
+        <div class="payment-review-selected"><strong id="systemActivationSummary">请选择客户和权益</strong><span>新生成的完整激活码会加密保存，仅系统管理员后台可再次查看</span></div>
+        <button id="systemActivationButton" class="btn btn-primary" type="submit">生成一张</button>
+      </form>
+      <p id="systemActivationStatus" class="agent-admin-status" role="status">服务端会核对客户主账号、权益选项、激活码开关和幂等请求。</p>
+    </section>
+    <section class="membership-records" aria-labelledby="systemActivationRecordsTitle">
+      <div class="membership-section-head"><div><h2 id="systemActivationRecordsTitle">统一激活码记录</h2><p>系统管理员可查看修改后新生成的完整激活码；旧历史码因当时未保存完整值无法恢复。</p></div><button id="systemActivationRecordsRefresh" class="btn btn-ghost" type="button">刷新记录</button></div>
+      <div class="filter-bar" aria-label="统一激活码记录筛选">
+        <select class="select" id="systemActivationTypeFilter" aria-label="类型"><option value="">全部类型</option><option value="membership">会员</option><option value="ai_beans">AI豆</option></select>
+        <select class="select" id="systemActivationStatusFilter" aria-label="状态"><option value="">全部状态</option><option value="issued">已申请</option><option value="activated">已激活</option><option value="expired">已过期</option><option value="voided">已作废</option></select>
+        <select class="select" id="systemActivationBenefitFilter" aria-label="方案或额度" disabled><option value="">请先选择类型</option></select>
+      </div>
+      <div class="table-wrap membership-record-table"><table><thead><tr><th>申请ID</th><th>记录ID</th><th>完整激活码</th><th>目标客户</th><th>类型</th><th>方案 / 豆面额</th><th>状态</th><th>申请时间</th><th>到期时间</th><th>激活时间</th><th>操作</th></tr></thead><tbody id="systemActivationRecordRows"><tr><td class="membership-empty" colspan="11">正在读取管理员记录…</td></tr></tbody></table></div>
+      <div class="pagination" id="systemActivationPagination"><div class="pagination-left"><span id="systemActivationRecordTotal">共0条记录</span><label>每页 <select class="page-size-select" id="systemActivationPageSize"><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select> 条</label></div><div class="pagination-right" id="systemActivationPageButtons"></div></div>
+      <p id="systemActivationRecordStatus" class="agent-admin-status" role="status">完整码只在系统管理员接口解密返回，不写日志或通知。</p>
+    </section>
+    <section class="membership-records" aria-labelledby="agentActivationRecordsTitle">
+      <div class="membership-section-head"><div><h2 id="agentActivationRecordsTitle">代理商激活码处理</h2><p>系统管理员查看完整激活码、代理商账号和客户账号；代理商自己登录时仍只显示掩码。</p></div><button id="agentActivationRecordsRefresh" class="btn btn-ghost" type="button">刷新记录</button></div>
+      <div class="filter-bar" aria-label="代理商激活码处理状态筛选"><select class="select" id="agentActivationStatusFilter" aria-label="处理状态"><option value="">全部状态</option><option value="pending_payment">待确认付款</option><option value="unactivated">未激活</option><option value="confirmed">已确认付款 / 已核销</option><option value="expired">已过期</option><option value="voided">已作废</option></select></div>
+      <div class="table-wrap membership-record-table agent-activation-record-table"><table><thead><tr><th>完整激活码</th><th>代理商账号</th><th>客户账号</th><th>会员方案 / AI豆</th><th>锁定代理价 / 豆价</th><th>申请时间</th><th>激活时间</th><th>付款确认时间</th><th>正式权益到期</th><th>状态</th><th>操作</th></tr></thead><tbody id="agentActivationRecordRows"><tr><td class="membership-empty" colspan="11">正在读取代理商激活码记录…</td></tr></tbody></table></div>
+      <p id="agentActivationRecordStatus" class="agent-admin-status" role="status">待处理记录优先显示。</p>
+    </section>
+    <section class="membership-records" aria-labelledby="membershipCampaignTitle">
+      <div class="membership-section-head"><div><h2 id="membershipCampaignTitle">会员节假日活动</h2><p>手工维护活动草稿并发布。所有时间按北京时间解释；月卡/季卡/年卡赠送固定为7/15/30天。</p></div><button id="membershipCampaignRefresh" class="btn btn-ghost" type="button">刷新活动</button></div>
+      <form id="membershipCampaignForm" class="payment-review-form">
+        <label><span>活动年份</span><input id="membershipCampaignYear" type="number" min="2020" max="2200" required></label>
+        <label><span>活动类型</span><select id="membershipCampaignType"><option value="spring_festival">春节</option><option value="labour_day">劳动节</option><option value="mid_autumn_national_day">中秋国庆</option></select></label>
+        <label class="payment-review-wide"><span>活动名称</span><input id="membershipCampaignName" type="text" maxlength="160" required></label>
+        <label><span>开始时间（北京时间）</span><input id="membershipCampaignStartsAt" type="datetime-local" required></label>
+        <label><span>结束时间（北京时间）</span><input id="membershipCampaignEndsAt" type="datetime-local" required></label>
+        <div class="payment-review-selected"><strong>固定赠送：月卡7天 / 季卡15天 / 年卡30天</strong><span>发布前会检查与其他已发布活动的时间重叠。</span></div>
+        <button id="membershipCampaignSave" class="btn btn-primary" type="submit">保存草稿</button>
+      </form>
+      <p id="membershipCampaignStatus" class="agent-admin-status" role="status">真实节假日来源不自动导入；由系统管理员确认后手工发布。</p>
+      <div class="table-wrap membership-record-table"><table><thead><tr><th>年份</th><th>类型</th><th>名称</th><th>开始</th><th>结束</th><th>赠送</th><th>状态</th><th>已发放客户</th><th>操作</th></tr></thead><tbody id="membershipCampaignRows"><tr><td class="membership-empty" colspan="9">正在读取活动…</td></tr></tbody></table></div>
+    </section>
+  </main>
+</div>
+<script src="../assets/brand.js"></script>
+<script src="../assets/sidebar.js"></script>
+<script src="../assets/membership-admin.js?v=20260921-agentvoidwd01"></script>
+</body>
+</html>

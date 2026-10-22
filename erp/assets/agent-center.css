@@ -1,0 +1,36 @@
+.agent-referral{display:grid;gap:14px;margin-top:24px;padding:20px 24px}
+.agent-referral h2{margin:0;color:var(--text);font-size:17px}.agent-referral p{margin:5px 0 0;color:var(--text-muted);font-size:12px;line-height:1.65}
+.agent-referral-head,.agent-referral-code{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.agent-referral-code{padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--surface-alt)}
+.agent-referral-code>div:first-child{display:grid;gap:4px}.agent-referral-code span{color:var(--text-muted);font-size:12px}.agent-referral-code strong{color:var(--text);font-size:20px;letter-spacing:.04em}
+.agent-referral-code>div:last-child{display:flex;gap:8px;flex-wrap:wrap}
+.agent-referral-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.agent-referral-stats>div{display:grid;gap:5px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.agent-referral-stats span{color:var(--text-muted);font-size:11px}.agent-referral-stats strong{color:var(--text);font-size:18px}.agent-referral-rule{padding:10px 12px;border-radius:8px;background:var(--accent-soft)}
+@media(max-width:900px){.agent-referral-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.agent-referral-stats{grid-template-columns:1fr}.agent-referral-code>div:last-child{width:100%}}
+.agent-code-request{display:grid;gap:16px;margin-top:24px;padding:20px 24px}
+.agent-code-request h2{margin:0;color:var(--text);font-size:17px}
+.agent-code-request p{margin:5px 0 0;color:var(--text-muted);font-size:12px}
+.agent-code-request form{display:flex;align-items:flex-start;gap:14px 18px;flex-wrap:wrap}
+/* 每个字段固定三行：标签行、控件行、说明行。说明文字占独立行，不会把同行控件顶高。 */
+.agent-field{display:grid;grid-template-rows:20px var(--ui-control-h) 16px;row-gap:5px;align-items:start}
+.agent-field>label{grid-row:1;align-self:center;color:var(--text-muted);font-size:12px;line-height:1}
+.agent-field>select,.agent-field>input{grid-row:2;box-sizing:border-box;height:var(--ui-control-h);padding:0 10px;border:1px solid var(--input-border);border-radius:var(--ui-radius);background:var(--input-bg);color:var(--text);font-size:13px}
+.agent-field>small{grid-row:3;color:var(--text-muted);font-size:11px;line-height:16px;white-space:nowrap}
+.agent-field>select{width:132px}
+.agent-field>input{width:min(300px,72vw)}
+.agent-field-action>.btn{grid-row:2;justify-self:start}
+.agent-customer-account[hidden]{display:none}
+.agent-price-card{position:relative;outline:none}
+.agent-price-card:focus-visible{box-shadow:0 0 0 2px var(--accent)}
+/* 完整代理价规则只做悬停浮层：脱离文档流，展开时不得改变卡片高度或顶开下方面板。 */
+.agent-price-rules{position:absolute;top:calc(100% + 8px);left:0;z-index:30;display:none;width:min(320px,calc(100vw - 96px));margin:0;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--input-bg);color:var(--text);font-size:12px;line-height:1.65;box-shadow:var(--shadow-lg);pointer-events:none}
+.agent-price-rules::before{content:"";position:absolute;top:-5px;left:22px;width:9px;height:9px;transform:rotate(45deg);background:var(--input-bg);border-left:1px solid var(--line);border-top:1px solid var(--line)}
+.agent-price-rules strong,.agent-price-rules span{display:block}
+.agent-price-rules strong{margin-bottom:6px;color:var(--text);font-size:13px}
+.agent-price-card:hover .agent-price-rules,.agent-price-card:focus .agent-price-rules,.agent-price-card:focus-within .agent-price-rules{display:block}
+.agent-one-time-code{display:grid;gap:10px;padding:16px;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:10px;background:var(--accent-soft)}
+.agent-one-time-code[hidden]{display:none}
+.agent-one-time-code code{overflow-wrap:anywhere;color:var(--text);font-size:18px;font-weight:750}
+.agent-one-time-code>div{display:flex;gap:8px;flex-wrap:wrap}
+.agent-code-void{min-width:64px}
+@media(max-width:700px){.agent-code-request form{gap:12px}.agent-field{width:100%}.agent-field>select,.agent-field>input{width:100%}.agent-field>small{white-space:normal}}

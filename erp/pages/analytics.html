@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分析 - 网研ERP</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .overview-page { --accent: var(--primary); }
+  .search-wrap { position: relative; display: inline-flex; align-items: center; }
+  .search-wrap svg { position: absolute; left: 10px; width: 15px; height: 15px; color: var(--text-faint); pointer-events: none; }
+  .search-wrap .input { width: 260px; padding-left: 32px; padding-right: 30px; }
+  .search-clear {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    border: none; background: var(--line); color: var(--text-muted); width: 18px; height: 18px;
+    border-radius: 50%; font-size: 13px; cursor: pointer; display: none;
+    align-items: center; justify-content: center; padding: 0; line-height: 1;
+  }
+  .search-clear.show { display: inline-flex; }
+  .icon-btn-sm {
+    width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text-muted); cursor: pointer; display: inline-flex;
+    align-items: center; justify-content: center;
+  }
+  .icon-btn-sm:hover { border-color: var(--primary); color: var(--primary); }
+  .icon-btn-sm svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .btn-sync.loading { opacity: .65; pointer-events: none; }
+  .btn-sync.loading::before {
+    content: ''; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.45);
+    border-top-color: var(--card); border-radius: 50%; display: inline-block;
+    vertical-align: -2px; margin-right: 6px; animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .source-chip {
+    display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px;
+    border-radius: 8px; background: var(--surface-alt); color: var(--text-muted); font-size: 12px; white-space: nowrap;
+  }
+  .source-chip b { color: var(--text); font-weight: 600; }
+  .meta-time { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px; margin-bottom: 14px;
+  }
+  .period-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px 16px 12px; min-width: 0; position: relative;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04);
+  }
+  .period-card::before {
+    content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 2px;
+  }
+  .period-card.blue::before { background: #4f6ef7; }
+  .period-card.orange::before { background: #f97316; }
+  .period-card.teal::before { background: #14b8a6; }
+  .period-card.rose::before { background: #f43f5e; }
+  .period-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  .period-name { font-size: 13px; font-weight: 700; color: var(--text); }
+  .period-tag { font-size: 11px; color: var(--text-muted); background: var(--surface-alt); border-radius: 999px; padding: 2px 8px; }
+  .period-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+  .period-row:last-child { margin-bottom: 0; }
+  .period-row span { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+  .period-row b { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: 0; white-space: nowrap; }
+  .period-row.sub b { font-size: 13px; color: var(--text-muted); }
+
+  .charts-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .chart-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    padding: 16px; min-width: 0;
+  }
+  .chart-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .chart-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--text); }
+  .chart-title i { width: 4px; height: 15px; border-radius: 2px; background: var(--accent); display: inline-block; }
+  .chart-title i.orange { background: #f97316; }
+  .chart-title i.teal { background: #14b8a6; }
+  .chart-title i.rose { background: #f43f5e; }
+  .chart-sub { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+  .chart-head .btn { font-size: 12px; padding: 5px 12px; }
+
+  .donut-wrap { display: flex; align-items: center; gap: 20px; padding: 4px 0 2px; }
+  .donut { width: 128px; height: 128px; border-radius: 50%; position: relative; flex: none; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  .donut:hover { transform: scale(1.03); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .donut svg { width: 100%; height: 100%; }
+  .donut svg path { transition: opacity 0.2s ease, transform 0.2s ease; transform-origin: center; cursor: pointer; }
+  .donut svg path:hover { opacity: 0.8; transform: scale(1.05); }
+  .donut svg path.dimmed { opacity: 0.3; }
+  .donut svg path.highlighted { opacity: 1; transform: scale(1.05); }
+  .donut::after { content: ''; position: absolute; inset: 24px; background: var(--card); border-radius: 50%; z-index: 1; }
+  .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; pointer-events: none; }
+  .donut-center b { font-size: 17px; color: var(--text); font-weight: 800; letter-spacing: 0; }
+  .donut-center span { font-size: 10px; color: var(--text-faint); margin-top: 2px; }
+  .donut-legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text); min-width: 0; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s ease; }
+  .legend-item:hover { background: var(--surface-alt); }
+  .legend-item.dimmed { opacity: 0.4; }
+  .legend-item.highlighted { background: var(--primary-light); font-weight: 600; }
+  .legend-item .dot { width: 9px; height: 9px; border-radius: 3px; flex: none; transition: transform 0.15s ease; }
+  .legend-item:hover .dot { transform: scale(1.3); }
+  .legend-item .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-item .pct { color: var(--text); font-weight: 700; white-space: nowrap; }
+  .legend-item .amt { font-size: 11px; color: var(--text-faint); white-space: nowrap; }
+
+  .panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    margin-bottom: 14px; overflow: hidden;
+  }
+  .panel-head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    padding: 14px 16px; border-bottom: 1px solid var(--line);
+  }
+  .panel-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--text); }
+  .panel-title i { width: 4px; height: 15px; border-radius: 2px; background: #14b8a6; display: inline-block; }
+  .panel-sub { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+  .panel-count { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+  .table-wrap { overflow-x: auto; max-height: 430px; overflow-y: auto; }
+  table { min-width: 680px; }
+  th { position: sticky; top: 0; background: var(--surface-hover); z-index: 1; cursor: pointer; user-select: none; white-space: nowrap; }
+  th .sort-arrow { color: var(--accent); font-size: 10px; }
+  th:hover { color: var(--accent); }
+  td.rank { color: var(--text-faint); font-variant-numeric: tabular-nums; }
+  td.num { font-variant-numeric: tabular-nums; text-align: right; }
+  th.num { text-align: right; }
+  .cat-name { font-weight: 600; color: var(--text); }
+
+  .data-note {
+    display: flex; align-items: flex-start; gap: 10px; background: var(--card);
+    border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px;
+    font-size: 12px; color: var(--text-muted); line-height: 1.8;
+  }
+  .data-note svg { width: 16px; height: 16px; flex: none; margin-top: 3px; color: #f59e0b; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .data-note b { color: var(--text); }
+  .data-note .warn { color: #b45309; font-weight: 600; }
+  #toastBox { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1200; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .toast {
+    padding: 10px 18px; border-radius: 8px; font-size: 13px; color: #fff;
+    box-shadow: 0 8px 24px rgba(15,23,42,.2); max-width: 82vw; line-height: 1.5;
+  }
+  .toast.ok { background: #16a34a; }
+  .toast.err { background: #dc2626; }
+  .toast.info { background: #334155; }
+
+  /* 统一组件层迁移：数字列保持右对齐、类目长文本左对齐（特异性高于 ui.css 通用居中规则） */
+  .ui-page table thead th.num { text-align: right; }
+  .ui-page .table-wrap table tbody td.num { text-align: right; }
+  .ui-page .table-wrap table tbody td.cat-name { text-align: left; }
+  @media (max-width: 1300px) { .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 1050px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .filter-bar { flex-wrap: wrap; }
+    .filter-bar .search-wrap { width: 100%; }
+    .filter-bar .search-wrap .input { width: 100%; }
+  }
+  @media (max-width: 720px) {
+    .stat-grid { grid-template-columns: 1fr; }
+    .donut-wrap { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+<link rel="stylesheet" href="../assets/ui.css">
+<script src="../assets/theme-restore.js"></script>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">网研<span>ERP</span></div>
+    <nav class="menu"></nav>
+  </div>
+  <div class="main-content overview-page ui-page">
+    <div class="header">
+      <div class="header-left">
+        <strong>分析</strong>
+        <span class="breadcrumb">网研ERP <span>/</span> 分析</span>
+      </div>
+      <div class="header-right">
+        <label class="source-chip" style="margin-right:8px;"><span>店铺</span><select id="shopScope" style="background:transparent;border:none;color:inherit;font-size:12px;font-weight:600;cursor:pointer;padding-left:2px;min-width:80px;"><option value="">全网大盘</option></select></label>
+        <span class="user-name">管理员</span>
+        <button class="icon-btn">🔔</button>
+        <span class="avatar">管</span>
+      </div>
+    </div>
+    <div class="content">
+      <div class="filter-bar">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="input" type="text" placeholder="搜索类目 / 品牌" id="overviewSearch" autocomplete="off">
+          <button type="button" class="search-clear" id="searchClear" title="清空搜索">&times;</button>
+        </div>
+        <span class="source-chip">数据源 <b>全网获取数据 · 自动更新</b></span>
+        <span class="meta-time" id="metaTime">正在加载…</span>
+        <span class="spacer"></span>
+        <button class="icon-btn-sm" id="btnRefresh" title="刷新数据">
+          <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        </button>
+        <button class="btn btn-outline" id="btnExport">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+          下载报表
+        </button>
+        <button class="btn btn-primary btn-sync" id="btnSyncOverview">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+          同步大盘数据
+        </button>
+      </div>
+
+      <div class="stat-grid" id="periodGrid"></div>
+
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-head">
+            <div>
+              <div class="chart-title"><i></i>类目月销量占比</div>
+              <div class="chart-sub">全平台口径 · 近 30 天</div>
+            </div>
+            <a class="btn btn-light" href="category.html">类目分析</a>
+          </div>
+          <div class="donut-wrap" id="chartSales"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-head">
+            <div>
+              <div class="chart-title"><i class="orange"></i>类目月销售额占比</div>
+              <div class="chart-sub">全平台口径 · 近 30 天</div>
+            </div>
+            <a class="btn btn-light" href="category.html">类目分析</a>
+          </div>
+          <div class="donut-wrap" id="chartAmount"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-head">
+            <div>
+              <div class="chart-title"><i class="teal"></i>品牌销量占比</div>
+              <div class="chart-sub">全平台口径 · 有品牌 / 无品牌</div>
+            </div>
+          </div>
+          <div class="donut-wrap" id="chartBrand"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-head">
+            <div>
+              <div class="chart-title"><i class="rose"></i>履约来源销量占比</div>
+              <div class="chart-sub">全平台口径 · FBO / FBS</div>
+            </div>
+          </div>
+          <div class="donut-wrap" id="chartSource"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title"><i></i>类目销量 / 销售额排行</div>
+            <div class="panel-sub">全平台口径 · 近 30 天 · 点击表头排序</div>
+          </div>
+          <div class="panel-count" id="catCount"></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th data-sort="rank">排名 <span class="sort-arrow"></span></th>
+                <th data-sort="name">类目 <span class="sort-arrow"></span></th>
+                <th class="num" data-sort="sales_num">销量 <span class="sort-arrow"></span></th>
+                <th class="num" data-sort="amount_num">销售额 <span class="sort-arrow"></span></th>
+                <th class="num" data-sort="sales_rate">销量占比 <span class="sort-arrow"></span></th>
+                <th class="num" data-sort="sales_amount_rate">销售额占比 <span class="sort-arrow"></span></th>
+              </tr>
+            </thead>
+            <tbody id="catBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="data-note">
+        <svg viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        <div>
+          <b>数据口径与来源</b><br>
+          本页展示的是 OZON 数据（顶部店铺下拉可切换单店铺视角；"全网大盘"查看全平台汇总）。数据通过全网接口更新后写入服务器公共缓存，所有用户共用；服务器自动同步更新，新用户无需手动同步即可直接读取。数据源更新后，本页才会出现新的市场数据；<span id="noteUpdate">数据更新至 2026-08-01</span>。点击「同步大盘数据」可手动触发一次刷新。
+        </div>
+      </div>
+    </div>
+  </div>
+<script>
+(function () {
+  'use strict';
+  var PALETTE = ['#4f6ef7', '#f97316', '#14b8a6', '#f43f5e', '#f59e0b', '#8b5cf6', '#0ea5e9', '#10b981', '#d946ef', '#64748b'];
+  var OTHER_COLOR = 'var(--text-faint)';
+  var PERIODS = [
+    { key: 'week', name: '周', tag: '近 7 天', cls: 'blue' },
+    { key: 'month', name: '月', tag: '近 30 天', cls: 'orange' },
+    { key: 'quarter', name: '季度', tag: '近 90 天', cls: 'teal' },
+    { key: 'year', name: '年', tag: '近 365 天', cls: 'rose' }
+  ];
+  var STATE = {
+    data: null,
+    search: '',
+    sortKey: 'sales_amount_rate',
+    sortDir: -1
+  };
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function toast(text, type) {
+    var box = document.getElementById('toastBox');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'toastBox';
+      document.body.appendChild(box);
+    }
+    var el = document.createElement('div');
+    el.className = 'toast ' + (type || 'info');
+    el.textContent = text;
+    box.appendChild(el);
+    setTimeout(function () {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    }, 3200);
+  }
+  function parseNum(s) {
+    var m = String(s == null ? '' : s).match(/([\d.]+)/);
+    var v = parseFloat(m ? m[1] : 0) || 0;
+    if (String(s).indexOf('万') >= 0) v *= 10000;
+    if (String(s).indexOf('亿') >= 0) v *= 100000000;
+    return v;
+  }
+  function fmtInt(n) {
+    return Number(n || 0).toLocaleString('zh-CN');
+  }
+  function fmtYi(n) {
+    return (Number(n || 0) / 100000000).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '亿';
+  }
+  function listFromData(key) {
+    return (STATE.data && Array.isArray(STATE.data.charts[key])) ? STATE.data.charts[key] : [];
+  }
+  function matchesName(item) {
+    var q = STATE.search.trim().toLowerCase();
+    if (!q) return true;
+    return String(item.name || '').toLowerCase().indexOf(q) >= 0;
+  }
+
+  function renderPeriods() {
+    var grid = document.getElementById('periodGrid');
+    var pc = (STATE.data && STATE.data.period_count) || {};
+    var html = PERIODS.map(function (p) {
+      var d = pc[p.key] || {};
+      var sales = d.sales || 0;
+      var amount = d.sales_amount || 0;
+      var cny = d.sales_amount_cny || '--';
+      return '<div class="period-card ' + p.cls + '">' +
+        '<div class="period-top"><span class="period-name">' + p.name + '大盘</span><span class="period-tag">' + p.tag + '</span></div>' +
+        '<div class="period-row"><span>销售量</span><b>' + fmtInt(sales) + ' 件</b></div>' +
+        '<div class="period-row"><span>销售额</span><b>₽' + fmtYi(amount) + '</b></div>' +
+        '<div class="period-row sub"><span>≈ 人民币</span><b>¥' + esc(cny) + '</b></div>' +
+        '</div>';
+    }).join('');
+    grid.innerHTML = html || '<div class="period-card"><div class="period-name">暂无数据</div></div>';
+  }
+
+  function renderDonut(el, items, opts) {
+    opts = opts || {};
+    if (!items || !items.length) {
+      el.innerHTML = '<div class="empty-tip">暂无数据</div>';
+      return;
+    }
+    var total = items.reduce(function (s, it) { return s + (Number(it.rate) || 0); }, 0) || 1;
+    var size = 128;
+    var center = size / 2;
+    var radius = 56;
+    var innerRadius = 38;
+    var svgParts = [];
+    var curAngle = -90;
+    items.forEach(function (it, i) {
+      var pct = (Number(it.rate) || 0) / total * 100;
+      var angle = pct / 100 * 360;
+      var endAngle = curAngle + angle;
+      var startRad = curAngle * Math.PI / 180;
+      var endRad = endAngle * Math.PI / 180;
+      var x1 = center + radius * Math.cos(startRad);
+      var y1 = center + radius * Math.sin(startRad);
+      var x2 = center + radius * Math.cos(endRad);
+      var y2 = center + radius * Math.sin(endRad);
+      var ix1 = center + innerRadius * Math.cos(startRad);
+      var iy1 = center + innerRadius * Math.sin(startRad);
+      var ix2 = center + innerRadius * Math.cos(endRad);
+      var iy2 = center + innerRadius * Math.sin(endRad);
+      var largeArc = angle > 180 ? 1 : 0;
+      var d = 'M ' + ix1 + ' ' + iy1 + ' L ' + x1 + ' ' + y1 + ' A ' + radius + ' ' + radius + ' 0 ' + largeArc + ' 1 ' + x2 + ' ' + y2 + ' L ' + ix2 + ' ' + iy2 + ' A ' + innerRadius + ' ' + innerRadius + ' 0 ' + largeArc + ' 0 ' + ix1 + ' ' + iy1 + ' Z';
+      svgParts.push('<path d="' + d + '" fill="' + it.color + '" data-idx="' + i + '" class="donut-slice" />');
+      curAngle = endAngle;
+    });
+    var svg = '<svg viewBox="0 0 ' + size + ' ' + size + '" xmlns="http://www.w3.org/2000/svg">' + svgParts.join('') + '</svg>';
+    var legend = items.map(function (it, i) {
+      return '<div class="legend-item" data-idx="' + i + '">' +
+        '<span class="dot" data-color="' + esc(it.color) + '"></span>' +
+        '<span class="nm">' + esc(it.name) + '</span>' +
+        '<span class="pct">' + (Number(it.rate) || 0).toFixed(2) + '%</span>' +
+        (it.amount ? '<span class="amt">' + esc(it.amount) + '</span>' : '') +
+        '</div>';
+    }).join('');
+    el.innerHTML = '<div class="donut" role="img" aria-label="' + esc(opts.label || '占比图') + '">' +
+      svg +
+      '<div class="donut-center"><b>' + total.toFixed(1) + '%</b><span>' + esc(opts.center || '占比') + '</span></div></div>' +
+      '<div class="donut-legend">' + legend + '</div>';
+    // 图例色块经 CSSOM 着色：CSP style-src-attr 'none' 会拦截 JS 生成的 style 属性
+    Array.prototype.forEach.call(el.querySelectorAll('.legend-item .dot'), function (dot) {
+      var color = dot.getAttribute('data-color');
+      if (color) dot.style.background = color;
+    });
+    // 交互逻辑
+    var slices = el.querySelectorAll('.donut-slice');
+    var legendItems = el.querySelectorAll('.legend-item');
+    function highlight(idx) {
+      slices.forEach(function (s, i) {
+        s.classList.toggle('dimmed', idx !== null && i !== idx);
+        s.classList.toggle('highlighted', i === idx);
+      });
+      legendItems.forEach(function (l, i) {
+        l.classList.toggle('dimmed', idx !== null && i !== idx);
+        l.classList.toggle('highlighted', i === idx);
+      });
+      if (idx !== null) {
+        var centerEl = el.querySelector('.donut-center b');
+        var labelEl = el.querySelector('.donut-center span');
+        if (centerEl) centerEl.textContent = items[idx].rate.toFixed(1) + '%';
+        if (labelEl) labelEl.textContent = items[idx].name;
+      } else {
+        var centerEl = el.querySelector('.donut-center b');
+        var labelEl = el.querySelector('.donut-center span');
+        if (centerEl) centerEl.textContent = total.toFixed(1) + '%';
+        if (labelEl) labelEl.textContent = opts.center || '占比';
+      }
+    }
+    slices.forEach(function (s, i) {
+      s.addEventListener('mouseenter', function () { highlight(i); });
+      s.addEventListener('mouseleave', function () { highlight(null); });
+    });
+    legendItems.forEach(function (l, i) {
+      l.addEventListener('mouseenter', function () { highlight(i); });
+      l.addEventListener('mouseleave', function () { highlight(null); });
+      l.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var isHighlighted = l.classList.contains('highlighted');
+        highlight(isHighlighted ? null : i);
+      });
+    });
+  }
+
+  function buildCategoryItems(list, rateKey, amountKey) {
+    var filtered = list.filter(matchesName);
+    if (!filtered.length) return [];
+    var sorted = filtered.slice().sort(function (a, b) {
+      return (Number(b[rateKey]) || 0) - (Number(a[rateKey]) || 0);
+    });
+    var top = sorted.slice(0, 8);
+    var rest = sorted.slice(8);
+    var items = top.map(function (it, i) {
+      return {
+        name: it.name,
+        rate: it[rateKey],
+        color: PALETTE[i % PALETTE.length],
+        amount: it.sales + '件 · ₽' + it.sales_amount
+      };
+    });
+    if (rest.length) {
+      var rr = rest.reduce(function (s, it) { return s + (Number(it[rateKey]) || 0); }, 0);
+      items.push({ name: '其它 (' + rest.length + ')', rate: rr, color: OTHER_COLOR, amount: '其它 ' + rest.length + ' 个类目' });
+    }
+    return items;
+  }
+
+  function renderCharts() {
+    var monthSales = listFromData('month_sales');
+    renderDonut(document.getElementById('chartSales'), buildCategoryItems(monthSales, 'sales_rate', 'sales_rate'), { label: '类目月销量占比', center: '销量占比' });
+    renderDonut(document.getElementById('chartAmount'), buildCategoryItems(monthSales, 'sales_amount_rate', 'sales_amount_rate'), { label: '类目月销售额占比', center: '销售额占比' });
+
+    var brand = listFromData('brand').filter(matchesName).map(function (it, i) {
+      return { name: it.name || '未命名', rate: it.sales_rate, color: i ? OTHER_COLOR : '#4f6ef7', amount: it.sales + '件 · ₽' + it.sales_amount };
+    });
+    renderDonut(document.getElementById('chartBrand'), brand, { label: '品牌销量占比', center: '品牌' });
+
+    var source = listFromData('source').filter(matchesName).map(function (it, i) {
+      return { name: it.name || '未命名', rate: it.sales_rate, color: i ? '#f97316' : '#0ea5e9', amount: it.sales + '件 · ₽' + it.sales_amount };
+    });
+    renderDonut(document.getElementById('chartSource'), source, { label: '履约来源销量占比', center: '履约来源' });
+  }
+
+  function tableRows() {
+    var rows = listFromData('month_sales').map(function (it, idx) {
+      return {
+        rank: idx + 1,
+        name: it.name,
+        sales: it.sales,
+        sales_num: parseNum(it.sales),
+        amount: it.sales_amount,
+        amount_num: parseNum(it.sales_amount),
+        sales_rate: Number(it.sales_rate) || 0,
+        sales_amount_rate: Number(it.sales_amount_rate) || 0
+      };
+    }).filter(function (it) {
+      return matchesName(it);
+    });
+    var key = STATE.sortKey;
+    rows.sort(function (a, b) {
+      if (key === 'name') return String(a.name).localeCompare(String(b.name), 'zh') * STATE.sortDir;
+      return ((Number(b[key]) || 0) - (Number(a[key]) || 0)) * STATE.sortDir;
+    });
+    rows.forEach(function (r, i) { r.rank = i + 1; });
+    return rows;
+  }
+
+  function renderTable() {
+    var rows = tableRows();
+    var body = document.getElementById('catBody');
+    var count = document.getElementById('catCount');
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="6" class="empty-tip">未找到匹配类目</td></tr>';
+      if (count) count.textContent = '0 个类目';
+      return;
+    }
+    body.innerHTML = rows.map(function (r) {
+      return '<tr>' +
+        '<td class="rank">' + r.rank + '</td>' +
+        '<td class="cat-name">' + esc(r.name) + '</td>' +
+        '<td class="num">' + esc(r.sales) + '</td>' +
+        '<td class="num">₽' + esc(r.amount) + '</td>' +
+        '<td class="num">' + r.sales_rate.toFixed(2) + '%</td>' +
+        '<td class="num">' + r.sales_amount_rate.toFixed(2) + '%</td>' +
+        '</tr>';
+    }).join('');
+    if (count) count.textContent = rows.length + ' 个类目';
+  }
+
+  function renderMeta() {
+    var meta = document.getElementById('metaTime');
+    var note = document.getElementById('noteUpdate');
+    var d = STATE.data;
+    if (!d) return;
+    var parts = [];
+    if (d.last_update) parts.push('数据 ' + d.last_update);
+    if (d.fetched_at) {
+      var ft = new Date(d.fetched_at);
+      if (!isNaN(ft.getTime())) parts.push('更新 ' + ft.toLocaleString('zh-CN', { hour12: false }));
+    }
+    if (meta) meta.textContent = parts.join(' · ');
+    if (note) note.textContent = '数据更新至 ' + (d.last_update || '未知');
+  }
+
+  function renderAll() {
+    renderPeriods();
+    renderCharts();
+    renderTable();
+    renderMeta();
+  }
+
+  function loadOverview(silent) {
+    return fetch('/api/overview').then(function (r) { return r.json(); }).then(function (d) {
+      STATE.data = d || null;
+      renderAll();
+      if (!silent) toast('数据已刷新', 'ok');
+    }).catch(function () {
+      if (!silent) toast('读取大盘数据失败', 'err');
+    });
+  }
+
+  function setSyncLoading(on) {
+    var btn = document.getElementById('btnSyncOverview');
+    if (btn) btn.classList.toggle('loading', on);
+  }
+
+  function pollSync(initialFetched, tries, taskProgress) {
+    tries = tries || 0;
+    if (tries > 36) {
+      setSyncLoading(false);
+      toast('同步完成，但未检测到新缓存；数据源可能尚未更新', 'info');
+      if (taskProgress) taskProgress.fail('大盘同步失败：未检测到新缓存', '后台任务在 3 分钟内没有生成新的缓存，可能缺少数据源配置或同步进程失败');
+      return;
+    }
+    fetch('/api/overview').then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.fetched_at && d.fetched_at !== initialFetched) {
+        STATE.data = d;
+        renderAll();
+        setSyncLoading(false);
+        toast('同步完成，数据已更新', 'ok');
+        if (taskProgress) taskProgress.finish('大盘同步完成：数据已更新');
+        return;
+      }
+      if (taskProgress) taskProgress.update(Math.min(95, 5 + tries * 2.5), '大盘同步：等待后台更新缓存（' + (tries * 5) + ' 秒）');
+      setTimeout(function () { pollSync(initialFetched, tries + 1, taskProgress); }, 5000);
+    }).catch(function () {
+      if (taskProgress) taskProgress.update(Math.min(95, 5 + tries * 2.5), '大盘同步：读取缓存失败，正在重试');
+      setTimeout(function () { pollSync(initialFetched, tries + 1, taskProgress); }, 5000);
+    });
+  }
+
+  function startSync() {
+    var btn = document.getElementById('btnSyncOverview');
+    if (btn && btn.classList.contains('loading')) return;
+    setSyncLoading(true);
+    var before = STATE.data && STATE.data.fetched_at;
+    var taskProgress = window.WYERP_SYNC_STREAM.progress.begin('大盘同步：正在启动后台任务');
+    window.erpStorage.request('/api/overview/sync', { method: 'POST' }).then(function (r) {
+      return r.json().then(function (d) { return { ok: r.ok, data: d }; });
+    }).then(function (r) {
+      if (!r.ok) {
+        setSyncLoading(false);
+        if (r.data && r.data.error === 'unauthorized') { taskProgress.fail('大盘同步失败：登录已失效', '登录状态已失效'); location.reload(); return; }
+        var reason = r.data.error || '同步任务启动失败';
+        taskProgress.fail('大盘同步启动失败：' + reason, reason);
+        toast(reason, 'err');
+        return;
+      }
+      toast('同步任务已启动，完成后页面自动刷新', 'ok');
+      taskProgress.update(5, '大盘同步：后台任务已启动，等待生成缓存');
+      pollSync(before, 0, taskProgress);
+    }).catch(function (error) {
+      setSyncLoading(false);
+      taskProgress.fail('大盘同步启动失败', error && error.message || '无法连接服务器');
+      toast('无法启动同步任务', 'err');
+    });
+  }
+
+  function exportCsv() {
+    if (!STATE.data) { toast('暂无数据可导出', 'err'); return; }
+    var rows = [];
+    rows.push('大盘总览,全网全平台数据');
+    rows.push('数据缓存,' + (STATE.data.last_update || ''));
+    rows.push('更新时间,' + (STATE.data.fetched_at || ''));
+    rows.push('');
+    rows.push('周期,销量,销售额(RUB),销售额(CNY)');
+    PERIODS.forEach(function (p) {
+      var d = (STATE.data.period_count || {})[p.key] || {};
+      rows.push([p.name, d.sales || 0, d.sales_amount || 0, d.sales_amount_cny || ''].join(','));
+    });
+    rows.push('');
+    rows.push('类目,销量,销售额(RUB),销量占比,销售额占比');
+    tableRows().forEach(function (r) {
+      rows.push([r.name, r.sales, r.amount, (r.sales_rate / 100).toFixed(4), (r.sales_amount_rate / 100).toFixed(4)].join(','));
+    });
+    rows.push('');
+    rows.push('品牌,销量,销售额(RUB),销量占比');
+    listFromData('brand').forEach(function (it) {
+      rows.push([it.name || '', it.sales || '', it.sales_amount || '', (Number(it.sales_rate) / 100).toFixed(4)].join(','));
+    });
+    rows.push('');
+    rows.push('履约来源,销量,销售额(RUB),销量占比');
+    listFromData('source').forEach(function (it) {
+      rows.push([it.name || '', it.sales || '', it.sales_amount || '', (Number(it.sales_rate) / 100).toFixed(4)].join(','));
+    });
+    var blob = new Blob(['\uFEFF' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = '大盘总览_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+      if (a.parentNode) a.parentNode.removeChild(a);
+    }, 100);
+    toast('报表已导出', 'ok');
+  }
+
+  function bindEvents() {
+    var searchInput = document.getElementById('overviewSearch');
+    var searchClear = document.getElementById('searchClear');
+    function toggleClear() {
+      searchClear.classList.toggle('show', !!(searchInput.value || '').trim());
+    }
+    function applySearch() {
+      STATE.search = searchInput.value || '';
+      toggleClear();
+      renderCharts();
+      renderTable();
+    }
+    searchInput.addEventListener('input', applySearch);
+    searchClear.addEventListener('click', function () {
+      searchInput.value = '';
+      applySearch();
+      searchInput.focus();
+    });
+
+    var ths = Array.prototype.slice.call(document.querySelectorAll('th[data-sort]'));
+    ths.forEach(function (th) {
+      th.addEventListener('click', function () {
+        var key = th.getAttribute('data-sort');
+        if (STATE.sortKey === key) {
+          STATE.sortDir = STATE.sortDir === 1 ? -1 : 1;
+        } else {
+          STATE.sortKey = key;
+          STATE.sortDir = key === 'name' ? 1 : -1;
+        }
+        ths.forEach(function (x) {
+          var arrow = x.querySelector('.sort-arrow');
+          if (arrow) arrow.textContent = '';
+        });
+        var arrow = th.querySelector('.sort-arrow');
+        if (arrow) arrow.textContent = STATE.sortDir === 1 ? ' ▲' : ' ▼';
+        renderTable();
+      });
+    });
+
+    document.getElementById('btnRefresh').addEventListener('click', function () { loadOverview(false); });
+    document.getElementById('btnExport').addEventListener('click', exportCsv);
+    document.getElementById('btnSyncOverview').addEventListener('click', startSync);
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    bindEvents();
+    window.erpStorage.init([]).then(function () {
+      loadOverview(true);
+    });
+  });
+})();
+</script>
+
+<script src="../assets/brand.js"></script>
+<script src="../assets/storage.js"></script>
+<script src="../assets/sync-stream.js"></script>
+<script src="../assets/table-pagination.js?v=20261002-b07b2"></script><script src="../assets/sidebar.js"></script>
+</body>
+</html>

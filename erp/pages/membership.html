@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>会员中心 - 网研ERP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/membership.css?v=20260923-avatar01">
+<link rel="stylesheet" href="../assets/membership-controls.css?v=20261005-merge01">
+<link rel="stylesheet" href="../assets/agent-application.css">
+<link rel="stylesheet" href="../assets/ui.css">
+<script src="../assets/theme-restore.js"></script>
+</head>
+<body>
+<aside class="sidebar"><div class="logo">网研<span>ERP</span></div><nav class="menu"></nav></aside>
+<div class="main-content">
+  <header class="header"><div class="header-left"><strong>会员中心</strong><span class="breadcrumb">网研ERP <span>/</span> 会员中心</span></div><div class="header-right"><span class="user-name">管理员</span><button class="icon-btn" type="button">🔔</button><span class="avatar">管</span></div></header>
+  <main class="content membership-page ui-page">
+    <section class="card membership-profile" aria-labelledby="membershipGreeting">
+      <div class="membership-avatar" id="membershipAvatar"><img id="membershipAvatarImage" alt="当前用户头像" hidden><span id="membershipAvatarFallback"></span></div>
+      <div class="membership-profile-copy">
+        <span class="membership-eyebrow">Ozon 会员中心</span>
+        <h1 id="membershipGreeting">正在读取登录账号…</h1>
+        <p>当前会员：<strong class="membership-level" id="currentMembershipLevel">正在读取…</strong></p>
+        <p id="membershipTemporaryEntitlementHint" class="membership-temporary-hint" hidden>客户激活后先获得72小时临时权益，管理员确认付款后转为正式会员。</p>
+      </div>
+      <div class="membership-activate-card membership-profile-activate" id="membershipActivateCard" aria-labelledby="membershipActivateTitle" hidden>
+        <div class="membership-profile-activate-head"><h2 id="membershipActivateTitle">使用激活码</h2><span>会员 / AI豆</span></div>
+        <form id="membershipActivateForm"><label for="membershipActivationCode">激活码</label><input id="membershipActivationCode" name="code" type="text" minlength="29" maxlength="29" pattern="[A-Za-z0-9]{4}(?:-[A-Za-z0-9]{4}){5}" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" disabled><button id="membershipActivateButton" type="submit" disabled>兑换</button></form>
+        <p class="membership-activate-status" id="membershipActivateStatus" role="status" aria-live="polite">激活码功能尚未开放。</p>
+      </div>
+      <span class="static-preview-badge" id="membershipModeBadge">只读服务</span>
+    </section>
+
+    <section class="card membership-quota-section" aria-labelledby="membershipQuotaTitle">
+      <div class="membership-section-head">
+        <div><span class="membership-eyebrow">当前账号额度</span><h2 id="membershipQuotaTitle">会员额度使用</h2></div>
+        <p>与店铺、上架、采集箱、收藏和子账号的服务端实际限制保持一致。</p>
+      </div>
+      <div class="membership-quota-grid" id="membershipQuotaGrid"></div>
+    </section>
+
+    <section class="card membership-referral-card" id="membershipReferralCard" aria-labelledby="membershipReferralTitle" hidden>
+      <div class="membership-section-head">
+        <div><span class="membership-eyebrow">邀请好友</span><h2 id="membershipReferralTitle">普通用户邀请奖励</h2></div>
+        <p>好友验证邮箱并完成注册额外获得 <strong>1000 AI豆</strong>；好友首次成功购买付费会员后，你获得 <strong>3000 AI豆</strong>。代理商不参与普通邀请奖励。</p>
+      </div>
+      <div class="membership-referral-grid">
+        <div class="membership-referral-code"><span>我的邀请码</span><strong id="membershipReferralCode">--</strong><div><button class="btn" id="membershipReferralCopyCode" type="button">复制邀请码</button><button class="btn btn-primary" id="membershipReferralCopyLink" type="button">复制邀请链接</button></div></div>
+        <div class="membership-referral-stat"><span>已邀请注册</span><strong id="membershipReferralInvitedCount">0</strong><small>人</small></div>
+        <div class="membership-referral-stat"><span>已触发首付奖励</span><strong id="membershipReferralPaidCount">0</strong><small>人</small></div>
+      </div>
+      <p class="membership-referral-status" id="membershipReferralStatus" role="status" aria-live="polite">邀请码长期有效，一个普通账号终身只能绑定一个邀请人。</p>
+    </section>
+
+    <section class="membership-plans" aria-labelledby="membershipPlansTitle">
+      <div class="membership-section-head">
+        <div><span class="membership-eyebrow">仅适用于 Ozon</span><h2 id="membershipPlansTitle">Ozon 会员方案</h2></div>
+        <p id="membershipAvailability">方案与价格由服务端只读返回；收费和激活码开关当前关闭。</p>
+      </div>
+      <div class="membership-plan-grid">
+        <article class="membership-plan-card plan-trial" data-plan-code="trial">
+          <div class="plan-name">试用会员</div><p class="plan-for">适合新用户体验</p>
+          <div class="plan-price">免费体验</div>
+          <h3>会员权益</h3>
+          <ul><li><span>注册赠送</span><strong>15天</strong></li><li><span>完善基础信息</span><strong>再赠15天</strong></li><li><span>店铺数量</span><strong>1个</strong></li><li><span>每日上品数量</span><strong>10个SKU</strong></li><li><span>采集箱商品</span><strong>100个商品</strong></li><li><span>收藏夹数量</span><strong>100个</strong></li><li><span>下架重上</span><strong>支持</strong></li><li><span>一键跟卖</span><strong>不支持</strong></li><li><span>数据分析</span><strong>不支持</strong></li><li><span>子账号</span><strong>不支持</strong></li><li><span>同账号同时在线</span><strong>不支持</strong></li><li><span>AI翻译</span><strong>免费使用</strong></li><li><span>AI服务配置</span><strong>不支持</strong></li><li><span>物流配置</span><strong>不支持</strong></li><li><span>剩余体验时长</span><strong>付费后可叠加</strong></li><li><span>平台</span><strong>Ozon</strong></li></ul>        </article>
+        <article class="membership-plan-card plan-month" data-plan-code="month">
+          <div class="plan-name">月卡会员</div><p class="plan-for">适合小型商家</p>
+          <div class="plan-price"><strong>499</strong><span>元/月</span></div>
+          <h3>会员权益</h3>
+          <ul><li><span>使用期限</span><strong>30天</strong></li><li><span>店铺数量</span><strong>10个</strong></li><li><span>每日上品数量</span><strong>500个SKU</strong></li><li><span>采集箱商品</span><strong>500个商品</strong></li><li><span>收藏夹数量</span><strong>1000个</strong></li><li><span>下架重上</span><strong>支持</strong></li><li><span>一键跟卖</span><strong>支持</strong></li><li><span>数据分析</span><strong>支持</strong></li><li><span>子账号</span><strong>1个</strong></li><li><span>同账号同时在线</span><strong>不支持</strong></li><li><span>AI翻译</span><strong>免费使用</strong></li><li><span>AI服务配置</span><strong>自定义配置</strong></li><li><span>物流配置</span><strong>自定义配置</strong></li><li><span>体验时长</span><strong>可叠加</strong></li><li><span>平台</span><strong>Ozon</strong></li></ul>        </article>
+        <article class="membership-plan-card plan-quarter" data-plan-code="quarter">
+          <span class="plan-discount">85折优惠</span>
+          <div class="plan-name">季卡会员</div><p class="plan-for">适合成长型商家</p>
+          <div class="plan-price"><strong>1299</strong><span>元/季度</span></div><p class="plan-original">原价：1497元/季度</p>
+          <h3>会员权益</h3>
+          <ul><li><span>使用期限</span><strong>90天</strong></li><li><span>店铺数量</span><strong>50个</strong></li><li><span>每日上品数量</span><strong>1000个SKU</strong></li><li><span>采集箱商品</span><strong>1500个商品</strong></li><li><span>收藏夹数量</span><strong>2000个</strong></li><li><span>下架重上</span><strong>支持</strong></li><li><span>一键跟卖</span><strong>支持</strong></li><li><span>数据分析</span><strong>支持</strong></li><li><span>子账号</span><strong>5个</strong></li><li><span>同账号同时在线</span><strong>不支持</strong></li><li><span>AI翻译</span><strong>免费使用</strong></li><li><span>AI服务配置</span><strong>自定义配置</strong></li><li><span>物流配置</span><strong>自定义配置</strong></li><li><span>体验时长</span><strong>可叠加</strong></li><li><span>平台</span><strong>Ozon</strong></li></ul>        </article>
+        <article class="membership-plan-card plan-year" data-plan-code="year">
+          <span class="plan-discount">75折优惠</span>
+          <div class="plan-name">年卡会员</div><p class="plan-for">适合企业及大卖家</p>
+          <div class="plan-price"><strong>4499</strong><span>元/年</span></div><p class="plan-original">原价：5988元/年</p>
+          <h3>会员权益</h3>
+          <ul><li><span>使用期限</span><strong>365天</strong></li><li><span>店铺数量</span><strong>200个</strong></li><li><span>每日上品数量</span><strong>不限</strong></li><li><span>采集箱商品</span><strong>5000个商品</strong></li><li><span>收藏夹数量</span><strong>3000个</strong></li><li><span>下架重上</span><strong>支持</strong></li><li><span>一键跟卖</span><strong>支持</strong></li><li><span>数据分析</span><strong>支持</strong></li><li><span>子账号</span><strong>20个</strong></li><li><span>同账号同时在线</span><strong>不支持</strong></li><li><span>AI翻译</span><strong>免费使用</strong></li><li><span>AI服务配置</span><strong>自定义配置</strong></li><li><span>物流配置</span><strong>自定义配置</strong></li><li><span>体验时长</span><strong>可叠加</strong></li><li><span>平台</span><strong>Ozon</strong></li></ul>        </article>
+      </div>
+    </section>
+
+    <section class="card agent-application-card" id="agentApplicationCard" aria-labelledby="agentApplicationTitle" hidden>
+      <div class="agent-application-copy">
+        <span class="membership-eyebrow">代理商自助申请</span>
+        <h2 id="agentApplicationTitle">申请成为代理商</h2>
+        <p id="agentApplicationStatus" role="status" aria-live="polite">前期暂未开放</p>
+      </div>
+      <ol class="agent-application-gates" aria-label="申请开放条件">
+        <li data-application-gate="serverSwitch"><span>1</span><div><strong>管理员开放入口</strong><small>服务器开关默认关闭</small></div></li>
+        <li data-application-gate="legalContract"><span>2</span><div><strong>正式合同完成复核</strong><small>旧版冲突合同不能签署</small></div></li>
+        <li data-application-gate="privateDocumentIntake"><span>3</span><div><strong>安全提交申请材料</strong><small>身份证和营业执照只进私有加密区</small></div></li>
+        <li data-application-gate="adminReview"><span>4</span><div><strong>管理员人工审核</strong><small>申请不会自动获得代理资格</small></div></li>
+      </ol>
+      <button class="btn btn-primary agent-application-button" id="agentApplicationButton" type="button" disabled>申请入口未开放</button>
+    </section>
+
+    <section class="card membership-device-card" aria-labelledby="deviceManagementTitle">
+      <div><h2 id="deviceManagementTitle">设备管理</h2><p>同一账号只保留一个有效会话；新设备登录成功后，旧会话会自动退出。离线时间指会话退出或被新登录取代的时刻，未结束显示"仍在线"；设备名称使用服务端记录的设备号生成诚实、稳定的展示名，不声称是 Windows 真实主机名；IP地址与设备号（服务器签发的唯一识别号，悬停查看完整值）由服务端在登录时记录，字段上线前的历史会话显示"登录时未记录"，不回填。</p></div>
+      <span class="static-link" id="membershipDeviceSummary">正在读取…</span>
+    </section>
+
+    <section class="membership-records" aria-labelledby="deviceRecordsTitle">
+      <div class="table-wrap membership-record-table"><table><thead><tr><th id="deviceRecordsTitle">会话</th><th>IP地址</th><th>设备名称</th><th>设备号</th><th>登录时间</th><th>离线时间</th><th>最后活动</th><th>到期时间</th><th>状态</th></tr></thead><tbody id="membershipDeviceRows"><tr><td class="membership-empty" colspan="9">正在读取设备会话…</td></tr></tbody></table></div>
+    </section>
+
+    <section class="membership-records" aria-labelledby="activationRecordsTitle">
+      <div class="membership-section-head"><div><h2 id="activationRecordsTitle">激活码使用记录</h2><p>只返回脱敏掩码，完整激活码不保存在浏览器。</p></div><div class="membership-page-links"><a href="ai-beans.html">AI豆管理</a><a id="agentCenterLink" href="agent-center.html" hidden>代理商中心</a><a id="membershipAdminLink" href="membership-admin.html" hidden>系统管理</a></div></div>
+      <div class="table-wrap membership-record-table"><table><thead><tr><th>激活码掩码</th><th>权益类型</th><th>激活时间</th><th>到期时间</th><th>状态</th></tr></thead><tbody id="membershipActivationRows"><tr><td class="membership-empty" colspan="5">正在读取脱敏记录…</td></tr></tbody></table></div>
+    </section>
+  </main>
+</div>
+<script src="../assets/brand.js"></script>
+<script src="../assets/identity-display.js?v=20261006-id01"></script>
+<script src="../assets/table-pagination.js?v=20261002-b07b2"></script><script src="../assets/sidebar.js"></script>
+<script src="../assets/membership-quota.js?v=20261005-quota01"></script>
+<script src="../assets/membership.js?v=20260923-avatar01-date02"></script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>任务中心 - 网研ERP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.task-summary{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:14px;margin-bottom:16px}.summary-card{padding:16px 18px;border:1px solid var(--line);border-radius:12px;background:var(--card)}.summary-card span{font-size:12px;color:var(--text-muted)}.summary-card strong{display:block;margin-top:7px;font-size:25px;color:var(--text)}
+.content{display:flex;flex-direction:column;min-height:0;overflow:hidden;padding-bottom:0}.task-summary{flex:none}.task-card{flex:1;min-height:0;display:flex;flex-direction:column;padding:0;overflow:hidden}.task-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}.task-toolbar .input{width:var(--search-field-width)}.task-toolbar .select{min-width:130px}.task-toolbar .spacer{flex:1}.refresh-note{font-size:12px;color:var(--text-faint)}
+.task-card .table-wrap{flex:1;min-height:0;min-width:0;width:100%;max-width:100%;overflow-x:hidden;overflow-y:auto;scrollbar-gutter:stable}
+.task-table{width:100%;min-width:0;table-layout:fixed}
+.task-col-name{width:19%}.task-col-type{width:7%}.task-col-reason{width:14%}.task-col-actor{width:9%}.task-col-start,.task-col-end{width:11%}.task-col-duration{width:7%}.task-col-progress{width:15%}.task-col-status{width:7%}
+.task-table th,.task-table td{min-width:0;max-width:0;padding-left:7px;padding-right:7px}.task-table th{white-space:normal;overflow-wrap:anywhere;line-height:1.4}
+.task-table td{height:76px;box-sizing:border-box;vertical-align:middle;white-space:nowrap;overflow:hidden}
+.task-name{display:flex;align-items:center;gap:5px;min-width:0;height:22px;line-height:22px;font-weight:650;color:var(--text);margin-bottom:4px}
+.task-name-text{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-name .inline-icon-btn{flex:0 0 22px}.task-ai-details{flex:0 0 auto;padding:0 7px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--primary);font-size:11px;line-height:20px;cursor:pointer;white-space:nowrap}.task-ai-details:hover{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 10%,var(--card))}.task-ai-details[hidden]{display:none}.task-id,.task-label{height:18px;line-height:18px;color:var(--text-muted);font-size:12px}.task-id{display:block;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.batch-toggle{flex:0 0 24px;width:24px;height:24px;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text);font-weight:700;cursor:pointer}.batch-toggle:hover{border-color:var(--primary);color:var(--primary)}.batch-toggle[hidden]{display:none}
+.task-label,.task-progress-label,.task-duration,.task-table .username-ellipsis{display:block;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.task-time{display:block;min-width:0;max-width:100%;overflow:hidden;text-align:center;line-height:1.25}.task-time .date-line,.task-time .time-line{display:block;white-space:nowrap}.task-time .time-line{margin-top:2px;color:var(--text-muted);font-size:11px}
+.task-type{display:inline-flex;padding:3px 8px;border-radius:6px;background:var(--surface-hover);color:var(--text-muted);font-size:12px;white-space:nowrap}
+.task-reason{display:-webkit-box;max-width:100%;padding:5px 9px;border:1px solid color-mix(in srgb,var(--red) 38%,var(--line));border-radius:8px;background:var(--red-soft);color:var(--red);font-size:12px;line-height:17px;white-space:pre-line;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;cursor:help}.task-reason-empty{color:var(--text-faint)}
+.task-reason[hidden],.task-reason-empty[hidden],.task-sku-copy[hidden]{display:none}
+.progress-cell{min-width:0}.progress-head{display:flex;align-items:center;gap:8px;height:18px;line-height:18px;margin-bottom:6px;color:var(--text-muted);font-size:12px}
+.task-progress-label{flex:1}.task-percent{flex:0 0 5ch;width:5ch;text-align:right}
+.task-percent,.task-time,.task-duration,.status-pill{font-variant-numeric:tabular-nums}.task-percent,.task-duration,.status-pill{white-space:nowrap}
+.status-pill{display:inline-flex;align-items:center;padding:4px 9px;border-radius:99px;border:1px solid;font-size:12px}.status-running{color:var(--blue);border-color:color-mix(in srgb,var(--blue) 38%,var(--line));background:var(--blue-soft)}.status-done{color:var(--green);border-color:color-mix(in srgb,var(--green) 38%,var(--line));background:var(--green-soft)}.status-failed{color:var(--red);border-color:color-mix(in srgb,var(--red) 38%,var(--line));background:var(--red-soft)}.empty-task{text-align:center;padding:70px 20px!important;color:var(--text-faint)}
+.task-batch-detail-row td{height:auto;padding:0 16px 14px!important;background:var(--surface-hover);white-space:normal;overflow:visible}.batch-detail-list{border:1px solid var(--line);border-radius:10px;background:var(--card);overflow:hidden}.batch-detail-item{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,2fr) minmax(48px,.45fr) minmax(0,2fr) minmax(60px,.6fr);gap:8px;align-items:center;min-height:48px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px}.batch-detail-item:last-child{border-bottom:0}.batch-detail-item>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.batch-shop{font-weight:650;color:var(--text)}.batch-progress,.batch-reason{color:var(--text-muted)}.batch-percent{font-variant-numeric:tabular-nums;text-align:right}
+.task-footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:12px 16px;border-top:1px solid var(--line);color:var(--text-muted);font-size:12px}.task-footer .btn{min-width:72px}
+.ai-prompt-dialog{width:min(1040px,calc(100vw - 32px));max-width:none;height:min(820px,calc(100vh - 32px));max-height:none;padding:0;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--text);box-shadow:var(--shadow-lg)}.ai-prompt-dialog::backdrop{background:rgba(15,23,42,.52)}.ai-prompt-dialog-shell{display:flex;flex-direction:column;height:100%;min-height:0}.ai-prompt-dialog-head{display:flex;align-items:flex-start;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)}.ai-prompt-dialog-title{flex:1;min-width:0}.ai-prompt-dialog-title h2{margin:0;font-size:17px}.ai-prompt-dialog-title p{margin:5px 0 0;color:var(--text-muted);font-size:12px;overflow-wrap:anywhere;user-select:text}.ai-prompt-dialog-body{flex:1;min-height:0;overflow:auto;padding:16px 18px}.ai-prompt-state{padding:28px 18px;border:1px dashed var(--line);border-radius:10px;color:var(--text-muted);text-align:center}.ai-prompt-state.is-error{border-color:color-mix(in srgb,var(--red) 38%,var(--line));background:var(--red-soft);color:var(--red)}.ai-prompt-detail[hidden],.ai-prompt-state[hidden]{display:none}.ai-prompt-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px}.ai-prompt-meta-item{min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface-hover)}.ai-prompt-meta-item dt{margin-bottom:5px;color:var(--text-muted);font-size:11px}.ai-prompt-meta-item dd{margin:0;color:var(--text);font-size:12px;line-height:1.55;overflow-wrap:anywhere;white-space:pre-wrap;user-select:text}.ai-prompt-meta-wide{grid-column:1/-1}.ai-prompt-trace dd{max-height:260px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.ai-prompt-section{margin-top:14px}.ai-prompt-section h3{margin:0 0 7px;font-size:13px}.ai-prompt-snapshot{max-height:280px;margin:0;padding:12px;border:1px solid var(--line);border-radius:9px;background:var(--surface-hover);color:var(--text);font:12px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow:auto;overflow-wrap:anywhere;user-select:text}.ai-prompt-dialog-foot{display:flex;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--line)}
+@media(max-width:900px){.task-summary{grid-template-columns:repeat(2,1fr)}.ai-prompt-dialog{width:calc(100vw - 16px);height:calc(100vh - 16px)}.ai-prompt-meta{grid-template-columns:1fr}}
+</style>
+<link rel="stylesheet" href="../assets/ui.css">
+<script src="../assets/theme-restore.js"></script>
+</head>
+<body>
+<aside class="sidebar"><div class="logo">网研<span>ERP</span></div><nav class="menu"></nav></aside>
+<div class="main-content">
+<header class="header"><div class="header-left"><strong>任务中心</strong><span class="breadcrumb">网研ERP <span>/</span> 概览 <span>/</span> 任务中心</span></div><div class="header-right"><span class="user-name">管理员</span><button class="icon-btn" type="button">🔔</button><span class="avatar">管</span></div></header>
+<main class="content ui-page">
+  <section class="task-summary"><div class="summary-card"><span>全部记录</span><strong id="totalCount">0</strong></div><div class="summary-card"><span>进行中</span><strong id="runningCount">0</strong></div><div class="summary-card"><span>成功</span><strong id="doneCount">0</strong></div><div class="summary-card"><span>失败</span><strong id="failedCount">0</strong></div></section>
+  <section class="card task-card">
+    <div class="task-toolbar"><input class="input" id="keyword" placeholder="搜索任务、失败原因、用户"><select class="select" id="typeFilter"><option value="">全部操作</option><option value="sync">同步</option><option value="create">新增</option><option value="edit">修改</option><option value="archive">归档/恢复</option></select><select class="select" id="statusFilter"><option value="">全部状态</option><option value="running">进行中</option><option value="done">成功</option><option value="failed">失败</option></select><button class="btn btn-primary" id="refreshBtn">刷新</button><span class="spacer"></span><span class="refresh-note" id="refreshNote">按任务状态自动刷新</span></div>
+    <div class="table-wrap"><table class="task-table"><colgroup><col class="task-col-name"><col class="task-col-type"><col class="task-col-reason"><col class="task-col-actor"><col class="task-col-start"><col class="task-col-end"><col class="task-col-duration"><col class="task-col-progress"><col class="task-col-status"></colgroup><thead><tr><th>任务</th><th>操作类型</th><th>失败原因</th><th>操作用户</th><th>开始时间</th><th>结束/更新时间</th><th>耗时</th><th>任务进度</th><th>状态</th></tr></thead><tbody id="taskBody"></tbody></table></div>
+    <div class="task-footer"><span id="pageText">第 1 页</span><button class="btn" id="prevPage">上一页</button><button class="btn" id="nextPage">下一页</button></div>
+  </section>
+</main>
+</div>
+<dialog class="ai-prompt-dialog ui-page" id="aiPromptDetailsDialog" aria-labelledby="aiPromptDetailsTitle">
+  <div class="ai-prompt-dialog-shell">
+    <header class="ai-prompt-dialog-head"><div class="ai-prompt-dialog-title"><h2 id="aiPromptDetailsTitle">查看提示词/处理详情</h2><p id="aiPromptDetailsTaskId">任务ID：—</p></div><button class="icon-btn" id="aiPromptDetailsClose" type="button" aria-label="关闭处理详情">×</button></header>
+    <div class="ai-prompt-dialog-body">
+      <div class="ai-prompt-state" id="aiPromptDetailsState" role="status">正在加载处理详情…</div>
+      <div class="ai-prompt-detail" id="aiPromptDetailsContent" hidden>
+        <dl class="ai-prompt-meta" id="aiPromptDetailsMeta"></dl>
+        <section class="ai-prompt-section"><h3>当时生效的官方模板正文</h3><pre class="ai-prompt-snapshot" id="aiPromptSnapshotTemplate"></pre></section>
+        <section class="ai-prompt-section"><h3>本次确认卖点</h3><pre class="ai-prompt-snapshot" id="aiPromptSnapshotSellingPoints"></pre></section>
+        <section class="ai-prompt-section"><h3>文字模型原始整理结果</h3><pre class="ai-prompt-snapshot" id="aiPromptSnapshotRawResponse"></pre></section>
+        <section class="ai-prompt-section"><h3>实际提交图片模型的最终完整提示词</h3><pre class="ai-prompt-snapshot" id="aiPromptSnapshotFinalPrompt"></pre></section>
+      </div>
+    </div>
+    <footer class="ai-prompt-dialog-foot"><button class="btn" id="aiPromptDetailsDone" type="button">关闭</button></footer>
+  </div>
+</dialog>
+<script src="../assets/brand.js"></script>
+<script src="../assets/identity-display.js"></script>
+<script src="../assets/storage.js"></script>
+<script src="../assets/sync-stream.js"></script>
+<script src="../assets/inline-action-icons.js"></script>
+<script src="../assets/task-refresh-policy.js"></script>
+<script src="../assets/task-center.js?v=20260920-1"></script>
+<script src="../assets/sidebar.js"></script>
+</body>
+</html>

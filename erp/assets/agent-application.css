@@ -1,0 +1,75 @@
+.agent-application-card {
+  margin-top: 24px;
+  padding: 22px 24px;
+}
+.agent-application-copy h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 17px;
+}
+.agent-application-copy p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.agent-application-gates {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+  padding: 0;
+  list-style: none;
+}
+.agent-application-gates li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-hover);
+}
+.agent-application-gates li > span {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+.agent-application-gates strong,
+.agent-application-gates small { display: block; }
+.agent-application-gates strong {
+  color: var(--text);
+  font-size: 12px;
+}
+.agent-application-gates small {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.agent-application-gates li.is-ready {
+  border-color: color-mix(in srgb, #2fa866 45%, var(--line));
+}
+.agent-application-gates li.is-ready > span {
+  background: #2fa866;
+  color: #fff;
+}
+.agent-application-button { min-width: 180px; }
+.agent-application-button:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+@media (max-width: 1180px) {
+  .agent-application-gates { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .agent-application-gates { grid-template-columns: 1fr; }
+  .agent-application-button { width: 100%; }
+}

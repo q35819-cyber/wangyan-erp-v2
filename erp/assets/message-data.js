@@ -1,0 +1,14 @@
+/* 网研ERP — 消息模板、黑名单与发送记录模型 */
+(function(root,factory){var api=factory();if(typeof module==='object'&&module.exports)module.exports=api;if(root)root.WYERP_MESSAGE_DATA=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){'use strict';
+  function text(v){return v==null?'':String(v).trim();}function array(v){return Array.isArray(v)?v:(v&&Array.isArray(v.items)?v.items:[]);}function num(v){if(v===''||v==null)return 0;var n=Number(v);return Number.isFinite(n)?n:0;}
+  function template(v){v=v||{};return{id:text(v.id),name:text(v.name),type:text(v.type),trigger:text(v.trigger),content:text(v.content),status:text(v.status)||'启用',createdAt:text(v.createdAt),updatedAt:text(v.updatedAt)};}
+  function blocked(v){v=v||{};return{id:text(v.id),buyer:text(v.buyer||v.buyerName),orderNo:text(v.orderNo),shop:text(v.shop),reason:text(v.reason),note:text(v.note),orderCount:num(v.orderCount),createdAt:text(v.createdAt)};}
+  function log(v){v=v||{};return{id:text(v.id),sentAt:text(v.sentAt||v.createdAt),template:text(v.template||v.templateName),buyer:text(v.buyer||v.buyerName),channel:text(v.channel),status:text(v.status),error:text(v.error)};}
+  function many(value,normalizer){return array(value).map(normalizer).filter(function(v){return v.id||v.name||v.buyer||v.template;});}
+  function upsert(value,item,normalizer){var list=many(value,normalizer),next=normalizer(item),found=false;list=list.map(function(v){if(next.id&&v.id===next.id){found=true;return next;}return v;});if(!found)list.unshift(next);return list;}
+  function remove(value,id,normalizer){id=text(id);return many(value,normalizer).filter(function(v){return v.id!==id;});}
+  function filterTemplates(value,c){c=c||{};var q=text(c.keyword).toLowerCase();return many(value,template).filter(function(v){return(!q||v.name.toLowerCase().indexOf(q)>=0)&&(!c.type||v.type===c.type)&&(!c.status||v.status===c.status);});}
+  function filterBlocked(value,c){c=c||{};var q=text(c.keyword).toLowerCase();return many(value,blocked).filter(function(v){return(!q||(v.buyer+' '+v.orderNo).toLowerCase().indexOf(q)>=0)&&(!c.reason||v.reason===c.reason)&&(!c.shop||v.shop===c.shop);});}
+  function filterLogs(value,c){c=c||{};var q=text(c.keyword).toLowerCase();return many(value,log).filter(function(v){return(!q||(v.template+' '+v.buyer).toLowerCase().indexOf(q)>=0)&&(!c.channel||v.channel===c.channel)&&(!c.status||v.status===c.status);});}
+  return{array:array,template:template,blocked:blocked,log:log,templates:function(v){return many(v,template);},blockedList:function(v){return many(v,blocked);},logs:function(v){return many(v,log);},upsertTemplate:function(v,i){return upsert(v,i,template);},removeTemplate:function(v,id){return remove(v,id,template);},upsertBlocked:function(v,i){return upsert(v,i,blocked);},removeBlocked:function(v,id){return remove(v,id,blocked);},filterTemplates:filterTemplates,filterBlocked:filterBlocked,filterLogs:filterLogs};
+});

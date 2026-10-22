@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>代理商中心 - 网研ERP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/membership.css">
+<link rel="stylesheet" href="../assets/agent-center.css">
+<link rel="stylesheet" href="../assets/ui.css">
+<script src="../assets/theme-restore.js"></script>
+</head>
+<body>
+<aside class="sidebar"><div class="logo">网研<span>ERP</span></div><nav class="menu"></nav></aside>
+<div class="main-content">
+  <header class="header"><div class="header-left"><strong>代理商中心</strong><span class="breadcrumb">会员与代理商 <span>/</span> 代理商中心</span></div><div class="header-right"><span class="user-name">管理员</span><button class="icon-btn" type="button">🔔</button><span class="avatar">管</span></div></header>
+  <main class="content membership-page ui-page">
+    <section class="card membership-profile">
+      <div class="membership-avatar" id="agentAvatar" aria-label="当前用户头像"><img id="agentAvatarImage" alt="当前用户头像" hidden><span id="agentAvatarFallback">代</span></div>
+      <div class="membership-profile-copy"><span class="membership-eyebrow">M3 安全申请</span><h1>代理商中心</h1><p>代理资格、价格与激活码均以服务端实时结果为准。</p></div>
+      <span class="static-preview-badge" id="agentModeBadge">正在读取…</span>
+    </section>
+    <section class="prototype-grid" aria-label="代理商概览">
+      <article class="card prototype-card"><span>代理资格</span><strong id="agentQualification">正在读取…</strong><p id="agentExpiry">资格期限由服务端判定。</p></article>
+      <article class="card prototype-card agent-price-card" tabindex="0" aria-describedby="agentPriceRules"><span>当前月卡代理价</span><strong id="agentMonthPrice">--</strong><p id="agentPriceBasis">每月4日按上一自然月有效客户销量锁定。</p>
+        <div class="agent-price-rules" id="agentPriceRules" role="tooltip"><strong>完整代理价规则</strong><span>上月有效客户当量：0–9个 ¥260，10–19个 ¥235，20–29个 ¥210，30–39个 ¥185，40个及以上 ¥160。</span><span>季卡 ¥600，按3个当量计；年卡 ¥2000，按12个当量计。</span><span>只统计真实已付款且未退款的客户订单，本人购买不计。每月1—3日沿用上期价格，4日重新计算；激活码生成时锁定当时价格。</span></div>
+      </article>
+      <article class="card prototype-card"><span>信用 / 押金</span><strong id="agentCredit">--</strong><p>信用与押金仍只展示权威摘要，处罚操作未开放。</p></article>
+      <article class="card prototype-card"><span>本月有效订单</span><strong id="agentMonthCodes">--</strong><p id="agentSalesStatus">只统计管理员确认代理付款且未退款的订单。</p></article>
+    </section>
+    <section class="card agent-referral" aria-labelledby="agentReferralTitle">
+      <div class="agent-referral-head"><div><h2 id="agentReferralTitle">代理邀请</h2><p>代理邀请只用于代理资格任务抵扣，不叠加普通用户邀请的1000/3000 AI豆奖励。</p></div><span class="static-preview-badge" id="agentReferralState">正在读取…</span></div>
+      <div class="agent-referral-code"><div><span>代理邀请码</span><strong id="agentReferralCode">--</strong></div><div><button class="btn btn-outline" id="agentReferralCopyCode" type="button" disabled>复制邀请码</button><button class="btn btn-primary" id="agentReferralCopyLink" type="button" disabled>复制邀请链接</button></div></div>
+      <div class="agent-referral-stats" aria-label="代理邀请资格抵扣统计">
+        <div><span>有效邀请</span><strong id="agentReferralInvited">0</strong></div>
+        <div><span>三人组抵扣</span><strong id="agentReferralGroupCredits">0</strong></div>
+        <div><span>付费额外抵扣</span><strong id="agentReferralPaidCredits">0</strong></div>
+        <div><span>已使用</span><strong id="agentReferralUsedCredits">0</strong></div>
+        <div><span>剩余</span><strong id="agentReferralRemainingCredits">0</strong></div>
+      </div>
+      <p class="agent-referral-rule" id="agentReferralRule">每3个有效邀请注册=1个资格任务抵扣；每个被邀请普通用户首次有效付费会员或AI豆充值再+1。抵扣只能补任务数量，至少1笔真实客户付费/客户单不能抵扣。</p>
+      <p class="membership-activate-status" id="agentReferralStatus" role="status" aria-live="polite">邀请数据正在读取。</p>
+    </section>
+    <section class="card agent-code-request" aria-labelledby="agentCodeRequestTitle">
+      <div><h2 id="agentCodeRequestTitle">申请激活码</h2><p>完整代码只在创建成功后展示一次；刷新或关闭页面后无法再次查看。</p></div>
+      <form id="agentCodeRequestForm">
+        <div class="agent-field">
+          <label for="agentBenefitType">激活码类型</label>
+          <select id="agentBenefitType" name="benefitType" disabled><option value="membership">会员激活码</option><option value="bean_recharge">AI豆充值码</option></select>
+        </div>
+        <div class="agent-field" id="agentMembershipPlanField">
+          <label for="agentPlanCode">会员方案</label>
+          <select id="agentPlanCode" name="planCode" disabled><option value="month">月卡</option><option value="quarter">季卡</option><option value="year">年卡</option></select>
+        </div>
+        <div class="agent-field" id="agentBeanAmountField" hidden>
+          <label for="agentBeanAmount">AI豆额度</label>
+          <select id="agentBeanAmount" name="beanAmount" disabled><option value="1000">1000豆</option><option value="2000">2000豆</option><option value="5000">5000豆</option><option value="10000">10000豆</option><option value="50000">50000豆</option></select>
+          <small id="agentBeanRewardHint">代理奖励按购买豆数30%取整数：1000豆奖励300豆。</small>
+        </div>
+        <div class="agent-field">
+          <label for="agentCodePurpose">用途</label>
+          <select id="agentCodePurpose" name="purpose" disabled><option value="customer">客户使用</option><option value="self">本人使用</option></select>
+        </div>
+        <div class="agent-field agent-customer-account" id="agentCustomerAccountField">
+          <label for="agentCustomerAccount">客户登录账户</label>
+          <input id="agentCustomerAccount" name="customerAccount" type="text" maxlength="120" autocomplete="off" placeholder="请输入客户登录邮箱或手机号" aria-describedby="agentCustomerAccountHint" disabled>
+          <small id="agentCustomerAccountHint">仅支持客户主账号，不支持子账号。</small>
+        </div>
+        <div class="agent-field agent-field-action">
+          <button class="btn btn-primary" id="agentCodeRequestButton" type="submit" disabled>申请激活码</button>
+        </div>
+      </form>
+      <p class="membership-activate-status" id="agentCodeRequestStatus" role="status" aria-live="polite">激活码功能尚未开放。</p>
+      <div class="agent-one-time-code" id="agentOneTimeCodeBox" hidden>
+        <span>本次完整激活码</span><code id="agentOneTimeCode"></code>
+        <div><button class="btn btn-outline" id="agentCopyCode" type="button">复制</button><button class="btn btn-outline" id="agentClearCode" type="button">已保存，清除显示</button></div>
+      </div>
+    </section>
+    <section class="membership-records"><div class="membership-section-head"><div><h2>激活码与付款</h2><p>列表只返回掩码；会员码执行月卡3张、季卡1张、年卡1张的滚动24小时额度。AI豆码支持五档，生成时按30%整数豆奖励代理商，未使用作废或过期会扣回。</p></div></div>
+      <div class="table-wrap membership-record-table"><table><thead><tr><th>掩码</th><th>方案</th><th>用途</th><th>申请时间</th><th>到期时间</th><th>状态</th><th>操作</th></tr></thead><tbody id="agentCodeRows"><tr><td class="membership-empty" colspan="7">正在读取服务端激活码…</td></tr></tbody></table></div>
+    </section>
+  </main>
+</div>
+<script src="../assets/brand.js"></script>
+<script src="../assets/table-pagination.js?v=20261002-b07b2"></script><script src="../assets/sidebar.js"></script>
+<script src="../assets/agent-center.js?v=20260926-columns01"></script>
+</body>
+</html>

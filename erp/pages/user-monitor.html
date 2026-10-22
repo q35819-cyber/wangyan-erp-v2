@@ -1,0 +1,75 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>用户监控 - 网研ERP</title><link rel="stylesheet" href="../assets/style.css"><style>
+.summary{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:12px;margin-bottom:14px}.summary .card{padding:15px}.summary span{display:block;color:var(--text-muted);font-size:12px}.summary b{display:block;margin-top:6px;font-size:22px}.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.toolbar .search-input{flex:1;min-width:240px}.monitor-wrap{height:calc(100vh - 330px);min-height:390px;overflow:auto}.monitor-table{table-layout:fixed;width:100%;min-width:1260px}.monitor-table th{position:sticky;top:0;z-index:2}.monitor-table th:nth-child(1){width:52px}.monitor-table th:nth-child(2){width:100px}.monitor-table th:nth-child(3){width:120px}.monitor-table th:nth-child(4){width:95px}.monitor-table th:nth-child(5),.monitor-table th:nth-child(7){width:132px}.monitor-table th:nth-child(6){width:150px}.monitor-table th:nth-child(8){width:90px}.monitor-table th:nth-child(9){width:112px}.monitor-table th:nth-child(10){width:270px}.monitor-table td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.danger{color:var(--red)}.safe{color:var(--green)}.actions{display:flex;gap:5px}.actions .btn{padding:5px 8px}.page-foot{display:flex;justify-content:space-between;align-items:center;padding-top:10px}.pager{display:flex;gap:6px}.rule{margin-top:12px;padding:12px 16px;color:var(--text-muted);font-size:12px;line-height:1.8}.modal-mask{position:fixed;inset:0;background:rgba(2,8,20,.62);display:none;align-items:center;justify-content:center;z-index:100}.modal-mask.open{display:flex}.modal-card{width:min(440px,calc(100vw - 32px));padding:22px;border:1px solid var(--popup-border,#D7A054)}.modal-card .input{width:100%;margin:14px 0}.modal-actions{display:flex;justify-content:flex-end;gap:8px}@media(max-width:850px){.summary{grid-template-columns:repeat(2,1fr)}}
+</style>
+<style>
+.content{display:flex;flex-direction:column;min-height:0;overflow:hidden;padding-bottom:0}.notice,.summary,.rule{flex:none}.monitor-list-card{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}.monitor-list-card .monitor-wrap{flex:1;min-height:0;height:auto;overflow:auto;position:relative;bottom:auto}.monitor-list-card .page-foot{flex:none}
+</style>
+<link rel="stylesheet" href="../assets/ui.css">
+<script src="../assets/theme-restore.js">
+</script>
+</head>
+<body>
+<aside class="sidebar">
+<div class="logo">网研<span>ERP</span>
+</div>
+<nav class="menu">
+</nav>
+</aside>
+<div class="main-content">
+<header class="header">
+<div class="header-left">
+<strong>用户监控</strong>
+<span class="breadcrumb">网研ERP <span>/</span> 设置 <span>/</span> 用户监控</span>
+</div>
+<div class="header-right">
+<span class="user-name">系统管理员</span>
+<button class="icon-btn">🔔</button>
+<span class="avatar">管</span>
+</div>
+</header>
+<main class="content ui-page">
+<div class="notice" style="margin-bottom:14px">网页无法读取真实主板序列号，本页使用服务器签发的浏览器设备安全标识。IP 变化不会单独冻结账号，连续 10 次独立异常才自动冻结账号组。</div>
+<section class="summary"><div class="card"><span>监控用户</span><b id="total">0</b></div><div class="card"><span>存在异常</span><b id="risk">0</b></div><div class="card"><span>已冻结</span><b id="frozen">0</b></div><div class="card"><span>已封号</span><b id="banned">0</b></div></section>
+<section class="card monitor-list-card" style="padding:15px">
+<div class="toolbar">
+<input class="input search-input" id="keyword" placeholder="模糊搜索用户名、用户ID、IP或邮箱">
+<select class="select" id="statusFilter">
+<option value="">全部状态</option>
+<option value="none">正常/观察中</option>
+<option value="auto_frozen">自动冻结</option>
+<option value="manual_frozen">手动冻结</option>
+<option value="banned">已封号</option>
+</select>
+<button class="btn btn-outline" id="refreshBtn">刷新</button>
+</div>
+<div class="table-wrap monitor-wrap">
+<table class="monitor-table">
+<thead>
+<tr>
+<th>序号</th>
+<th>用户ID</th>
+<th>用户身份</th>
+<th>账号类型</th>
+<th>首次IP</th>
+<th>首次设备标识</th>
+<th>最近IP</th>
+<th>异常次数</th>
+<th>安全状态</th>
+<th>操作</th>
+</tr>
+</thead>
+<tbody id="body">
+</tbody>
+</table>
+</div>
+<div class="page-foot">
+<span id="pageInfo">
+</span>
+<div class="pager" id="pager">
+</div>
+</div>
+</section>
+<section class="card rule"><b>精简规则</b><br>1. 首次登录记录 IP 与浏览器设备安全标识；30 分钟内出现 3 个设备或 4 个 IP 网段视为异常。2. 普通请求建议不超过每分钟 120 次；10 秒超过 50 次或每分钟超过 180 次记一次异常，同类异常 5 分钟内只计一次。3. 异常写入任务中心并发送提醒；未配置用户邮箱时转发系统管理员。4. 连续 10 次异常冻结主账号和全部子账号，24 小时内系统管理员未处理则自动解封。5. 手动冻结和封号均不会自动解封。</section>
+</main></div><div class="modal-mask ui-page" id="emailModal"><div class="card modal-card" role="dialog" aria-modal="true"><h3>设置安全提醒邮箱</h3><p id="emailUser"></p><input class="input" id="emailInput" type="email" maxlength="240" placeholder="留空表示未配置"><div class="modal-actions"><button class="btn btn-outline" id="emailCancel">取消</button><button class="btn btn-primary" id="emailSave">保存</button></div></div></div><script src="../assets/brand.js"></script><script src="../assets/identity-display.js?v=20261006-id01"></script><script src="../assets/storage.js"></script><script src="../assets/sidebar.js"></script><script>
+(function(){'use strict';var items=[],page=1,size=20,selected=null,$=function(id){return document.getElementById(id)},els={keyword:$('keyword'),status:$('statusFilter'),body:$('body'),pageInfo:$('pageInfo'),pager:$('pager'),total:$('total'),risk:$('risk'),frozen:$('frozen'),banned:$('banned'),modal:$('emailModal'),emailUser:$('emailUser'),emailInput:$('emailInput')};function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}function filtered(){var q=els.keyword.value.trim().toLowerCase(),s=els.status.value;return items.filter(function(x){return(!s||x.blockType===s)&&(!q||([x.profileFullName,x.email,x.username,x.userId,x.firstIp,x.lastIp,x.securityEmail].join(' ')).toLowerCase().indexOf(q)>=0)})}function state(x){if(x.blockType==='banned')return'已封号';if(x.blockType==='auto_frozen')return'自动冻结';if(x.blockType==='manual_frozen')return'手动冻结';return x.riskCount?'观察中':'正常'}function render(){var list=filtered(),pages=Math.max(1,Math.ceil(list.length/size));page=Math.min(page,pages);var rows=list.slice((page-1)*size,page*size);els.body.innerHTML=rows.length?rows.map(function(x,i){var identity=window.WYERP_IDENTITY_DISPLAY.displayIdentity(x),blocked=x.blockType!=='none',data=' data-id="'+x.userId+'" data-tenant="'+x.tenantId+'"',acts=blocked?'<button class="btn btn-outline" data-act="'+(x.blockType==='banned'?'unban':'unfreeze')+'"'+data+'>'+(x.blockType==='banned'?'解除封号':'解除冻结')+'</button>':'<button class="btn btn-outline" data-act="freeze"'+data+'>冻结</button><button class="btn btn-outline" data-act="ban"'+data+'>封号</button>';return'<tr><td>'+((page-1)*size+i+1)+'</td><td>'+esc(x.userId)+'</td><td title="'+esc(identity.raw)+'">'+esc(identity.masked)+'</td><td>'+(x.memberType==='member'?'子账号':'管理账号')+'</td><td title="'+esc(x.firstIp)+'">'+esc(x.firstIp||'--')+'</td><td title="'+esc(x.firstDevice)+'">'+esc(x.firstDevice||'--')+'</td><td title="'+esc(x.lastIp)+'">'+esc(x.lastIp||'--')+'</td><td class="'+(x.riskCount?'danger':'safe')+'">'+x.riskCount+'/10</td><td title="'+esc(x.blockReason||'')+'">'+state(x)+'</td><td><div class="actions"><button class="btn btn-outline" data-email="'+x.userId+'" data-tenant="'+x.tenantId+'">邮箱</button>'+acts+'</div></td></tr>'}).join(''):'<tr><td colspan="10" class="empty">没有符合条件的用户</td></tr>';els.pageInfo.textContent='共 '+list.length+' 条 · 每页 '+size+' 条';els.pager.innerHTML='';for(var p=1;p<=pages;p++){if(pages>9&&Math.abs(p-page)>2&&p!==1&&p!==pages)continue;els.pager.insertAdjacentHTML('beforeend','<button class="btn '+(p===page?'btn-primary':'btn-outline')+'" data-page="'+p+'">'+p+'</button>')}document.querySelectorAll('[data-page]').forEach(function(b){b.onclick=function(){page=Number(this.dataset.page);render()}});document.querySelectorAll('[data-act]').forEach(function(b){b.onclick=function(){action(this.dataset.id,this.dataset.tenant,this.dataset.act)}});document.querySelectorAll('[data-email]').forEach(function(b){b.onclick=function(){selected=items.find(function(x){return x.userId===b.dataset.email&&x.tenantId===b.dataset.tenant});var identity=window.WYERP_IDENTITY_DISPLAY.displayIdentity(selected);els.emailUser.textContent=identity.masked+'（ID '+selected.userId+'）';els.emailUser.title=identity.raw;els.emailInput.value=selected.securityEmail||'';els.modal.classList.add('open');els.emailInput.focus()}})}function request(id,tenantId,action,extra){return erpStorage.request('/api/system/user-monitor/'+id+'/action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({action:action,tenantId:tenantId},extra||{}))}).then(function(r){if(!r.ok)return r.json().then(function(d){throw new Error(d.error||'操作失败')});return load()})}function action(id,tenantId,act){var text={freeze:'冻结该用户？手动冻结不会自动解封。',ban:'封禁该用户？封号后必须由系统管理员解除。',unfreeze:'解除该用户冻结？',unban:'解除该用户封号？'}[act];if(confirm(text))request(id,tenantId,act).catch(function(e){alert(e.message)})}function load(){return erpStorage.request('/api/system/user-monitor').then(function(r){if(!r.ok)throw new Error(r.status===403?'仅系统管理员可访问':'读取失败');return r.json()}).then(function(d){items=d.items||[];els.total.textContent=items.length;els.risk.textContent=items.filter(function(x){return x.riskCount>0}).length;els.frozen.textContent=items.filter(function(x){return /frozen/.test(x.blockType)}).length;els.banned.textContent=items.filter(function(x){return x.blockType==='banned'}).length;render()})}els.keyword.oninput=els.status.onchange=function(){page=1;render()};$('refreshBtn').onclick=load;$('emailCancel').onclick=function(){els.modal.classList.remove('open')};$('emailSave').onclick=function(){if(!selected)return;request(selected.userId,selected.tenantId,'set_email',{email:els.emailInput.value.trim()}).then(function(){els.modal.classList.remove('open')}).catch(function(e){alert(e.message)})};els.modal.onclick=function(e){if(e.target===els.modal)els.modal.classList.remove('open')};erpStorage.init([]).then(load)})();
+</script></body></html>

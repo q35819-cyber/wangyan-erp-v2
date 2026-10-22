@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>榜单选品 - 网研ERP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .rank-tabs { display:flex; gap:30px; height:44px; align-items:flex-end; padding:0 20px; border-bottom:1px solid var(--line); background:var(--card); }
+  .rank-tab { height:44px; padding:0 2px; border:0; border-bottom:2px solid transparent; background:transparent; color:var(--text-muted); cursor:pointer; font-size:14px; }
+  .rank-tab.on { color:var(--primary); border-color:var(--primary); font-weight:600; }
+  .info-tip { margin:14px 0; padding:10px 14px; border:1px solid color-mix(in srgb,var(--primary) 28%,var(--line)); border-radius:6px; background:color-mix(in srgb,var(--primary) 9%,var(--card)); color:var(--primary); font-size:12px; }
+  .rank-filter { margin-bottom:14px; padding:16px; background:var(--card); border:1px solid var(--line); border-radius:8px; }
+  .category-row { display:flex; gap:8px; align-items:flex-start; margin-bottom:14px; }
+  .filter-label { width:72px; flex:none; padding-top:6px; color:var(--muted); font-size:13px; }
+  .category-list { display:flex; flex-wrap:wrap; gap:7px; }
+  .category-chip { padding:5px 12px; border:0; border-radius:4px; background:transparent; color:var(--text-muted); cursor:pointer; }
+  .category-chip.on { background:var(--accent-btn-soft); color:var(--primary); }
+  .field-grid { display:grid; grid-template-columns:repeat(4,minmax(185px,1fr)); gap:10px 14px; }
+  .field-grid .input,.field-grid .select { width:100%; }
+  .filter-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:14px; }
+  .rank-table-card { padding:0; overflow:hidden; }
+  .rank-table-scroll { overflow:auto; }
+  .rank-table { min-width:1680px; }
+  .product-cell { display:flex; gap:9px; min-width:260px; align-items:flex-start; }
+  .product-img { width:46px; height:46px; object-fit:cover; border:1px solid var(--line); border-radius:5px; background:var(--surface); }
+  .product-title { max-width:220px; color:var(--text); font-weight:600; white-space:normal; line-height:1.45; }
+  .product-sku { margin-top:4px; color:var(--muted); font-size:11px; }
+  .metric-empty { color:var(--text-faint); }
+  .ranking-empty { padding:78px 20px; text-align:center; color:var(--text-faint); line-height:1.9; }
+  .rank-footer { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; }
+  @media (max-width:1100px){ .field-grid{grid-template-columns:repeat(2,minmax(180px,1fr));} }
+</style>
+<link rel="stylesheet" href="../assets/ui.css">
+<script src="../assets/theme-restore.js"></script>
+</head>
+<body>
+  <div class="sidebar"><div class="logo">网研<span>ERP</span></div><nav class="menu"></nav></div>
+  <div class="main-content">
+    <div class="header">
+      <div class="header-left"><strong>榜单选品</strong><span class="breadcrumb">网研ERP <span>/</span> 选品 <span>/</span> 榜单选品</span></div>
+      <div class="header-right"><span class="user-name">管理员</span><button class="icon-btn">🔔</button><span class="avatar">管</span></div>
+    </div>
+    <div class="content ui-page">
+      <div class="rank-tabs" id="rankTabs">
+        <button class="rank-tab on" data-mode="hot">热销商品</button>
+        <button class="rank-tab" data-mode="new">热销新品</button>
+        <button class="rank-tab" data-mode="potential">潜力商品</button>
+        <button class="rank-tab" data-mode="blue">蓝海商品</button>
+        <button class="rank-tab" data-mode="china">中国专区</button>
+      </div>
+      <div class="info-tip">榜单仅使用已同步的真实市场指标，不根据店铺销量臆造市场排名。</div>
+      <div class="membership-quota-strip" id="rankingFavoriteQuota"></div>
+      <section class="rank-filter">
+        <div class="category-row"><div class="filter-label">一级类目</div><div class="category-list" id="categoryList"></div></div>
+        <div class="field-grid">
+          <input class="input" id="keyword" placeholder="商品名称 / SKU">
+          <input class="input" id="minSales" type="number" min="0" placeholder="月销量 ≥">
+          <input class="input" id="minRevenue" type="number" min="0" placeholder="月销售额 ≥">
+          <input class="input" id="minPrice" type="number" min="0" placeholder="平均价格 ≥">
+          <input class="input" id="maxPrice" type="number" min="0" placeholder="平均价格 ≤">
+          <input class="input" id="minGrowth" type="number" placeholder="销售额增长率 ≥ %">
+          <select class="select" id="fulfillment"><option value="">全部履约方式</option><option>FBO</option><option>FBS</option><option>realFBS</option></select>
+          <input class="input" id="minDailySales" type="number" min="0" placeholder="日销量 ≥">
+        </div>
+        <div class="filter-actions"><button class="btn" id="resetBtn" type="button">重置</button><button class="btn btn-primary" id="queryBtn" type="button">查询</button></div>
+      </section>
+      <section class="card rank-table-card">
+        <div class="rank-table-scroll">
+          <table class="rank-table">
+            <thead><tr>
+              <th>商品信息</th><th>类目</th><th>月销量</th><th>月销售额</th><th>平均价格</th><th>销售额增长率</th>
+              <th>月浏览量</th><th>日销量</th><th>商品卡加购率</th><th>搜索加购率</th><th>转化率</th>
+              <th>履约方式</th><th>重量</th><th>上架日期</th><th>操作</th>
+            </tr></thead>
+            <tbody id="rankingBody"></tbody>
+          </table>
+        </div>
+        <div class="rank-footer"><span id="totalText">共 0 条记录</span><span>数据来源：当前租户已同步数据</span></div>
+      </section>
+    </div>
+  </div>
+<script src="../assets/brand.js"></script>
+<script src="../assets/storage.js"></script>
+<script src="../assets/membership-quota.js?v=20261005-quota01"></script>
+<script src="../assets/selection-analysis.js"></script>
+<script src="../assets/product-favorites.js"></script>
+<script src="../assets/sku-mask.js"></script>
+<script src="../assets/ozon-product-link.js?v=20261005-ozonlink01"></script>
+<script src="../assets/sidebar.js"></script>
+<script>
+(function () {
+  'use strict';
+  var analysis = window.WYERP_SELECTION_ANALYSIS;
+  var favoriteModel = window.WYERP_PRODUCT_FAVORITES;
+  var allRows = [];
+  var favorites = [];
+  var favoriteLimit = 0;
+  var favoriteQuota = null;
+  var quotaApi = window.WYERP_MEMBERSHIP_QUOTA;
+  var mode = 'hot';
+  var category = '';
+
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char];
+    });
+  }
+  function numberValue(id) {
+    var value = document.getElementById(id).value;
+    return value === '' ? null : Number(value);
+  }
+  function metric(value, suffix) {
+    return value == null ? '<span class="metric-empty">--</span>' : esc(Number(value).toLocaleString('zh-CN', { maximumFractionDigits: 2 })) + (suffix || '');
+  }
+  function isFavorite(sku) {
+    return favorites.some(function (item) { return item.sku.toLowerCase() === String(sku || '').toLowerCase(); });
+  }
+  function renderCategories() {
+    var categories = allRows.map(function (row) { return row.category; }).filter(Boolean).filter(function (item,index,items) { return items.indexOf(item) === index; });
+    document.getElementById('categoryList').innerHTML = [''].concat(categories).map(function (item) {
+      return '<button class="category-chip' + (item === category ? ' on' : '') + '" type="button" data-category="' + esc(item) + '">' + esc(item || '全部') + '</button>';
+    }).join('');
+  }
+  function filteredRows() {
+    var keyword = document.getElementById('keyword').value.trim().toLowerCase();
+    var minSales = numberValue('minSales'), minRevenue = numberValue('minRevenue'), minPrice = numberValue('minPrice');
+    var maxPrice = numberValue('maxPrice'), minGrowth = numberValue('minGrowth'), minDaily = numberValue('minDailySales');
+    var fulfillment = document.getElementById('fulfillment').value.toLowerCase();
+    return analysis.sortRanking(allRows.filter(function (row) {
+      if (category && row.category !== category) return false;
+      if (keyword && (row.name + ' ' + row.sku).toLowerCase().indexOf(keyword) < 0) return false;
+      if (minSales !== null && (row.monthlySales == null || row.monthlySales < minSales)) return false;
+      if (minRevenue !== null && (row.monthlyRevenue == null || row.monthlyRevenue < minRevenue)) return false;
+      if (minPrice !== null && (row.price == null || row.price < minPrice)) return false;
+      if (maxPrice !== null && (row.price == null || row.price > maxPrice)) return false;
+      if (minGrowth !== null && (row.growth == null || row.growth < minGrowth)) return false;
+      if (minDaily !== null && (row.dailySales == null || row.dailySales < minDaily)) return false;
+      if (fulfillment && row.fulfillment.toLowerCase() !== fulfillment) return false;
+      if (mode === 'new' && !row.createdAt) return false;
+      if (mode === 'potential' && row.growth == null) return false;
+      if (mode === 'blue' && !row.blueOcean) return false;
+      if (mode === 'china' && !/^(?:中国|china|cn)$/i.test(row.origin)) return false;
+      return true;
+    }), mode);
+  }
+  function applyFavoriteQuota(payload) {
+    var quota = payload && payload.quotas && payload.quotas.favorites;
+    if (quota) {
+      favoriteQuota = Object.assign({}, quota);
+      favoriteLimit = quota.unlimited || quota.limit === null ? null : Number(quota.limit || 0);
+      return;
+    }
+    var plan = payload && payload.membership && payload.membership.activePlan;
+    favoriteQuota = null;
+    favoriteLimit = plan && plan.benefits && Object.prototype.hasOwnProperty.call(plan.benefits, 'favoriteLimit') ? plan.benefits.favoriteLimit : 0;
+  }
+  function renderFavoriteQuota() {
+    if (!favoriteQuota) return;
+    favoriteQuota.usage = favorites.length;
+    quotaApi.render(document.getElementById('rankingFavoriteQuota'), favoriteQuota, { compact: true, label: '会员收藏额度', note: '收藏操作共用此额度' });
+  }
+
+  function render() {
+    var rows = filteredRows();
+    renderFavoriteQuota();
+    var body = document.getElementById('rankingBody');
+    document.getElementById('totalText').textContent = '共 ' + rows.length + ' 条记录';
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="15"><div class="ranking-empty">当前租户没有符合条件的市场榜单数据<br>店铺商品缓存不包含市场榜单指标时，这里不会生成虚假排名。</div></td></tr>';
+      return;
+    }
+    body.innerHTML = rows.map(function (row) {
+      var image = row.image ? '<img class="product-img" src="' + esc(row.image) + '" alt="">' : '<div class="product-img"></div>';
+      return '<tr><td><div class="product-cell">' + image + '<div>' + window.WYERP_OZON_PRODUCT_LINK.titleHtml(row, row.name || '未命名商品', { className: 'product-title product-title-clamp-2 ozon-product-title-link' }) + '<div class="product-sku">SKU：' + esc(window.WYERP_SKU_MASK.mask(row.sku)) + '</div></div></div></td>' +
+        '<td>' + esc(row.category || '--') + '</td><td>' + metric(row.monthlySales) + '</td><td>' + metric(row.monthlyRevenue) + '</td><td>' + metric(row.price) + '</td>' +
+        '<td>' + metric(row.growth, '%') + '</td><td>' + metric(row.views) + '</td><td>' + metric(row.dailySales) + '</td><td>' + metric(row.cartRate, '%') + '</td>' +
+        '<td>' + metric(row.searchCartRate, '%') + '</td><td>' + metric(row.conversionRate, '%') + '</td><td>' + esc(row.fulfillment || '--') + '</td>' +
+        '<td>' + metric(row.weight) + '</td><td>' + esc(row.createdAt || '--') + '</td><td><button class="link favorite-btn" type="button" data-sku="' + esc(row.sku) + '"' + (isFavorite(row.sku) ? ' disabled' : '') + '>' + (isFavorite(row.sku) ? '已收藏' : '收藏') + '</button></td></tr>';
+    }).join('');
+    // 图片加载失败兜底：CSP script-src-attr 'none' 会拦截内联 onerror，改用事件绑定
+    Array.prototype.forEach.call(body.querySelectorAll('img.product-img'), function (img) {
+      if (img.complete && img.naturalWidth === 0) img.style.display = 'none';
+      else img.addEventListener('error', function () { img.style.display = 'none'; });
+    });
+  }
+  document.getElementById('rankTabs').addEventListener('click', function (event) {
+    var tab = event.target.closest('.rank-tab');
+    if (!tab) return;
+    mode = tab.dataset.mode;
+    document.querySelectorAll('.rank-tab').forEach(function (node) { node.classList.toggle('on', node === tab); });
+    render();
+  });
+  document.getElementById('categoryList').addEventListener('click', function (event) {
+    var chip = event.target.closest('.category-chip');
+    if (!chip) return;
+    category = chip.dataset.category;
+    renderCategories();
+    render();
+  });
+  document.getElementById('queryBtn').addEventListener('click', render);
+  document.getElementById('rankingBody').addEventListener('click', function (event) {
+    var button = event.target.closest('.favorite-btn');
+    if (!button) return;
+    var row = allRows.find(function (item) { return item.sku === button.dataset.sku; });
+    if (!row) return;
+    if (favoriteLimit !== null && favorites.length >= favoriteLimit) {
+      alert('当前会员最多可收藏 ' + favoriteLimit + ' 个商品，请先移除旧收藏或升级会员。');
+      return;
+    }
+    var previous = favorites;
+    var next = favoriteModel.add(favorites, {
+      sku: row.sku, name: row.name, image: row.image, category: row.category, price: row.price,
+      status: '未上架', source: '榜单选品'
+    });
+    erpStorage.set('erp_favorite_products', next).then(function () {
+      favorites = favoriteModel.normalizeAll(erpStorage.get('erp_favorite_products'));
+      renderFavoriteQuota();
+      button.textContent = '已收藏';
+      button.disabled = true;
+    }).catch(function (error) {
+      favorites = previous;
+      alert(error.message || '收藏未保存，请稍后重试。');
+    });
+  });
+  document.getElementById('resetBtn').addEventListener('click', function () {
+    document.querySelectorAll('.field-grid input').forEach(function (input) { input.value = ''; });
+    document.getElementById('fulfillment').value = '';
+    category = '';
+    renderCategories();
+    render();
+  });
+  erpStorage.init(['erp_online_products', 'erp_favorite_products']).then(function () {
+    return quotaApi.load().then(applyFavoriteQuota).catch(function () { favoriteLimit = 0; favoriteQuota = null; });
+  }).then(function () {
+    allRows = analysis.rankingRows(erpStorage.get('erp_online_products'));
+    favorites = favoriteModel.normalizeAll(erpStorage.get('erp_favorite_products'));
+    renderCategories();
+    render();
+  });
+})();
+</script>
+</body>
+</html>

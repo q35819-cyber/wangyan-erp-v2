@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<policymap>
+  <policy domain="resource" name="memory" value="256MiB"/>
+  <policy domain="resource" name="map" value="512MiB"/>
+  <policy domain="resource" name="disk" value="1GiB"/>
+  <policy domain="resource" name="width" value="12KP"/>
+  <policy domain="resource" name="height" value="12KP"/>
+  <policy domain="resource" name="area" value="40MP"/>
+  <policy domain="resource" name="list-length" value="2"/>
+  <policy domain="resource" name="thread" value="1"/>
+  <policy domain="resource" name="time" value="20"/>
+  <policy domain="delegate" rights="none" pattern="*"/>
+  <policy domain="filter" rights="none" pattern="*"/>
+  <policy domain="path" rights="none" pattern="@*"/>
+  <policy domain="module" rights="none" pattern="{AAI,ART,ASHLAR,AVS,BAYER,BGR,BRAILLE,CALS,CAPTION,CIN,CIP,CLIP,CLIPBOARD,CMYK,CUBE,CUT,DCM,DDS,DEBUG,DIB,DJVU,DMR,DNG,DOT,DPS,DPX,EMF,EPT,EXR,FARBFELD,FAX,FITS,FL32,FLIF,FPX,FTXT,GRADIENT,GRAY,HALD,HDR,HISTOGRAM,HRZ,HTML,ICON,INFO,INLINE,IPL,JBIG,JNX,JP2,JSON,JXL,KERNEL,LABEL,MAC,MAGICK,MAP,MASK,MAT,MATTE,META,MIFF,MONO,MPC,MPR,MSL,MTV,MVG,NULL,ORA,OTB,PALM,PANGO,PATTERN,PCD,PCL,PCX,PDB,PDF,PES,PGX,PICT,PIX,PLASMA,PNM,PS,PS2,PS3,PSD,PWP,QOI,RAW,RGB,RGF,RLA,RLE,SCR,SCREENSHOT,SCT,SF3,SFW,SGI,SIXEL,STEGANO,STRIMG,SUN,SVG,TGA,THUMBNAIL,TIFF,TILE,TIM,TIM2,TTF,TXT,UHDR,UIL,URL,UYVY,VICAR,VID,VIDEO,VIFF,VIPS,WBMP,WPG,XBM,XC,XCF,XPM,XPS,YAML,YCBCR,YUV}"/>
+  <policy domain="coder" rights="none" pattern="{ART,ASHLAR,CLIPBOARD,EPHEMERAL,HTML,HTTPS,HTTP,INFO,INLINE,LABEL,MAGICK,MASK,MPR,MSL,MVG,NULL,PDF,PLASMA,PS,PS2,PS3,PANGO,SHOW,SVG,TEXT,TILE,URL,VID,WIN,X,XC}"/>
+  <policy domain="coder" rights="read" pattern="{AVIF,BMP,GIF,HEIC,HEIF,WEBP}"/>
+  <policy domain="coder" rights="read|write" pattern="{JPEG,JPG,PNG}"/>
+</policymap>

@@ -1,0 +1,153 @@
+/* SKU 图片编辑器统一弹窗样式：仅服务 sku-image-editor.js 创建的弹窗，同源静态文件（CSP style-src 'self'） */
+.sku-reference-editor .sku-image-source-list>.sku-image-card.is-source-selected{box-shadow:0 0 0 3px color-mix(in srgb,#7562ed 24%,transparent);background:color-mix(in srgb,#7562ed 5%,var(--surface))}.sku-reference-editor .sku-source-number{position:absolute;left:7px;top:7px;z-index:3;display:flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 6px;box-sizing:border-box;border-radius:7px;background:rgba(24,20,38,.78);color:#fff;font-size:12px;font-weight:700;line-height:1}.sku-reference-editor .sku-source-selected-mark{position:absolute;right:7px;top:7px;z-index:3;height:24px;padding:0 8px;border-radius:7px;background:#7562ed;color:#fff;font-size:11px;font-weight:700;line-height:24px}.sku-reference-editor .sku-image-source-list>.sku-image-card[aria-pressed="true"] .sku-image-card-foot{background:color-mix(in srgb,#7562ed 10%,var(--surface))}
+.sku-reference-editor .sku-image-role-badge{position:absolute;left:7px;top:7px;z-index:4;max-width:calc(100% - 14px);height:24px;padding:0 8px;box-sizing:border-box;display:flex;align-items:center;border-radius:7px;background:rgba(108,92,231,.92);color:#fff;font-size:11px;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}.sku-reference-editor .sku-image-card.is-fixed-role{border-color:color-mix(in srgb,#7562ed 78%,var(--line))}.sku-reference-editor .sku-image-card.is-fixed-role .sku-image-card-foot:before{content:'固定';margin-right:auto;color:#7562ed;font-size:11px;font-weight:700}.theme-dark .sku-reference-editor .sku-image-role-badge{background:rgba(117,98,237,.92)}
+.sku-reference-editor .sku-source-preview-error{position:absolute;inset:0 0 31px;display:flex;align-items:center;justify-content:center;padding:34px 8px 8px;color:var(--text-muted);font-size:12px;text-align:center;background:var(--surface)}
+.sku-reference-editor .sku-source-preview-image{display:block;width:100%;height:100%;object-fit:contain;background:var(--surface)}.sku-reference-editor .sku-image-preview[data-preview-state="pending"] .sku-source-preview-image{opacity:.72}
+.sku-reference-editor .sku-image-source-list.sku-network-source-list{display:block;overflow:hidden;padding:0 6px 0 0;margin-top:24px!important}.sku-reference-editor .sku-image-source-list.sku-network-source-list .sku-network-panel{display:flex;flex-direction:column;align-items:stretch;min-height:0;padding:0 8px}.sku-reference-editor .sku-image-source-list.sku-network-source-list .sku-network-panel textarea{width:100%;height:260px;padding:12px 14px;box-sizing:border-box;border:1px solid var(--input-border,var(--line));border-radius:8px;background:var(--input-bg,var(--card));color:var(--text);font:13px/1.7 inherit;resize:vertical;outline:none}.sku-reference-editor .sku-image-source-list.sku-network-source-list .sku-network-panel textarea:focus{border-color:#7562ed;box-shadow:0 0 0 2px color-mix(in srgb,#7562ed 16%,transparent)}.sku-reference-editor .sku-image-source-list.sku-network-source-list .sku-network-panel>.btn{align-self:flex-end;margin-top:12px;height:34px;padding:6px 18px}
+dialog.wy-modal{border:0;padding:0;border-radius:14px;background:var(--card,#fff);color:var(--text,#1f2430);box-shadow:0 24px 80px rgba(15,23,42,.28);font-family:inherit;}
+dialog.wy-modal::backdrop{background:rgba(15,23,42,.45)}
+dialog.wy-modal.wy-lg{width:min(1080px,96vw);height:min(86vh,880px);max-width:96vw}
+dialog.wy-modal.wy-md{width:min(680px,94vw);max-height:86vh}
+dialog.wy-modal.wy-sm{width:min(440px,92vw)}
+dialog.wy-modal.wy-full{width:96vw!important;height:96vh!important;max-width:96vw}
+.wy-dlg{display:flex;flex-direction:column;height:100%;min-height:0}
+.wy-dlg-head{display:flex;align-items:center;gap:8px;padding:15px 24px;border-bottom:1px solid var(--line,#e8eaf0);flex-shrink:0}
+.wy-dlg-title{margin:0;font-size:17px;font-weight:650;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wy-dlg-icon{width:34px;height:34px;border:0;border-radius:8px;background:transparent;color:#8a93a6;font-size:16px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none;padding:0}
+.wy-dlg-icon:hover{background:#f3f4f8;color:#3d4658}
+.wy-dlg-body{flex:1;min-height:0;overflow:auto;padding:22px 24px;display:flex;flex-direction:column;gap:18px}
+.wy-dlg-body.no-pad{padding:0;gap:0}
+.wy-dlg-foot{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--line,#e8eaf0);flex-shrink:0;background:#fff;border-radius:0 0 14px 14px}
+.wy-dlg-foot .wy-spacer{flex:1}
+.wy-btn{height:40px;padding:0 22px;border-radius:9px;font-size:14px;font-weight:550;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:6px;font-family:inherit;white-space:nowrap}
+.wy-btn-ghost{background:#fff;border-color:#d9dde6;color:#3d4658}
+.wy-btn-ghost:hover{border-color:#b9c0cf;background:#f7f8fb}
+.wy-btn-primary{background:#6c5ce7;color:#fff}
+.wy-btn-primary:hover{background:#5d4de0}
+.wy-btn-primary:disabled,.wy-btn-ghost:disabled{opacity:.55;cursor:not-allowed}
+.wy-section{display:flex;flex-direction:column;gap:12px}
+.wy-section-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:650;color:#1f2430;margin:0}
+.wy-section-title .wy-badge{margin-left:2px}
+.wy-section-sub{margin:-4px 0 0;font-size:13px;color:#8a93a6}
+.wy-pickgrid{display:grid;gap:14px}
+.wy-pickgrid.cols-6{grid-template-columns:repeat(6,1fr)}
+.wy-pickgrid.cols-2{grid-template-columns:repeat(2,1fr)}
+.wy-preview-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media (max-width:900px){.wy-preview-grid{grid-template-columns:repeat(2,1fr)}}
+.wy-preview-thumb{aspect-ratio:1/1;border-radius:10px;background:#f3f4f8 center/contain no-repeat;border:1.5px solid #e6e8f0;position:relative;overflow:hidden;cursor:zoom-in}
+.wy-preview-thumb.selected{border:2px solid #6c5ce7;box-shadow:0 0 0 3px rgba(108,92,231,.15)}
+.wy-preview-title-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.wy-preview-count{display:flex;align-items:center;gap:6px;font-size:13px;color:#5b6478;cursor:default}
+.wy-preview-count input[type=number]{width:56px;height:28px;border:1px solid #d9dde6;border-radius:6px;text-align:center;font-size:13px;font-family:inherit;color:#1f2430;background:#fff}
+.wy-preview-count input[type=number]:focus{border-color:#6c5ce7;outline:none;box-shadow:0 0 0 2px rgba(108,92,231,.15)}
+.wy-preview-card{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%}
+.wy-preview-card .wy-preview-thumb{width:100%}
+.wy-preview-check{display:flex;align-items:center;gap:4px;font-size:12px;color:#5b6478;cursor:pointer;user-select:none}
+.wy-preview-check input[type=checkbox]{width:15px;height:15px;accent-color:#6c5ce7;cursor:pointer;margin:0}
+.wy-preview-thumb .idx{position:absolute;left:8px;top:8px;width:22px;height:22px;border-radius:6px;background:rgba(108,92,231,.9);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.wy-preview-pager{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px}
+.wy-preview-pager button{height:28px;padding:0 12px;border-radius:6px;border:1px solid #d9dde6;background:#fff;color:#3d4658;font-size:12px;cursor:pointer;font-family:inherit}
+.wy-preview-pager button:disabled{opacity:.4;cursor:not-allowed}
+.wy-preview-pager button:hover:not(:disabled){border-color:#6c5ce7;color:#6c5ce7}
+.wy-preview-pager .page-info{font-size:12px;color:#8a93a6;min-width:60px;text-align:center}
+.wy-pick{position:relative;display:flex;flex-direction:column;gap:5px;padding:15px 48px 15px 18px;border:1.5px solid #e6e8f0;border-radius:12px;background:#fff;cursor:pointer;text-align:left;font-family:inherit;min-height:62px;justify-content:center;color:inherit}
+.wy-pick:hover{border-color:#c6cdf5}
+.wy-pick.on{border-color:#6c5ce7;background:#f3f1ff}
+.wy-pick.disabled{opacity:.55;cursor:not-allowed;background:#f8f9fc}
+.wy-pick .t{font-size:15px;font-weight:600;color:#1f2430;display:flex;align-items:center;gap:8px}
+.wy-pick .d{font-size:13px;color:#8a93a6}
+.wy-pick .radio{position:absolute;right:16px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:2px solid #c8ccda;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-style:normal;line-height:1;box-sizing:border-box}
+.wy-pick.on .radio{border-color:#6c5ce7;background:#6c5ce7}
+.wy-pick.on .radio::after{content:"\2713"}
+.wy-badge{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:99px;font-size:12px;font-weight:600;font-style:normal;color:#fff}
+.wy-badge-green{background:#3fbf66}.wy-badge-blue{background:#3d8bfd}.wy-badge-gray{background:#9aa1b5}
+.wy-summary{background:#f6f7fa;border-radius:12px;padding:14px 18px;display:flex;flex-direction:column;gap:7px;font-size:13.5px;color:#5b6478}
+.wy-summary b{color:#1f2430;font-weight:650}
+.wy-summary .cost{color:#6c5ce7;font-weight:700}
+/* 限时活动价：原价删除线 + 活动价强调（与弹窗紫色系一致，禁止内联 style） */
+.price-original{text-decoration:line-through;color:#9aa1b5;font-weight:400}
+.price-promo{color:#6c5ce7;font-weight:700}
+/* sku32：模板卡+下方候选数量框（1-9；主图 fixed 禁用态与可编辑态样式区分）；弹窗整体为固定浅色紫色系，深浅主题下与其余控件同方案 */
+.wy-tplcell{display:flex;flex-direction:column;gap:6px;min-width:0}
+.wy-tplcell .wy-pick{flex:1;min-height:56px}
+.wy-tplqty{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:#8a93a6;user-select:none}
+.wy-tplqty input{width:40px;height:26px;border:1px solid #d9dde6;border-radius:6px;text-align:center;font-size:13px;font-family:inherit;color:#1f2430;background:#fff}
+.wy-tplqty input:focus{border-color:#6c5ce7;outline:none}
+.wy-tplqty input.fixed{background:#f3f4f8;color:#9aa1b5;border-style:dashed;cursor:not-allowed}
+/* sku33：自定义步进箭头（按钮+▲▼字符，禁止暴露浏览器原生number spinner外观） */
+.wy-tplstep{display:flex;flex-direction:column;gap:2px;flex:none}
+.wy-tplstep button{width:18px;height:12px;padding:0;display:flex;align-items:center;justify-content:center;border:1px solid #d9dde6;border-radius:4px;background:#fff;color:#5b6478;font-size:8px;line-height:1;cursor:pointer;font-family:inherit}
+.wy-tplstep button:hover:not(:disabled){border-color:#6c5ce7;color:#6c5ce7;background:#f3f1ff}
+.wy-tplstep button:disabled,.wy-tplstep button.fixed{background:#f3f4f8;color:#c3c8d6;border-color:#e6e8f0;cursor:not-allowed}
+.wy-tplstep button.fixed{border-style:dashed}
+/* sku34：卖点区块（选择模板上方）。textarea 外观复用商品页 .field textarea 体系（CSS变量深浅主题自适应），此处只补布局与按钮行，禁止内联style。
+   .field.wy-sellfield 用双类特异性覆盖商品页内联 .field 的 150px 网格列（用户验收反馈“大空间小框+内部滚动条”根因），文本框撑满区块宽度、明显加高 */
+.wy-sellrow{display:flex;justify-content:flex-start;align-items:center;gap:10px;flex-wrap:wrap;margin-top:2px}
+.wy-sellrow .wy-btn{height:32px;padding:0 14px;font-size:13px;border-radius:8px}
+.wy-selllang{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#5b6478}.wy-selllang select{height:32px;min-width:112px;padding:0 28px 0 10px;border:1px solid #d9dde6;border-radius:8px;background:#fff;color:#3d4658;font:13px inherit;outline:none;cursor:pointer}.wy-selllang select:focus{border-color:#6c5ce7;box-shadow:0 0 0 2px rgba(108,92,231,.15)}
+.field.wy-sellfield{display:block;margin-top:8px}
+.field.wy-sellfield textarea{display:block;width:100%;box-sizing:border-box;min-height:220px}
+/* 模板卡悬停显示生效提示词全文：限高可滚动，移出即隐。
+   sku34（任务#37）改 absolute 挂弹窗：全站 dialog[open]{transform:translate(-50%,-50%)} 会让 fixed 子层以弹窗为包含块、视口坐标被二次偏移，
+   absolute + JS 以「卡片rect−弹窗rect」换算坐标可免疫弹窗transform与宿主覆盖层（宽度由JS按弹窗可用空间设置） */
+.wy-tpl-tip{position:absolute;z-index:50;box-sizing:border-box;display:none;max-height:280px;overflow:auto;padding:12px 14px;border:1px solid #d9dde6;border-radius:10px;background:#fff;box-shadow:0 10px 30px rgba(15,23,42,.18);font-size:12.5px;line-height:1.7;color:#3d4658;white-space:pre-wrap;word-break:break-all}
+.wy-tpl-tip.show{display:block}
+.wy-progress-wrap{display:flex;flex-direction:column;gap:12px;border:1px solid #e6e8f0;border-radius:12px;padding:20px 22px;background:#fafaff}
+.wy-progress-label{display:flex;justify-content:space-between;gap:12px;font-size:14px;color:#6c5ce7;font-weight:600}
+.wy-progress-label .cnt{font-variant-numeric:tabular-nums}
+.wy-progress{height:8px;border-radius:99px;background:#e9ecf4;overflow:hidden}
+.wy-progress>i{display:block;height:100%;width:0;background:#6c5ce7;border-radius:99px;transition:width .2s ease}
+.wy-progress-hint{margin:0;font-size:12.5px;color:#8a93a6;line-height:1.7}
+.wy-result-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media (max-width:960px){.wy-result-grid{grid-template-columns:repeat(2,1fr)}}
+.wy-imgcard{position:relative;border:1.5px solid #e6e8f0;border-radius:12px;padding:10px 10px 8px;background:#fff;display:flex;flex-direction:column;gap:8px;min-width:0}
+.wy-imgcard.on{border-color:#6c5ce7}
+.wy-imgcheck{position:absolute;left:14px;top:14px;z-index:3;width:26px;height:26px;border-radius:8px;background:#6c5ce7;color:#fff;border:0;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(108,92,231,.4);font-family:inherit}
+.wy-imgcheck.off{background:#fff;color:#9aa1b5;border:1.5px solid #cfd4e2;box-shadow:none}
+.wy-imgcheck:disabled{cursor:not-allowed}
+.wy-imgthumb{aspect-ratio:1/1;border-radius:8px;background:#f3f4f8 center/contain no-repeat;position:relative;overflow:hidden;flex:none}
+.wy-imgthumb.zoomable{cursor:zoom-in}
+.wy-imgthumb .pv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(15,23,42,0);color:rgba(255,255,255,0);font-size:14px;font-weight:600;transition:background .15s,color .15s;pointer-events:none}
+.wy-imgthumb:hover .pv{background:rgba(15,23,42,.42);color:#fff}
+.wy-imgname{text-align:center;font-size:13px;color:#5b6478;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wy-imgerr{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:10px;font-size:12px;color:#dc2626;background:#fef2f2;text-align:center;line-height:1.5;cursor:default}
+.wy-tplcard{display:flex;align-items:center;gap:14px;padding:16px 18px;border:1.5px solid #6c5ce7;border-radius:12px;background:#f3f1ff}
+.wy-tplthumb{width:64px;height:64px;border-radius:10px;background:#fff center/contain no-repeat;border:1px solid #e6e8f0;flex:none;display:flex;align-items:center;justify-content:center;color:#b7bdcf;font-size:22px}
+.wy-tplthumb img{width:100%;height:100%;object-fit:contain;display:block;border-radius:9px}
+.wy-tplmain{min-width:0;display:flex;flex-direction:column;gap:5px}
+.wy-tplmain .n{font-size:15px;font-weight:650;color:#1f2430;display:flex;align-items:center;gap:8px}
+.wy-tplmain .d{font-size:12.5px;color:#8a93a6;line-height:1.6}
+.wy-checkline{display:flex;align-items:center;gap:8px;font-size:14px;color:#3d4658;cursor:pointer;user-select:none}
+.wy-checkline .box{width:20px;height:20px;border-radius:6px;border:2px solid #c8ccda;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:12px;box-sizing:border-box;flex:none}
+.wy-checkline.on .box{background:#6c5ce7;border-color:#6c5ce7}
+.wy-checkline.on .box::after{content:"\2713"}
+.wy-modes{display:flex;gap:6px}
+.wy-modebtn{flex:1;height:30px;border-radius:8px;border:1px solid #d9dde6;background:#fff;color:#5b6478;font-size:12px;cursor:pointer;font-family:inherit;padding:0}
+.wy-modebtn.on{border-color:#6c5ce7;background:#f3f1ff;color:#6c5ce7;font-weight:600}
+.wy-detaillist{display:flex;flex-direction:column;gap:9px}
+.wy-detailline{display:flex;gap:9px;align-items:center;font-size:13px;color:#3d4658;min-width:0}
+.wy-detailline .ic{width:18px;text-align:center;flex:none;font-style:normal}
+.wy-detailline.run .ic{color:#6c5ce7}
+.wy-detailline.ok .ic{color:#3fbf66}
+.wy-detailline.fail .ic{color:#dc2626}
+.wy-detailline .msg{color:#8a93a6;font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+/* 灯箱：独立顶层弹窗（与编辑器原有缩放层同款全屏方案），Esc / 点遮罩只关灯箱，不动业务弹窗 */
+dialog.wy-lightbox-modal{box-sizing:border-box;border:0!important;box-shadow:none!important;padding:0;background:rgba(8,12,24,.86);width:100vw;height:100vh;max-width:none;max-height:none;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff}
+dialog.wy-lightbox-modal::backdrop{background:transparent}
+dialog.wy-lightbox-modal img{display:block;max-width:calc(100vw - 80px);max-height:calc(100vh - 80px);border-radius:6px;box-shadow:0 12px 60px rgba(0,0,0,.5)}
+dialog.wy-lightbox-modal .x{position:fixed;top:14px;right:22px;width:44px;height:44px;border:0;background:transparent;color:#fff;font-size:30px;line-height:1;cursor:pointer;z-index:2}
+/* 图片选区（裁剪/去水印）弹窗：复用 wy-modal wy-lg 统一外壳，内部为工具条+画布区+提示 */
+#skuImageSelectionDialog .wy-sel-tools{display:flex;flex-wrap:wrap;gap:8px;flex:none}
+#skuImageSelectionDialog .wy-sel-tool{height:32px;padding:0 14px;border-radius:8px;border:1px solid #d9dde6;background:#fff;color:#3d4658;font-size:13px;font-family:inherit;cursor:pointer}
+#skuImageSelectionDialog .wy-sel-tool:hover{border-color:#b9c0cf;background:#f7f8fb}
+#skuImageSelectionDialog .wy-sel-tool.on{border-color:#6c5ce7;background:#f3f1ff;color:#6c5ce7;font-weight:600}
+#skuImageSelectionDialog .wy-sel-stage{position:relative;flex:1;min-height:280px;display:grid;place-items:center;overflow:auto;padding:16px;border-radius:10px;background:repeating-conic-gradient(#e8eaf1 0 25%,#f5f6fa 0 50%) 50%/20px 20px;touch-action:none}
+#skuImageSelectionDialog .wy-sel-stage img{grid-area:1/1;display:block;max-width:100%;max-height:100%;border-radius:6px}
+#skuImageSelectionDialog .wy-sel-stage canvas{grid-area:1/1;cursor:crosshair;touch-action:none}
+#skuImageSelectionDialog .wy-sel-help{margin:0;flex:none;font-size:12.5px;line-height:1.6;color:#8a93a6}
+/* 图片处理弹窗内部仍复用全局 .btn，统一到紫色系 */
+#skuImageProcessDialog .btn{height:32px;border-radius:8px;font-size:13px;border:1px solid #d9dde6;background:#fff;color:#3d4658}
+#skuImageProcessDialog .btn:hover{border-color:#b9c0cf;background:#f7f8fb;color:#3d4658}
+#skuImageProcessDialog .btn-primary,#skuImageProcessDialog .btn-primary:hover{background:#6c5ce7;border-color:#6c5ce7;color:#fff}
+#skuImageProcessDialog .btn-primary:hover{background:#5d4de0;border-color:#5d4de0}
+#skuImageProcessDialog strong i{background:#6c5ce7!important}

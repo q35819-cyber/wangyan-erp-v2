@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>订单统计 - 网研ERP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<!-- 订单统计为专属 scoped 样式：ui.css 前置，order-statistics-page.css 同特异性下后加载胜出 -->
+<link rel="stylesheet" href="../assets/ui.css">
+<link rel="stylesheet" href="../assets/order-statistics-page.css?v=20261004-overview01">
+<script src="../assets/theme-restore.js"></script>
+</head>
+<body class="order-statistics-page">
+<div class="sidebar"><div class="logo">网研<span>ERP</span></div><nav class="menu"></nav></div>
+<div class="main-content">
+  <div class="header"><div class="header-left"><strong>订单统计</strong><span class="breadcrumb">网研ERP <span>/</span> 订单 <span>/</span> 订单统计</span></div><div class="header-right"><span class="user-name">管理员</span><button class="icon-btn">🔔</button><span class="avatar">管</span></div></div>
+  <main class="content ui-page">
+    <div class="filter-bar stats-filter-bar">
+      <div class="stats-filter-primary">
+      <input class="input search-input" id="keyword" aria-label="搜索订单" placeholder="搜索 SKU、货号、货件编号、买家ID、店铺">
+      <select class="select" id="shop" aria-label="店铺"><option value="">全部店铺</option></select>
+      <select class="select" id="status" aria-label="订单状态"><option value="all">所有订单</option><option value="waiting_for_deliver">等待备货</option><option value="waiting_for_ship">等待发运</option><option value="delivering">运输中</option><option value="arbitration">有争议的</option><option value="delivered">已签收</option><option value="cancelled">已取消</option><option value="inwarehouse">WHD仓库</option></select>
+      <select class="select" id="sub" aria-label="订单子状态" hidden><option value="all">全部</option></select>
+      <div class="stats-date-range"><input class="input" id="from" type="date" aria-label="开始日期"><span class="date-sep">至</span><input class="input" id="to" type="date" aria-label="结束日期"></div>
+      </div>
+      <div class="stats-filter-actions">
+      <label class="rate-group"><input class="input" id="rate" type="number" min="0.0001" step="0.0001" value="12" title="自动读取当天人民币兑卢布汇率" style="width:82px"> ¥1→RUB</label>
+      <label class="rate-group"><input class="input" id="fee" type="number" min="0" step="0.01" value="0" style="width:82px"> 贴单费¥</label>
+      <button class="btn btn-primary" id="refresh">更新统计</button>
+      <button class="btn btn-outline" type="button" data-export-kind="summary" title="仅下载当前总览，独立 Excel 文件（.xlsx）" disabled>下载总览</button>
+      <button class="btn btn-outline" type="button" data-export-kind="status" title="仅下载当前状态明细，独立 Excel 文件（.xlsx）" disabled>下载状态明细</button>
+      <button class="btn btn-outline" type="button" data-export-kind="shops" title="仅下载当前店铺统计，独立 Excel 文件（.xlsx），含完整 20 项指标" disabled>下载店铺统计</button>
+      <span id="downloadStatus" class="breadcrumb" role="status" aria-live="polite"></span>
+      <span class="spacer"></span><a class="btn btn-outline" href="orders.html">返回订单管理</a>
+      </div>
+    </div>
+
+    <div class="stats-tabs" role="tablist" aria-label="订单统计功能">
+      <button class="stats-tab is-active" id="statsTabOverview" type="button" role="tab" aria-selected="true" aria-controls="statsPanelOverview" data-stats-view="overview">总览</button>
+      <button class="stats-tab" id="statsTabStatus" type="button" role="tab" aria-selected="false" aria-controls="statsPanelStatus" data-stats-view="status" tabindex="-1">订单状态</button>
+      <button class="stats-tab" id="statsTabAdvertising" type="button" role="tab" aria-selected="false" aria-controls="statsPanelAdvertising" data-stats-view="advertising" tabindex="-1">广告费用</button>
+      <button class="stats-tab" id="statsTabShops" type="button" role="tab" aria-selected="false" aria-controls="statsPanelShops" data-stats-view="shops" tabindex="-1">店铺统计</button>
+    </div>
+    <section class="stats-overview-panel stats-panel" id="statsPanelOverview" role="tabpanel" aria-labelledby="statsTabOverview" data-stats-panel="overview">
+      <section class="stats-overview" id="metrics" aria-label="订单经营总览"></section>
+      <div class="stats-chart-grid" aria-label="订单经营图表">
+        <article class="card stats-chart-card"><div class="section-title"><h2>订单趋势</h2><span class="breadcrumb">按当前筛选订单日期</span></div><div class="stats-chart" id="overviewOrderTrend" role="img" aria-label="订单趋势图"></div></article>
+        <article class="card stats-chart-card"><div class="section-title"><h2>经营指标对比</h2><span class="breadcrumb">人民币 · 指标横向比较，不相加</span></div><div class="stats-chart" id="overviewFinanceCompare" role="img" aria-label="销售额成本费用利润对比图"></div></article>
+        <article class="card stats-chart-card"><div class="section-title"><h2>订单状态构成</h2><span class="breadcrumb">已签收 / 已取消 / 未签收</span></div><div class="stats-chart" id="overviewStatusShare" role="img" aria-label="订单状态构成图"></div></article>
+        <article class="card stats-chart-card"><div class="section-title"><h2>广告费用构成</h2><span class="breadcrumb">当前店铺与日期范围</span></div><div class="stats-chart" id="overviewAdvertisingShare" role="img" aria-label="广告费用构成图"></div></article>
+      </div>
+      <p class="stats-note" id="overviewChartNote"></p>
+    </section>
+    <section class="card stats-section stats-panel" id="statsPanelAdvertising" role="tabpanel" aria-labelledby="statsTabAdvertising" data-stats-panel="advertising" hidden>
+      <div class="section-title"><h2 id="advertisingStatsTitle">广告费分类明细</h2><span class="breadcrumb" id="advertisingScopeText">正在读取 CPC / CPO 广告财务数据…</span></div>
+      <div class="table-wrap stats-table-wrap" tabindex="0" role="region" aria-labelledby="advertisingStatsTitle">
+        <table class="stats-table advertising-table" aria-labelledby="advertisingStatsTitle" data-no-auto-pagination="1">
+          <thead><tr><th scope="col" class="stats-sticky-heading">店铺</th><th scope="col">计费方式</th><th scope="col">广告费用类型</th><th scope="col">订单归属</th><th scope="col" data-admin-type-id hidden>Ozon type_id</th><th scope="col">费用笔数（笔）</th><th scope="col">广告费</th></tr></thead>
+          <tbody id="advertisingBody"></tbody>
+        </table>
+      </div>
+      <p class="stats-note">广告费按店铺、Ozon 实际费用类型和计费方式拆分。CPC / CPM 属于点击或展示维度，可以没有单笔订单归属；CPO（按订单付费）必须通过 Ozon Performance API 的订单报告按接口订单号精确归属。CPO 未完成接口对账或订单号匹配时只显示“待订单匹配”，不会被永久记成“无法归属”。</p>
+      <p class="stats-note" id="advertisingErrorText" hidden style="white-space:pre-line;color:var(--red)"></p>
+    </section>
+    <section class="card stats-section stats-panel" id="statsPanelStatus" role="tabpanel" aria-labelledby="statsTabStatus" data-stats-panel="status" hidden>
+      <div class="section-title"><h2 id="statusStatsTitle">订单状态明细</h2><span class="breadcrumb">销售额、广告费、总计费：卢布 / 人民币 · 其它成本与利润：人民币</span></div>
+      <div class="table-wrap stats-table-wrap" tabindex="0" role="region" aria-labelledby="statusStatsTitle">
+        <table class="stats-table status-table" aria-labelledby="statusStatsTitle" data-no-auto-pagination="1">
+          <colgroup><col style="width:9%"><col style="width:8%"><col style="width:5%"><col style="width:12%"><col style="width:9%"><col style="width:7%"><col style="width:9%"><col style="width:12%"><col style="width:8%"><col style="width:7%"><col style="width:7%"><col style="width:7%"></colgroup>
+          <thead><tr><th scope="col" class="stats-sticky-heading">店铺</th><th scope="col">订单状态</th><th scope="col">订单数（单）</th><th scope="col">销售额</th><th scope="col">垫资成本（¥）</th><th scope="col">贴单费（¥）</th><th scope="col">广告费</th><th scope="col">总计费</th><th scope="col">周期净利润（¥）</th><th scope="col">利润（¥）</th><th scope="col" title="已签收利润率">利润率</th><th scope="col" title="签收投产比">投产比</th></tr></thead>
+          <tbody id="statusBody"></tbody>
+        </table>
+      </div>
+      <p class="stats-note">宽度不足时可在表内横向滚动。WHD仓库按当前货物状态独立展示；其首次销售结果同时计入已取消订单数，因此WHD订单数是已取消订单数的当前状态子集，两者不可再次相加。WHD当前销售额为0，已经实际发生的平台扣费只在WHD费用口径统计并扣减周期净利润，不在已取消费用中重复计算。未签收利润为预估；“—”表示该状态未提供此指标。垫资成本已含贴单费，请勿重复相加。</p>
+    </section>
+    <section class="card stats-section stats-panel" id="statsPanelShops" role="tabpanel" aria-labelledby="statsTabShops" data-stats-panel="shops" hidden>
+      <div class="section-title"><h2 id="shopStatsTitle">店铺统计</h2><span id="scopeText" class="breadcrumb"></span></div>
+      <div class="table-wrap stats-table-wrap" tabindex="0" role="region" aria-labelledby="shopStatsTitle">
+        <table class="stats-table shop-stats-table" aria-labelledby="shopStatsTitle">
+          <colgroup>
+            <col style="width:6%">
+            <col style="width:3%"><col style="width:7%"><col style="width:5%"><col style="width:4.5%"><col style="width:5.5%"><col style="width:6%"><col style="width:6%">
+            <col style="width:3%"><col style="width:7%"><col style="width:5.5%"><col style="width:5%"><col style="width:6%">
+            <col style="width:3%"><col style="width:7%"><col style="width:5.5%"><col style="width:5%"><col style="width:6%"><col style="width:4%"><col style="width:4%">
+            <col style="width:3%"><col style="width:5%">
+          </colgroup>
+          <thead>
+            <tr><th scope="col" rowspan="2" class="stats-sticky-heading">店铺</th><th scope="colgroup" colspan="7" class="stats-group-heading">总览</th><th scope="colgroup" colspan="5" class="stats-group-heading">未签收</th><th scope="colgroup" colspan="7" class="stats-group-heading">已签收</th><th scope="colgroup" colspan="2" class="stats-group-heading">已取消</th></tr>
+            <tr>
+              <th scope="col">订单数（单）</th><th scope="col">销售额</th><th scope="col">垫资成本（¥）</th><th scope="col">贴单费（¥）</th><th scope="col">广告费</th><th scope="col">总计费</th><th scope="col">周期净利润（¥）</th>
+              <th scope="col">订单数（单）</th><th scope="col">销售额</th><th scope="col">垫资成本（¥）</th><th scope="col">贴单费（¥）</th><th scope="col">预估利润（¥）</th>
+              <th scope="col">订单数（单）</th><th scope="col">销售额</th><th scope="col">垫资成本（¥）</th><th scope="col">贴单费（¥）</th><th scope="col">利润（¥）</th><th scope="col">利润率</th><th scope="col">投产比</th>
+              <th scope="col">订单数（单）</th><th scope="col">取消订单成本（¥）</th>
+            </tr>
+          </thead>
+          <tbody id="shopBody"></tbody>
+        </table>
+      </div>
+      <p class="stats-note">每家店铺完整展示 21 项指标，与上方总览及状态明细对应。销售额上行为卢布，下行为人民币；横向滚动查看全部指标，店铺名称固定在左侧。垫资成本已含贴单费；未签收成本包含部分取消订单成本，请勿重复相加。</p>
+    </section>
+  </main>
+</div>
+<script src="../assets/brand.js"></script><script src="../assets/storage.js?v=20260927-cpo1"></script><script src="../assets/exchange-rate.js"></script><script src="../assets/order-shop-info.js"></script><script src="../assets/order-operations.js"></script><script src="../assets/order-fee-classification.js?v=20260927-cpo1"></script><script src="../assets/order-statistics.js?v=20261003-whdcancel01"></script><script src="../assets/online-product-format.js"></script><script src="../assets/online-product-profit.js?v=20260919-pft01"></script><script src="../assets/order-fee-estimate.js?v=20260919-pft01"></script><script src="../assets/order-statistics-view.js?v=20261004-overview01"></script><script src="../assets/echarts.min.js"></script><script src="../assets/order-statistics-overview.js?v=20261006-chartlayout01"></script><script src="../assets/exceljs-browser.js"></script><script src="../assets/order-statistics-export.js?v=20260925-ad2"></script><script src="../assets/table-pagination.js?v=20260929-b07b1"></script><script src="../assets/sidebar.js"></script>
+<script>
+(function(){'use strict';
+var model=window.WYERP_ORDER_STATISTICS,estimator=window.WYERP_ORDER_FEE_ESTIMATE,exchangeRate=window.WYERP_EXCHANGE_RATE,orders=[],shops=[],products=[],logistics=null,samples={},shopNames=[],initial=new URLSearchParams(location.search),externalAdvertising=null,advertisingNotice='',advertisingLoadKey='',projectionCache={orders:null,products:null,logistics:null,rate:null,rows:null},filterIndexCache={orders:null,meta:null,counts:null};
+var exportSnapshot=null,exportBusy=false,downloadButtons=Array.from(document.querySelectorAll('[data-export-kind]')),downloadStatus=document.getElementById('downloadStatus');
+var statsViewButtons=Array.from(document.querySelectorAll('[data-stats-view]')),statsPanels=Array.from(document.querySelectorAll('[data-stats-panel]')),statsView='overview';
+var keyword=document.getElementById('keyword'),shop=document.getElementById('shop'),status=document.getElementById('status'),sub=document.getElementById('sub'),from=document.getElementById('from'),to=document.getElementById('to'),rate=document.getElementById('rate'),fee=document.getElementById('fee'),scopeText=document.getElementById('scopeText'),advertisingScopeText=document.getElementById('advertisingScopeText'),advertisingErrorText=document.getElementById('advertisingErrorText');
+function setStatisticsView(next,syncUrl){var allowed=['overview','status','advertising','shops'];statsView=allowed.indexOf(next)>=0?next:'overview';statsViewButtons.forEach(function(button){var active=button.dataset.statsView===statsView;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',active?'true':'false');button.tabIndex=active?0:-1;});statsPanels.forEach(function(panel){panel.hidden=panel.dataset.statsPanel!==statsView;});if(statsView==='overview'&&window.WYERP_ORDER_STATISTICS_OVERVIEW&&window.WYERP_ORDER_STATISTICS_OVERVIEW.scheduleResize)window.WYERP_ORDER_STATISTICS_OVERVIEW.scheduleResize();var exportKind={overview:'summary',status:'status',shops:'shops'}[statsView]||'';downloadButtons.forEach(function(button){button.hidden=button.dataset.exportKind!==exportKind;});if(downloadStatus)downloadStatus.textContent='';if(syncUrl!==false){var url=new URL(location.href);if(statsView==='overview')url.searchParams.delete('view');else url.searchParams.set('view',statsView);history.replaceState(null,'',url.pathname+url.search+url.hash);}if(window.WYERP_TABLE_PAGINATION&&window.WYERP_TABLE_PAGINATION.refresh)requestAnimationFrame(function(){window.WYERP_TABLE_PAGINATION.refresh();});}
+statsViewButtons.forEach(function(button,index){button.addEventListener('click',function(){setStatisticsView(button.dataset.statsView,true);});button.addEventListener('keydown',function(event){var target=index;if(event.key==='ArrowRight')target=(index+1)%statsViewButtons.length;else if(event.key==='ArrowLeft')target=(index-1+statsViewButtons.length)%statsViewButtons.length;else if(event.key==='Home')target=0;else if(event.key==='End')target=statsViewButtons.length-1;else return;event.preventDefault();statsViewButtons[target].focus();setStatisticsView(statsViewButtons[target].dataset.statsView,true);});});
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
+function statusMatch(value,key){var s=String(value||'');if(key==='all')return true;if(key==='waiting_for_deliver')return s==='等待备货'||s==='等待打包';if(key==='waiting_for_ship')return s==='等待发运'||s==='等待装运'||s==='等待发货';if(key==='delivering')return s==='运输中'||s==='派送中'||s==='司机自提'||s==='到取货点';if(key==='arbitration')return s.indexOf('争议')>=0||s.indexOf('仲裁')>=0;if(key==='delivered')return s==='已签收'||s==='已送达';if(key==='cancelled')return s.indexOf('取消')>=0||s.indexOf('未接受')>=0;return true;}
+function shippedInfo(o){var c=o.cancel||{},qc=/^(02131|02478|02090)/.test(String(o.posting||''));return{shipped:qc?false:(typeof c.shipped==='boolean'?c.shipped:!!(o.track&&o.track!=='--'))};}
+function prepSubMatch(o,value){var track=!!(o.track&&String(o.track).trim()&&String(o.track).trim()!=='--'),express=(o.items||[]).some(function(p){return p&&p.purchaseExpress&&String(p.purchaseExpress).trim()&&String(p.purchaseExpress).trim()!=='--';}),has=track||express;return value==='has_track'?has:(value==='no_track'?!has:true);}
+function subMatch(o,tab,value){if(!value||value==='all')return true;if(tab==='waiting_for_deliver'||tab==='waiting_for_ship')return prepSubMatch(o,value);if(tab==='delivering')return value==='delivering'?String(o.status)==='运输中':String(o.status)==='到取货点';if(tab==='delivered')return value!=='resale'||!!o.retFrom;if(tab==='cancelled'){var who=o.cancel&&o.cancel.who||'';if(value==='resale')return!!((o.finance&&o.finance.resaleIncomeRub!=null)||o.retResalePosting);if(value==='buyer')return who==='买家取消';if(value==='seller')return who==='卖家取消';if(value==='ozon')return who==='Ozon取消';if(value==='qc')return/^(02131|02478|02090)/.test(String(o.posting||''));if(value==='destroyed')return String(o.ret)==='已销毁';if(value==='shipped')return shippedInfo(o).shipped;if(value==='unshipped')return!shippedInfo(o).shipped;}return true;}
+function daysOf(o){var s=String(o.status||'');if(['运输中','派送中','司机自提','到取货点'].indexOf(s)>=0){var ts=new Date(String(o.orderTime||'').replace(' ','T')).getTime();return ts&&!isNaN(ts)&&Date.now()>=ts?Math.floor((Date.now()-ts)/86400000)+1:null;}if(s==='已签收'){var a=String(o.orderTime||'').slice(0,10),b=String(o.deliveredDate||'').slice(0,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(a)||!/^\d{4}-\d{2}-\d{2}$/.test(b))return null;return Math.max(1,Math.floor((new Date(b+'T23:59:59')-new Date(a+'T00:00:00'))/86400000));}return null;}
+function buyerId(o){return window.WYERP_ORDER_SHOP_INFO.buyerId(o).value;}
+function invalidateFilterIndex(){filterIndexCache={orders:null,meta:null,counts:null};}
+function filterIndex(){if(filterIndexCache.orders===orders&&filterIndexCache.meta&&filterIndexCache.counts)return filterIndexCache;var counts={},meta=new WeakMap();orders.forEach(function(o){if(!o)return;var id=buyerId(o),buyerKey=String(o.shop||'')+'|'+id;if(id)counts[buyerKey]=(counts[buyerKey]||0)+1;var parts=[o.posting,o.shop,id],qty=0;(o.items||[]).forEach(function(p){if(p)parts.push(p.sku,p.offerId);qty+=Number(p&&p.qty)||0;});if(o.buyer)parts.push(o.buyer.name);meta.set(o,{buyerId:id,buyerKey:buyerKey,search:parts.filter(Boolean).join(' ').toLowerCase(),qty:qty,day:String(o.orderTime||'').slice(0,10)});});filterIndexCache={orders:orders,meta:meta,counts:counts};return filterIndexCache;}
+function filtered(){var index=typeof filterIndex==='function'?filterIndex():null,counts=index?index.counts:{};if(!index)orders.forEach(function(o){var id=buyerId(o);if(id)counts[String(o.shop||'')+'|'+id]=(counts[String(o.shop||'')+'|'+id]||0)+1;});var q=(keyword.value||'').trim().toLowerCase(),buyGt=Number(initial.get('buyGt'))||0,buyLt=Number(initial.get('buyLt'))||0,qtyGt=Number(initial.get('qtyGt'))||0,daysGt=Number(initial.get('daysGt'))||0;return orders.filter(function(o){if(!o)return false;var meta=index&&index.meta.get(o);if(q){if(meta){if(meta.search.indexOf(q)<0)return false;}else{var parts=[o.posting,o.shop,buyerId(o)];(o.items||[]).forEach(function(p){if(p)parts.push(p.sku,p.offerId);});if(o.buyer)parts.push(o.buyer.name);if(parts.filter(Boolean).join(' ').toLowerCase().indexOf(q)<0)return false;}}if(shop.value&&String(o.shop)!==shop.value)return false;var currentMode=model.financeMode(o);if(status.value==='inwarehouse'){if(currentMode!=='inwarehouse')return false;}else if(status.value==='cancelled'&&currentMode==='inwarehouse'){/* WHD当前在库，但首次销售结果属于已取消；保留在已取消筛选。 */}else{if(status.value!=='all'&&currentMode==='inwarehouse')return false;if(!statusMatch(o.status,status.value)||!subMatch(o,status.value,sub.value))return false;}var day=meta?meta.day:String(o.orderTime||'').slice(0,10);if(from.value&&day&&day<from.value)return false;if(to.value&&day&&day>to.value)return false;if(qtyGt){var qty=meta?meta.qty:0;if(!meta)(o.items||[]).forEach(function(p){qty+=Number(p&&p.qty)||0;});if(!(qty>qtyGt))return false;}if(daysGt){var days=daysOf(o);if(days==null||!(days>daysGt))return false;}var buyerKey=meta?meta.buyerKey:String(o.shop||'')+'|'+buyerId(o),bought=counts[buyerKey]||0;if(buyGt&&!(bought>buyGt))return false;if(buyLt&&!(bought<buyLt))return false;return true;});}
+function fillSub(value){var options={waiting_for_deliver:[['all','全部'],['has_track','有快递单号'],['no_track','无快递单号']],waiting_for_ship:[['all','全部'],['has_track','有快递单号'],['no_track','无快递单号']],delivering:[['all','全部'],['delivering','运输中'],['to_point','到取货点']],delivered:[['all','全部'],['resale','转售单']],cancelled:[['all','全部'],['resale','转售单'],['buyer','买家取消'],['ozon','OZON取消'],['seller','卖家取消'],['qc','质检单'],['destroyed','已销毁'],['shipped','已发货'],['unshipped','未发货']]},list=options[status.value]||[];sub.hidden=!list.length;sub.innerHTML=list.map(function(v){return'<option value="'+v[0]+'">'+v[1]+'</option>';}).join('');if(value&&list.some(function(v){return v[0]===value;}))sub.value=value;}
+function selectedLabel(select){return select.selectedIndex<0?'':select.options[select.selectedIndex].text;}
+function invalidateProjection(){projectionCache={orders:null,products:null,logistics:null,rate:null,rows:null};}
+function projectedOrders(opts){var rateValue=Number(opts&&opts.rate)||0;if(projectionCache.rows&&projectionCache.orders===orders&&projectionCache.products===products&&projectionCache.logistics===logistics&&projectionCache.rate===rateValue)return projectionCache.rows;var rows=estimator.projectOrders(orders,products,logistics,{rate:rateValue,market:'俄罗斯'});projectionCache={orders:orders,products:products,logistics:logistics,rate:rateValue,rows:rows};return rows;}
+function calculationOrders(list,opts){var projected=typeof projectedOrders==='function'?projectedOrders(opts):estimator.projectOrders(orders,products,logistics,{rate:opts.rate,market:'俄罗斯'});var selected=new Set(list);return projected.filter(function(order){return selected.has(orders[order._sourceIndex]);});}
+function internalRate(){return exchangeRate.cnyPerRub(rate.value);}
+function statisticsDateRange(list){var first='',last='';(list||orders).forEach(function(o){var day=String(o&&o.orderTime||'').slice(0,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return;if(!first||day<first)first=day;if(!last||day>last)last=day;});if(!first)return null;var start=from.value||first,end=to.value||last,days=Math.floor((new Date(end+'T00:00:00Z')-new Date(start+'T00:00:00Z'))/86400000)+1;return{from:start,to:end,days:days};}
+function showAdvertisingShopErrors(data){
+var errors=data&&Array.isArray(data.shopErrors)?data.shopErrors.slice():[],cpo=data&&data.cpo||{},statuses=Array.isArray(cpo.statuses)?cpo.statuses:[];
+(Array.isArray(cpo.errors)?cpo.errors:[]).forEach(function(item){errors.push({name:item.name||item.clientId||'广告费接口',message:item.message});});
+if(Number(cpo.pendingRub)>0){
+if(statuses.indexOf('pending_configuration')>=0)errors.push({name:'CPO按订单付费',message:'尚有 '+Number(cpo.pendingRub).toFixed(2)+' ₽ 待归属。请在店铺列表配置 Performance API Client ID / Client Secret。'});
+else if(statuses.indexOf('reconciliation_mismatch')>=0)errors.push({name:'CPO按订单付费',message:'Seller 财务总额与 Performance 订单报告尚未对平，本轮未强行写入订单；差额仍作为待归属费用扣除。'});
+else if(statuses.indexOf('partial')>=0)errors.push({name:'CPO按订单付费',message:'Performance 报告已读取，但仍有订单号未在ERP订单中精确匹配；未匹配金额继续作为待归属费用扣除。'});
+}
+if(!advertisingErrorText)return;if(!errors.length){advertisingErrorText.hidden=true;advertisingErrorText.textContent='';return;}
+advertisingErrorText.hidden=false;advertisingErrorText.textContent='广告费用核对提示：\n'+errors.map(function(item){return String(item.name||item.clientId||'未知店铺')+'：'+String(item.message||'广告费用读取失败');}).join('\n');
+}
+function selectedShopClientId(){if(!shop.value)return'';var found=shops.find(function(item){return item&&String(item.name||'')===String(shop.value);});return String(found&&(found.clientId||found.externalShopId)||'');}
+function canMergeExternalAdvertising(){return !keyword.value.trim()&&status.value==='all'&&(!sub.value||sub.value==='all')&&!['buyGt','buyLt','qtyGt','daysGt'].some(function(key){return!!Number(initial.get(key));});}
+function mergeExternalAdvertising(stats,breakdown,rateValue){if(!stats||!Array.isArray(breakdown))return stats;var unallocatedRub=0;breakdown.forEach(function(entry){var amount=Number(entry&&entry.amountRub)||0;if(!amount)return;unallocatedRub+=amount;stats.advertisingFeeRub+=amount;stats.advertisingFeeCny+=amount*rateValue;var existing=(stats.advertisingBreakdown||[]).find(function(row){return String(row.chargeModel)===String(entry.chargeModel)&&String(row.type)===String(entry.type)&&String(row.label)===String(entry.label);});if(existing){existing.amountRub+=amount;existing.amountCny+=amount*rateValue;existing.count+=(Number(entry.count)||0);}else(stats.advertisingBreakdown||(stats.advertisingBreakdown=[])).push({type:entry.type,label:entry.label,chargeModel:entry.chargeModel,chargeLabel:entry.chargeLabel,orderAttributable:false,amountRub:amount,amountCny:amount*rateValue,count:Number(entry.count)||0,source:'ozon_finance_accrual_by_day'});var charge=(stats.advertisingChargeBreakdown||[]).find(function(row){return String(row.chargeModel)===String(entry.chargeModel);});if(charge){charge.amountRub+=amount;charge.amountCny+=amount*rateValue;charge.count+=(Number(entry.count)||0);}else(stats.advertisingChargeBreakdown||(stats.advertisingChargeBreakdown=[])).push({chargeModel:entry.chargeModel,label:entry.chargeLabel,orderAttributable:false,amountRub:amount,amountCny:amount*rateValue,count:Number(entry.count)||0});});if(model.applyUnallocatedAdvertisingProfit)model.applyUnallocatedAdvertisingProfit(stats,unallocatedRub,rateValue);stats.advertisingBreakdown.sort(function(a,b){return Math.abs(Number(b.amountRub)||0)-Math.abs(Number(a.amountRub)||0);});stats.advertisingChargeBreakdown.sort(function(a,b){return Math.abs(Number(b.amountRub)||0)-Math.abs(Number(a.amountRub)||0);});return stats;}
+function mergePendingCpo(stats,cpo,rateValue){
+if(!stats)return stats;var pending=Math.max(0,Number(cpo&&cpo.pendingRub)||0),unallocated=Number(stats.unallocatedAdvertisingFeeRub)||0;
+if(pending>0){stats.advertisingFeeRub=(Number(stats.advertisingFeeRub)||0)+pending;stats.advertisingFeeCny=(Number(stats.advertisingFeeCny)||0)+pending*rateValue;
+(stats.advertisingBreakdown||(stats.advertisingBreakdown=[])).push({type:'',label:'商品推广（待订单匹配）',chargeModel:'CPO_PENDING',chargeLabel:'按订单付费',pendingCpo:true,orderAttributable:null,amountRub:pending,amountCny:pending*rateValue,count:Number(cpo&&cpo.unmatchedRows||cpo&&cpo.sellerRows||0),source:'ozon_performance_pending'});}
+if(model.applyPeriodAdvertisingCosts)model.applyPeriodAdvertisingCosts(stats,unallocated,pending,rateValue);return stats;
+}
+function loadAdvertising(){
+var range=statisticsDateRange(orders);advertisingNotice='';
+if(!range){externalAdvertising=null;if(advertisingScopeText)advertisingScopeText.textContent='当前没有可用于广告统计的订单日期';return Promise.resolve(null);}
+if(!(range.days>0)||range.days>93){externalAdvertising=null;advertisingNotice='广告费用未读取：请选择不超过93天的日期范围';if(advertisingScopeText)advertisingScopeText.textContent=advertisingNotice;return Promise.resolve(null);}
+var clientId=selectedShopClientId(),key=[range.from,range.to,clientId].join('|');
+if(advertisingScopeText)advertisingScopeText.textContent='正在读取 '+range.from+' 至 '+range.to+' 的广告财务与 CPO 订单归属…';
+if(externalAdvertising&&advertisingLoadKey===key)return Promise.resolve(externalAdvertising);
+var url='/api/order-advertising';
+return erpStorage.request(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from:range.from,to:range.to,clientId:clientId}),cache:'no-store'}).then(function(res){return res.json().catch(function(){return{};}).then(function(data){
+if(!res.ok)throw new Error(data.message||'广告费用读取失败，请稍后重试。');
+externalAdvertising=data;advertisingLoadKey=key;
+var reload=Number(data&&data.cpo&&data.cpo.ordersUpdated)>0?erpStorage.reload(['erp_orders_data']).then(function(){orders=Array.isArray(erpStorage.get('erp_orders_data'))?erpStorage.get('erp_orders_data'):[];invalidateProjection();invalidateFilterIndex();samples=estimator.signedSamples(orders);}):Promise.resolve();
+return reload.then(function(){showAdvertisingShopErrors(data);var source=data.cache&&data.cache.fetchedDays>0?'服务器已补齐缺失日期':'服务器缓存';if(advertisingScopeText)advertisingScopeText.textContent='广告口径：'+range.from+' 至 '+range.to+' · '+(clientId?'当前店铺':'全部店铺')+' · '+source+' · CPO按接口订单号归属';return data;});
+});}).catch(function(error){externalAdvertising=null;advertisingLoadKey='';advertisingNotice='广告费用读取失败：'+String(error&&error.message||'未知错误');if(advertisingScopeText)advertisingScopeText.textContent=advertisingNotice;if(advertisingErrorText){advertisingErrorText.hidden=false;advertisingErrorText.textContent=advertisingNotice;}return null;});
+}
+function render(){
+var list=filtered(),opts={rate:internalRate(),manualFee:parseFloat(fee.value)||0,prepared:true},calculated=calculationOrders(list,opts),s=model.calculate(calculated,opts),advertisingStats={advertisingBreakdown:(s.advertisingBreakdown||[]).map(function(item){return Object.assign({},item);}),advertisingChargeBreakdown:(s.advertisingChargeBreakdown||[]).map(function(item){return Object.assign({},item);}),advertisingFeeRub:s.advertisingFeeRub||0,advertisingFeeCny:s.advertisingFeeCny||0,signedProfitCny:null};
+if(externalAdvertising){mergeExternalAdvertising(advertisingStats,externalAdvertising.unallocatedBreakdown,opts.rate);mergePendingCpo(advertisingStats,externalAdvertising.cpo,opts.rate);}
+if(externalAdvertising&&canMergeExternalAdvertising()){mergeExternalAdvertising(s,externalAdvertising.unallocatedBreakdown,opts.rate);mergePendingCpo(s,externalAdvertising.cpo,opts.rate);}
+var groups={};(shop.value?[shop.value]:shopNames).forEach(function(name){groups[name]=[];});calculated.forEach(function(o){var shopMatch=null;if(!o.shop){var sid=String(o.shopId||o.clientId||o.externalShopId||'');if(sid)shopMatch=shops.find(function(s){return s&&String(s.id||s.clientId||s.externalShopId||'')===sid;});}var name=(o.shop||(shopMatch&&shopMatch.name)||'未关联店铺').trim();if(!name)name='未关联店铺';(groups[name]||(groups[name]=[])).push(o);});
+var shopStats=Object.keys(groups).sort().map(function(name){
+var stats=model.calculate(groups[name],opts),shopAdvertising={advertisingBreakdown:(stats.advertisingBreakdown||[]).map(function(item){return Object.assign({},item);}),advertisingChargeBreakdown:(stats.advertisingChargeBreakdown||[]).map(function(item){return Object.assign({},item);}),advertisingFeeRub:stats.advertisingFeeRub||0,advertisingFeeCny:stats.advertisingFeeCny||0,signedProfitCny:null};
+var shopRow=shops.find(function(item){return item&&String(item.name||'')===String(name);}),clientId=String(shopRow&&(shopRow.clientId||shopRow.externalShopId)||''),external=externalAdvertising&&clientId&&externalAdvertising.byShop&&externalAdvertising.byShop[clientId];
+if(external){mergeExternalAdvertising(shopAdvertising,external.unallocatedBreakdown,opts.rate);mergePendingCpo(shopAdvertising,external.cpo,opts.rate);}
+if(externalAdvertising&&canMergeExternalAdvertising()&&external){mergeExternalAdvertising(stats,external.unallocatedBreakdown,opts.rate);mergePendingCpo(stats,external.cpo,opts.rate);}
+return{name:name,stats:stats,advertisingStats:shopAdvertising};});
+var shopPlatformFeeCny=model.reconcileRoundedParts(s.platformFeeCny,shopStats.map(function(group){return group.stats.platformFeeCny;}));shopStats.forEach(function(group,index){group.stats.platformFeeCny=shopPlatformFeeCny[index];});
+var totalRange=statisticsDateRange(list),scopeMeta={shopLabel:shop.value||'全部店铺',scopeText:'ERP订单数据 · '+(totalRange?(totalRange.from+' 至 '+totalRange.to):'无有效订单日期')+' · '+list.length+' 单 · 缺失/覆盖见指标提示',advertisingScopeText:(advertisingScopeText&&advertisingScopeText.textContent)||'广告数据：当前同步结果'};
+window.WYERP_ORDER_STATISTICS_VIEW.renderSummary(s,advertisingStats,scopeMeta,shopStats);if(window.WYERP_ORDER_STATISTICS_OVERVIEW)window.WYERP_ORDER_STATISTICS_OVERVIEW.render({orders:calculated,stats:s,advertisingStats:advertisingStats,opts:opts,model:model,meta:scopeMeta});window.WYERP_ORDER_STATISTICS_VIEW.renderShops(shopStats,s,scopeMeta);scopeText.textContent='共 '+list.length+' 单 · '+Object.keys(groups).length+' 家店铺'+(advertisingNotice?' · '+advertisingNotice:'');
+var filters=[['关键词',keyword.value.trim()||'不限'],['店铺',selectedLabel(shop)],['订单状态',selectedLabel(status)],['子状态',sub.hidden?'不限':selectedLabel(sub)],['开始日期',from.value||'不限'],['结束日期',to.value||'不限']];[['buyGt','购买次数大于'],['buyLt','购买次数小于'],['qtyGt','商品数量大于'],['daysGt','发货/签收天数大于']].forEach(function(pair){if(Number(initial.get(pair[0])))filters.push([pair[1],initial.get(pair[0])]);});
+var allOrders=!keyword.value.trim()&&!shop.value&&status.value==='all'&&!from.value&&!to.value&&!['buyGt','buyLt','qtyGt','daysGt'].some(function(key){return!!Number(initial.get(key));});
+exportSnapshot={summary:s,shops:shopStats,rate:Number(rate.value)||12,manualFee:opts.manualFee,filters:filters,period:{from:from.value,to:to.value,allOrders:allOrders,actual:window.WYERP_ORDER_STATISTICS_EXPORT.orderDateRange(list)}};downloadButtons.forEach(function(button){button.disabled=exportBusy;});if(!exportBusy)downloadStatus.textContent='';}
+downloadButtons.forEach(function(button){button.addEventListener('click',async function(){
+if(!exportSnapshot||exportBusy)return;
+exportBusy=true;downloadButtons.forEach(function(item){item.disabled=true;});downloadStatus.textContent='正在生成 Excel…';
+try{await window.WYERP_ORDER_STATISTICS_EXPORT.download(Object.assign({},exportSnapshot,{simulation:document.title.indexOf('仅模拟')>=0}),button.dataset.exportKind);downloadStatus.textContent=button.textContent.replace(/^下载/,'')+' Excel 已生成，请查看浏览器下载';}
+catch(error){downloadStatus.textContent='下载失败，请重试：'+(error.message||'未知错误');}
+finally{exportBusy=false;downloadButtons.forEach(function(item){item.disabled=!exportSnapshot;});}
+});});
+function saveSettings(){return erpStorage.request('/api/domain/commands/finance-settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rate:internalRate(),manualFee:fee.value})}).then(function(res){return res.json().catch(function(){return{};}).then(function(data){if(!res.ok){var failure=new Error('服务暂时无法保存统计设置，请稍后重试。');failure.publicMessage=data.message||failure.message;throw failure;}return data;});}).then(function(data){erpStorage.acceptServerPayload('erp_rate',data.settings.erp_rate,data.versions.erp_rate);erpStorage.acceptServerPayload('erp_fee_manual',data.settings.erp_fee_manual,data.versions.erp_fee_manual);});}
+function applyTodayRate(){rate.value=exchangeRate.display(exchangeRate.rubPerCny(erpStorage.get('erp_rate')));var current=erpStorage.getExchangeRateStatus();rate.title=current&&current.fallback?'当天官方汇率查询失败，暂用 1 人民币 = 12 卢布':'俄罗斯央行当天官方汇率：1 人民币 = '+rate.value+' 卢布';}
+document.getElementById('refresh').onclick=function(){var button=this;button.disabled=true;advertisingLoadKey='';saveSettings().then(function(){externalAdvertising=null;var pending=loadAdvertising();render();return pending.then(render);}).catch(function(error){alert('统计设置保存失败：'+(error.publicMessage||'网络连接异常，请稍后重试。'));}).finally(function(){button.disabled=false;});};keyword.oninput=render;[shop,from,to].forEach(function(el){el.onchange=function(){advertisingLoadKey='';externalAdvertising=null;var pending=loadAdvertising();render();pending.then(render);};});sub.onchange=render;status.onchange=function(){fillSub('all');render();};
+document.addEventListener('erp-storage-audit-updated',function(event){if(event.detail&&event.detail.key==='erp_rate'&&event.detail.automatic){applyTodayRate();render();}});
+setStatisticsView(initial.get('view')||'overview',false);
+erpStorage.init(['erp_orders_data','erp_shops_data','erp_online_products','erp_rate','erp_fee_manual']).then(function(){orders=Array.isArray(erpStorage.get('erp_orders_data'))?erpStorage.get('erp_orders_data'):[];shops=Array.isArray(erpStorage.get('erp_shops_data'))?erpStorage.get('erp_shops_data'):[];products=Array.isArray(erpStorage.get('erp_online_products'))?erpStorage.get('erp_online_products'):[];invalidateProjection();invalidateFilterIndex();samples=estimator.signedSamples(orders);var names={};shops.forEach(function(s){if(s&&s.name)names[String(s.name)]=true;});orders.forEach(function(o){if(o&&o.shop)names[String(o.shop)]=true;});shopNames=Object.keys(names).sort();shop.innerHTML='<option value="">全部店铺</option>'+shopNames.map(function(name){return'<option value="'+esc(name)+'">'+esc(name)+'</option>';}).join('');keyword.value=initial.get('q')||'';shop.value=initial.get('shop')||'';from.value=initial.get('from')||'';to.value=initial.get('to')||'';status.value=initial.get('tab')||'all';fillSub(initial.get('sub')||'all');applyTodayRate();fee.value=erpStorage.get('erp_fee_manual')||'0';return Promise.all([erpStorage.request('/api/logistics-configs'),erpStorage.request('/api/auth/me')]);}).then(function(responses){return Promise.all([responses[0]&&responses[0].ok?responses[0].json():null,responses[1]&&responses[1].ok?responses[1].json():null]);}).then(function(data){logistics=data[0]||null;invalidateProjection();window.WYERP_ORDER_STATISTICS_SHOW_TYPE_ID=!!(data[1]&&data[1].isSystemAdmin);var th=document.querySelector('[data-admin-type-id]');if(th)th.hidden=!window.WYERP_ORDER_STATISTICS_SHOW_TYPE_ID;}).catch(function(){logistics=null;invalidateProjection();window.WYERP_ORDER_STATISTICS_SHOW_TYPE_ID=false;}).then(function(){render();return loadAdvertising().then(function(){render();});});
+})();
+</script>
+</body></html>

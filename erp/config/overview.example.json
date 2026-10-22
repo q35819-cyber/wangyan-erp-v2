@@ -1,0 +1,5 @@
+{
+  "playwrightModule": "<absolute-path-to-playwright/index.mjs>",
+  "chromiumExecutable": "<absolute-path-to-chromium-or-edge>",
+  "proxy": ""
+}

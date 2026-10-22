@@ -1,0 +1,14 @@
+.membership-activate-card[hidden]{display:none}
+.membership-profile-activate{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;flex:0 1 500px;min-width:360px;margin-left:auto;padding:12px 14px;border:1px solid color-mix(in srgb,var(--primary) 20%,var(--line));border-radius:12px;background:color-mix(in srgb,var(--primary-light) 32%,var(--card))}
+.membership-profile-activate-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.membership-profile-activate h2{margin:0;color:var(--text);font-size:14px}
+.membership-profile-activate-head span{color:var(--text-faint);font-size:10px;white-space:nowrap}
+.membership-profile-activate form{display:flex;align-items:center;gap:8px}
+.membership-profile-activate label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.membership-profile-activate input{min-width:0;flex:1;height:34px;padding:0 10px;border:1px solid var(--input-border);border-radius:8px;background:var(--input-bg);color:var(--text);font:inherit;font-size:12px}
+.membership-profile-activate button{height:34px;padding:0 16px;border:0;border-radius:8px;background:var(--primary);color:#fff;font-weight:700;white-space:nowrap}
+.membership-profile-activate button:disabled{opacity:.5;cursor:not-allowed}
+.membership-profile-activate:not([hidden]) + .static-preview-badge{margin-left:0}
+.membership-profile-activate .membership-activate-status{margin:0;color:var(--text-muted);font-size:10px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:1180px){.membership-profile{flex-wrap:wrap}.membership-profile-activate{order:3;flex:1 1 calc(100% - 94px);min-width:0;margin-left:94px}.membership-profile .static-preview-badge{margin-left:auto}}
+@media(max-width:700px){.membership-profile-activate{flex-basis:100%;width:100%;margin-left:0}.membership-profile-activate form{align-items:stretch;flex-direction:column}.membership-profile-activate .membership-activate-status{white-space:normal}}

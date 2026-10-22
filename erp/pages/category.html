@@ -1,0 +1,593 @@
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>类目分析 - 网研ERP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .cat-panel { background: var(--card); border-radius: 10px; padding: 20px 24px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .cat-level-row { display: grid; grid-template-columns: 72px minmax(0, 1fr) 58px; align-items: start; gap: 8px; margin-bottom: 14px; }
+  .cat-level-row.is-hidden { display: none; }
+  .cat-tag-label { padding-top: 6px; font-size: 14px; color: var(--text); white-space: nowrap; }
+  .cat-tag-list { display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap; max-height: 32px; overflow: hidden; }
+  .cat-tag-list.expanded { max-height: none; }
+  .cat-tag { display: inline-flex; align-items: center; min-height: 30px; padding: 4px 10px; border-radius: 8px; font-size: 13px; color: var(--text); background: transparent; cursor: pointer; border: 0; white-space: nowrap; transition: color .15s, background .15s; }
+  .cat-tag:hover { color: var(--primary); background: var(--primary-light); }
+  .cat-tag.active { background: var(--primary); color: #fff; font-weight: 600; }
+  .cat-tag-more { margin-top: 3px; height: 28px; border: 0; background: transparent; color: var(--primary); cursor: pointer; font-size: 13px; white-space: nowrap; }
+  .cat-filter-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--line); }
+  .cat-filter-bar .label { font-size: 14px; color: var(--text); white-space: nowrap; }
+  .cat-range { display: inline-flex; align-items: center; gap: 7px; }
+  .cat-range .input { box-sizing: border-box; width: 90px; height: 34px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--card); color: var(--text); font-size: 13px; }
+  .cat-range .input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px var(--primary-light); }
+  .range-sep, .unit { color: var(--text-faint); }
+  .cat-actions { display: flex; gap: 8px; margin-left: auto; }
+  .cat-actions .btn { min-width: 64px; height: 34px; padding: 0 15px; }
+  .cat-more-filters { width: 100%; display: none; align-items: center; gap: 10px 18px; flex-wrap: wrap; padding: 14px 0 0 72px; }
+  .cat-more-filters.show { display: flex; }
+  .cat-meta { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); color: var(--text-muted); font-size: 12px; }
+  .cat-meta .spacer { flex: 1; }
+  .cat-table-card { background: var(--card); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; }
+  .cat-table-scroll { width: 100%; overflow: auto; }
+  .cat-table { width: 100%; min-width: 1390px; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
+  .cat-table thead th { height: 58px; box-sizing: border-box; background: var(--surface-hover); color: var(--text-muted); font-weight: 600; text-align: center; padding: 10px 8px; border-bottom: 1px solid var(--line); white-space: normal; cursor: default; user-select: none; }
+  .cat-table thead th[data-sort] { cursor: pointer; }
+  .cat-table thead th[data-sort]:hover { color: var(--primary); }
+  .cat-table thead th .sort-icon { display: inline-block; width: 12px; margin-left: 3px; opacity: .35; }
+  .cat-table thead th.sorted .sort-icon { opacity: 1; color: var(--primary); }
+  .cat-table tbody td { height: 62px; box-sizing: border-box; padding: 10px 8px; border-bottom: 1px solid var(--line); color: var(--text); text-align: center; vertical-align: middle; }
+  .cat-table tbody tr:hover { background: var(--surface-hover); }
+  .cat-table tbody tr:last-child td { border-bottom: none; }
+  .cat-table .num { font-variant-numeric: tabular-nums; }
+  .cat-table .neg { color: var(--red); }
+  .cat-table .pos { color: var(--green); }
+  .cat-table .cny-hint { color: var(--text-faint); font-size: 11px; line-height: 1.5; }
+  .cat-table .cat-name { font-weight: 500; }
+  .empty-tip { padding: 72px 20px; text-align: center; color: var(--text-faint); font-size: 13px; }
+  .cat-pagination { display: flex; align-items: center; min-height: 54px; padding: 8px 14px; border-top: 1px solid var(--line); color: var(--text-muted); font-size: 13px; }
+  .cat-page-controls { display: flex; gap: 6px; margin-left: auto; }
+  .cat-page-btn { min-width: 30px; height: 30px; padding: 0 7px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer; }
+  .cat-page-btn:hover:not(:disabled), .cat-page-btn.active { background: var(--primary); color: #fff; }
+  .cat-page-btn:disabled { opacity: .35; cursor: default; }
+  .sync-loading { opacity: .6; pointer-events: none; }
+  .sync-loading::before { content: ''; width: 12px; height: 12px; border: 2px solid var(--primary-muted); border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; display: inline-block; vertical-align: -2px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-16px); background: #111827; color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 13px; opacity: 0; pointer-events: none; transition: all .25s; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,.2); white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.ok { background: #16a34a; }
+  .toast.err { background: #dc2626; }
+  .toast.warn { background: #d97706; }
+  .metric-note { color: var(--yellow); }
+  .attribute-library-card { display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding:14px 18px;border:1px solid var(--line);border-radius:10px;background:var(--card);box-shadow:var(--shadow); }
+  .attribute-library-title { min-width:150px; }
+  .attribute-library-title b { display:block;font-size:14px;color:var(--text); }
+  .attribute-library-title span,.attribute-library-summary { font-size:12px;color:var(--text-muted); }
+  .attribute-library-summary { flex:1;min-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .attribute-library-actions { display:flex;gap:8px; }
+  .attribute-failures { display:none;width:100%;max-height:240px;overflow:auto;border-top:1px solid var(--line);padding-top:10px; }
+  .attribute-failures.show { display:block; }
+  .attribute-failure-row { display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,1.3fr);gap:12px;padding:7px 4px;border-bottom:1px solid var(--line);font-size:12px; }
+  .attribute-failure-row:last-child { border-bottom:0; }
+  .attribute-failure-row span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .attribute-failure-row .reason { color:var(--red); }
+  .attribute-failures .empty-tip { padding: 18px; }
+  @media (max-width: 900px) {
+    .cat-panel { padding: 16px; }
+    .cat-level-row { grid-template-columns: 64px minmax(0, 1fr) 50px; }
+    .cat-tag-list { gap: 6px 10px; }
+    .cat-more-filters { padding-left: 0; }
+    .cat-actions { width: 100%; margin-left: 64px; }
+  }
+</style>
+<link rel="stylesheet" href="../assets/ui.css">
+<script src="../assets/theme-restore.js"></script>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">网研<span>ERP</span></div>
+    <nav class="menu"></nav>
+  </div>
+  <div class="main-content">
+    <div class="header">
+      <div class="header-left">
+        <strong>类目分析</strong>
+        <span class="breadcrumb">网研ERP <span>/</span> 选品 <span>/</span> 类目分析</span>
+      </div>
+      <div class="header-right">
+        <span class="user-name">管理员</span>
+        <button class="icon-btn">🔔</button>
+        <span class="avatar">管</span>
+      </div>
+    </div>
+    <div class="content ui-page">
+      <div class="cat-panel">
+        <div class="cat-level-row" id="l1Row">
+          <span class="cat-tag-label">一级类目</span>
+          <div class="cat-tag-list" id="l1Tags"></div>
+          <button type="button" class="cat-tag-more" id="l1More">更多⌄</button>
+        </div>
+        <div class="cat-level-row is-hidden" id="l2Row">
+          <span class="cat-tag-label">二级类目</span>
+          <div class="cat-tag-list" id="l2Tags"></div>
+          <button type="button" class="cat-tag-more" id="l2More">更多⌄</button>
+        </div>
+        <div class="cat-level-row is-hidden" id="l3Row">
+          <span class="cat-tag-label">三级类目</span>
+          <div class="cat-tag-list" id="l3Tags"></div>
+          <button type="button" class="cat-tag-more" id="l3More">更多⌄</button>
+        </div>
+        <div class="cat-filter-bar">
+          <span class="label">筛选条件</span>
+          <span class="label">月销量</span>
+          <span class="cat-range"><input class="input" type="number" min="0" id="filterMinQty"><span class="range-sep">~</span><input class="input" type="number" min="0" id="filterMaxQty"></span>
+          <span class="label">平均价格</span>
+          <span class="cat-range"><input class="input" type="number" min="0" id="filterMinPrice"><span class="unit">₽</span><span class="range-sep">~</span><input class="input" type="number" min="0" id="filterMaxPrice"><span class="unit">₽</span></span>
+          <div class="cat-actions">
+            <button class="btn btn-primary" id="btnQuery">查询</button>
+            <button class="btn btn-outline" id="btnReset">重置</button>
+            <button class="btn btn-outline" id="btnMoreFilters">更多⌄</button>
+          </div>
+          <div class="cat-more-filters" id="moreFilters">
+            <span class="label">月销售额</span>
+            <span class="cat-range"><input class="input" type="number" min="0" id="filterMinSales"><span class="unit">₽</span><span class="range-sep">~</span><input class="input" type="number" min="0" id="filterMaxSales"><span class="unit">₽</span></span>
+            <span class="label">月销售额增长率</span>
+            <span class="cat-range"><input class="input" type="number" id="filterMinGrowth"><span class="unit">%</span><span class="range-sep">~</span><input class="input" type="number" id="filterMaxGrowth"><span class="unit">%</span></span>
+          </div>
+        </div>
+        <div class="cat-meta"><span id="catLevelHint">当前：一级类目</span><span id="catUpdateTime">尚未同步</span><span class="metric-note" id="catMetricNote"></span><span class="spacer"></span><button class="btn btn-outline" id="btnSync">同步类目</button></div>
+      </div>
+      <section class="attribute-library-card"><div class="attribute-library-title"><b>三级类目属性库</b><span>服务器保存 + 浏览器本地缓存 · 超过7天自动检查刷新</span></div><div class="attribute-library-summary" id="attributeLibrarySummary" title="尚未同步">尚未同步全部三级类目属性</div><div class="attribute-library-actions"><button class="btn btn-outline" id="btnAttributeFailures" type="button">失败清单</button><button class="btn btn-primary" id="btnSyncAttributes" type="button">刷新全部属性</button></div><div class="attribute-failures" id="attributeFailures"></div></section>
+      <div class="cat-table-card">
+        <div class="cat-table-scroll">
+          <table class="cat-table">
+          <thead>
+            <tr>
+              <th style="width:50px;">序号</th><th style="width:150px;">类目</th>
+              <th data-sort="qty" style="width:100px;">月销量 <span class="sort-icon">↕</span></th><th data-sort="sales" style="width:150px;">月销售额 <span class="sort-icon">↕</span></th>
+              <th data-sort="growth" style="width:100px;">月销售额<br>增长率 <span class="sort-icon">↕</span></th><th data-sort="price" style="width:120px;">平均价格 <span class="sort-icon">↕</span></th>
+              <th data-sort="sellers" style="width:120px;">卖家数量 <span class="sort-icon">↕</span></th><th data-sort="brands" style="width:120px;">品牌数量 <span class="sort-icon">↕</span></th>
+              <th data-sort="brandShare" style="width:120px;">品牌销量占比 <span class="sort-icon">↕</span></th><th data-sort="fbsShare" style="width:120px;">FBS销量占比 <span class="sort-icon">↕</span></th>
+              <th data-sort="cancel" style="width:120px;">退货取消率 <span class="sort-icon">↕</span></th><th data-sort="topSeller" style="width:120px;">大卖家占比 <span class="sort-icon">↕</span></th>
+            </tr>
+          </thead>
+          <tbody id="catBody"></tbody>
+          </table>
+        </div>
+        <div class="cat-pagination"><span id="catCount">共 0 条记录</span><div class="cat-page-controls" id="catPages"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+<script src="../assets/brand.js"></script>
+<script src="../assets/storage.js"></script>
+<script src="../assets/category-trans.js"></script>
+<script src="../assets/category-analysis.js"></script>
+<script src="../assets/category-attribute-cache.js"></script>
+<script src="../assets/sync-stream.js"></script>
+<script>
+(function () {
+  'use strict';
+  var toastEl = document.getElementById('toast');
+  var toastTimer = null;
+  function toast(msg, type, duration) {
+    toastEl.textContent = msg;
+    toastEl.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.className = 'toast'; }, duration || 3000);
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function fmtTime(t) {
+    if (!t) return '--';
+    var d = new Date(t);
+    if (isNaN(d.getTime())) return t;
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  function fmtRub(n) {
+    if (n == null || isNaN(n)) return '--';
+    if (Math.abs(n) >= 100000000) return '₽' + (n/100000000).toFixed(2) + '亿';
+    if (Math.abs(n) >= 10000) return '₽' + (n/10000).toFixed(2) + '万';
+    return '₽' + n.toFixed(2);
+  }
+  var analysis = window.WYERP_CATEGORY_ANALYSIS;
+  if (!analysis) throw new Error('类目分析计算模块加载失败');
+  var data = null;
+  var selL1 = '';
+  var selL2 = '';
+  var selL3 = '';
+  var sortKey = 'qty';
+  var sortDir = -1;
+  var filters = {};
+  var currentPage = 1;
+  var pageSize = 20;
+  var attributePollTimer = null;
+  var attributeCache = window.WYERP_CATEGORY_ATTRIBUTE_CACHE;
+  var lastAttributeCacheTime = '';
+
+  function loadData() {
+    var stored = erpStorage.get('erp_category_tree');
+    if (!stored || !Array.isArray(stored.tree)) return null;
+    return stored;
+  }
+  function applyChineseCatalog(treeDocument, items) {
+    if (!treeDocument || !Array.isArray(treeDocument.tree) || !Array.isArray(items)) return false;
+    var l1Names = {}, l2Names = {}, l3Names = {};
+    items.forEach(function (item) {
+      var path = item && item.path;
+      if (!Array.isArray(path) || path.length < 3) return;
+      l1Names[String(path[0].id || '')] = path[0].name || '';
+      l2Names[String(path[0].id || '') + ':' + String(path[1].id || '')] = path[1].name || '';
+      l3Names[String(item.descriptionCategoryId || path[1].id || '') + ':' + String(item.typeId || path[2].id || '')] = path[2].name || '';
+    });
+    var changed = false;
+    treeDocument.tree.forEach(function (l1) {
+      var l1Id = String(l1.id || ''), nextL1 = l1Names[l1Id];
+      if (nextL1 && l1.name !== nextL1) { l1.name = nextL1; changed = true; }
+      (l1.children || []).forEach(function (l2) {
+        var l2Id = String(l2.id || ''), nextL2 = l2Names[l1Id + ':' + l2Id];
+        if (nextL2 && l2.name !== nextL2) { l2.name = nextL2; changed = true; }
+        (l2.children || []).forEach(function (l3) {
+          var descriptionId = String(l3.descriptionCategoryId || l2Id);
+          var nextL3 = l3Names[descriptionId + ':' + String(l3.id || '')];
+          if (nextL3 && l3.name !== nextL3) { l3.name = nextL3; changed = true; }
+        });
+      });
+    });
+    if (changed) {
+      treeDocument.updated = new Date().toISOString();
+      treeDocument.source = 'OZON 中文类目属性快照（按类目 ID 补齐）';
+    }
+    return changed;
+  }
+  function repairStoredCategoryNames() {
+    if (!data) return Promise.resolve(false);
+    return erpStorage.request('/api/category-attributes/catalog').then(function (response) {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.json();
+    }).then(function (payload) {
+      if (!applyChineseCatalog(data, payload.items || [])) return false;
+      return erpStorage.set('erp_category_tree', data).then(function () { renderAll(); return true; });
+    }).catch(function () { return false; });
+  }
+  function findL1() { return data && (data.tree || []).find(function (n) { return String(n.id) === String(selL1); }); }
+  function findL2() { var l1 = findL1(); return l1 && (l1.children || []).find(function (n) { return String(n.id) === String(selL2); }); }
+  function tagsHtml(items, selected) {
+    var html = '<button type="button" class="cat-tag' + (!selected ? ' active' : '') + '" data-id="">全部</button>';
+    (items || []).forEach(function (n) {
+      html += '<button type="button" class="cat-tag' + (String(selected) === String(n.id) ? ' active' : '') + '" data-id="' + esc(n.id) + '" title="' + esc(n.ru || n.name || '') + '">' + esc(n.name || n.ru || n.id) + '</button>';
+    });
+    return html;
+  }
+  function renderLevel(rowId, listId, moreId, items, selected, visible) {
+    var row = document.getElementById(rowId);
+    var list = document.getElementById(listId);
+    var more = document.getElementById(moreId);
+    row.classList.toggle('is-hidden', !visible);
+    if (!visible) return;
+    list.innerHTML = tagsHtml(items, selected);
+    list.classList.remove('expanded');
+    more.textContent = '更多⌄';
+    more.setAttribute('aria-expanded', 'false');
+    more.style.display = (items || []).length > 5 ? '' : 'none';
+  }
+  function renderLevels() {
+    var tree = data && data.tree || [];
+    var l1 = findL1();
+    var l2 = findL2();
+    renderLevel('l1Row', 'l1Tags', 'l1More', tree, selL1, true);
+    renderLevel('l2Row', 'l2Tags', 'l2More', l1 && l1.children || [], selL2, !!l1);
+    renderLevel('l3Row', 'l3Tags', 'l3More', l2 && l2.children || [], selL3, !!l2);
+    document.getElementById('catLevelHint').textContent = '当前：' + (l2 ? '三级类目' : (l1 ? '二级类目' : '一级类目'));
+    document.getElementById('catUpdateTime').textContent = data ? ('更新：' + fmtTime(data.updated)) : '尚未同步';
+  }
+  function metricText(value, type) {
+    if (value == null) return '--';
+    if (type === 'percent') return value.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + '%';
+    return value.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+  }
+  function compactMoney(value, symbol) {
+    if (value == null) return '--';
+    var abs = Math.abs(value);
+    var body = abs >= 100000000 ? (value / 100000000).toFixed(2) + '亿' : (abs >= 10000 ? (value / 10000).toFixed(2) + '万' : value.toLocaleString('zh-CN', { maximumFractionDigits: 2 }));
+    return symbol + body;
+  }
+  function moneyCell(value) {
+    if (value == null) return '--';
+    var rate = parseFloat(erpStorage.get('erp_rate')) || 1 / 12;
+    return '<div>' + compactMoney(value, '₽') + '</div><div class="cny-hint">≈' + compactMoney(value * rate, '¥') + '</div>';
+  }
+  function inputValue(id) { return document.getElementById(id).value.trim(); }
+  function readFilters() {
+    return {
+      minQty: inputValue('filterMinQty'), maxQty: inputValue('filterMaxQty'),
+      minPrice: inputValue('filterMinPrice'), maxPrice: inputValue('filterMaxPrice'),
+      minSales: inputValue('filterMinSales'), maxSales: inputValue('filterMaxSales'),
+      minGrowth: inputValue('filterMinGrowth'), maxGrowth: inputValue('filterMaxGrowth')
+    };
+  }
+  function tableRows() {
+    var rows = analysis.rowsForSelection(data && data.tree || [], { l1: selL1, l2: selL2, l3: selL3 });
+    if (selL3) rows = rows.filter(function (row) { return String(row.id) === String(selL3); });
+    return analysis.sortRows(analysis.filterRows(rows, filters), sortKey, sortDir);
+  }
+  function renderPagination(page) {
+    document.getElementById('catCount').textContent = '共 ' + page.total + ' 条记录';
+    var controls = document.getElementById('catPages');
+    var html = '<button class="cat-page-btn" data-page="1"' + (page.page <= 1 ? ' disabled' : '') + '>«</button>' +
+      '<button class="cat-page-btn" data-page="' + (page.page - 1) + '"' + (page.page <= 1 ? ' disabled' : '') + '>‹</button>';
+    var from = Math.max(1, page.page - 2);
+    var to = Math.min(page.pages, from + 4);
+    from = Math.max(1, to - 4);
+    for (var p = from; p <= to; p += 1) html += '<button class="cat-page-btn' + (p === page.page ? ' active' : '') + '" data-page="' + p + '">' + p + '</button>';
+    html += '<button class="cat-page-btn" data-page="' + (page.page + 1) + '"' + (page.page >= page.pages ? ' disabled' : '') + '>›</button>' +
+      '<button class="cat-page-btn" data-page="' + page.pages + '"' + (page.page >= page.pages ? ' disabled' : '') + '>»</button>';
+    controls.innerHTML = html;
+  }
+  function renderTable() {
+    var body = document.getElementById('catBody');
+    var rows = tableRows();
+    var page = analysis.paginate(rows, currentPage, pageSize);
+    currentPage = page.page;
+    var hasMetrics = rows.some(function (row) { return row.qty != null || row.sales != null || row.price != null; });
+    document.getElementById('catMetricNote').textContent = data && !hasMetrics ? '当前同步数据仅含类目树，市场指标待接入' : '';
+    if (!page.rows.length) {
+      body.innerHTML = '<tr><td colspan="12"><div class="empty-tip">' + (data ? '没有符合条件的类目' : '暂无类目数据，请点击「同步类目」获取') + '</div></td></tr>';
+      renderPagination(page);
+      return;
+    }
+    var start = (page.page - 1) * page.pageSize;
+    body.innerHTML = page.rows.map(function (row, index) {
+      var growthClass = row.growth == null ? '' : (row.growth < 0 ? ' neg' : ' pos');
+      return '<tr><td>' + (start + index + 1) + '</td><td><div class="cat-name" title="' + esc(row.ru) + '">' + esc(row.name) + '</div></td>' +
+        '<td class="num">' + metricText(row.qty) + '</td><td class="num">' + moneyCell(row.sales) + '</td>' +
+        '<td class="num' + growthClass + '">' + metricText(row.growth, 'percent') + '</td><td class="num">' + moneyCell(row.price) + '</td>' +
+        '<td class="num">' + metricText(row.sellers) + '</td><td class="num">' + metricText(row.brands) + '</td>' +
+        '<td class="num">' + metricText(row.brandShare, 'percent') + '</td><td class="num">' + metricText(row.fbsShare, 'percent') + '</td>' +
+        '<td class="num">' + metricText(row.cancel, 'percent') + '</td><td class="num">' + metricText(row.topSeller, 'percent') + '</td></tr>';
+    }).join('');
+    renderPagination(page);
+  }
+  function renderAll() { renderLevels(); renderTable(); updateSortIcons(); }
+  function updateSortIcons() {
+    var ths = document.querySelectorAll('.cat-table thead th[data-sort]');
+    ths.forEach(function (th) {
+      th.classList.remove('sorted');
+      var icon = th.querySelector('.sort-icon');
+      if (icon) icon.textContent = '↕';
+    });
+    var active = document.querySelector('.cat-table thead th[data-sort="' + sortKey + '"]');
+    if (active) {
+      active.classList.add('sorted');
+      var icon = active.querySelector('.sort-icon');
+      if (icon) icon.textContent = sortDir === 1 ? '↑' : '↓';
+    }
+  }
+  // Tag click handlers
+  document.getElementById('l1Tags').addEventListener('click', function (e) {
+    var tag = e.target.closest('.cat-tag');
+    if (!tag) return;
+    selL1 = tag.getAttribute('data-id');
+    selL2 = ''; selL3 = ''; currentPage = 1;
+    renderAll();
+  });
+  document.getElementById('l2Tags').addEventListener('click', function (e) {
+    var tag = e.target.closest('.cat-tag');
+    if (!tag) return;
+    selL2 = tag.getAttribute('data-id');
+    selL3 = ''; currentPage = 1;
+    currentPage = 1; renderAll();
+  });
+  ['l1', 'l2', 'l3'].forEach(function (level) {
+    document.getElementById(level + 'More').addEventListener('click', function () {
+      var list = document.getElementById(level + 'Tags');
+      var expanded = list.classList.toggle('expanded');
+      this.textContent = expanded ? '收起⌃' : '更多⌄';
+      this.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    });
+  });
+  document.getElementById('l3Tags').addEventListener('click', function (e) {
+    var tag = e.target.closest('.cat-tag');
+    if (!tag) return;
+    selL3 = tag.getAttribute('data-id');
+    renderAll();
+  });
+  // Sort handlers
+  document.querySelectorAll('.cat-table thead th[data-sort]').forEach(function (th) {
+    th.addEventListener('click', function () {
+      var key = th.getAttribute('data-sort');
+      if (sortKey === key) { sortDir *= -1; } else { sortKey = key; sortDir = -1; }
+      currentPage = 1; renderTable();
+      updateSortIcons();
+    });
+  });
+  // Query/Reset
+  document.getElementById('btnQuery').addEventListener('click', function () { filters = readFilters(); currentPage = 1; renderTable(); });
+  document.getElementById('btnReset').addEventListener('click', function () {
+    selL1 = ''; selL2 = ''; selL3 = '';
+    ['filterMinQty', 'filterMaxQty', 'filterMinPrice', 'filterMaxPrice', 'filterMinSales', 'filterMaxSales', 'filterMinGrowth', 'filterMaxGrowth'].forEach(function (id) { document.getElementById(id).value = ''; });
+    filters = {}; sortKey = 'qty'; sortDir = -1; currentPage = 1;
+    renderAll();
+  });
+  document.getElementById('btnMoreFilters').addEventListener('click', function () {
+    var shown = document.getElementById('moreFilters').classList.toggle('show');
+    this.textContent = shown ? '收起⌃' : '更多⌄';
+  });
+  document.getElementById('catPages').addEventListener('click', function (e) {
+    var button = e.target.closest('.cat-page-btn');
+    if (!button || button.disabled) return;
+    currentPage = Number(button.getAttribute('data-page')) || 1;
+    renderTable();
+    document.querySelector('.cat-table-card').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  });
+  function renderAttributeFailures(failures) {
+    var host = document.getElementById('attributeFailures');
+    host.innerHTML = (failures || []).length ? failures.map(function (item) {
+      return '<div class="attribute-failure-row"><span title="' + esc(item.pathText || item.key) + '">' + esc(item.pathText || item.key) + '</span><span class="reason" title="' + esc(item.reason || '平台没有返回失败原因') + '">' + esc(item.reason || '平台没有返回失败原因') + '</span></div>';
+    }).join('') : '<div class="empty-tip">没有未获取到的三级类目</div>';
+  }
+  function cacheAttributeLibrary(updatedAt) {
+    if (!attributeCache || !updatedAt || updatedAt === lastAttributeCacheTime) return Promise.resolve();
+    return erpStorage.init(['erp_category_attributes']).then(function () {
+      var library = erpStorage.get('erp_category_attributes');
+      if (!library) return;
+      return attributeCache.save(library).then(function () { lastAttributeCacheTime = updatedAt; });
+    }).catch(function () {});
+  }
+  var ATTRIBUTE_AUTO_REFRESH_MS = 7 * 24 * 60 * 60 * 1000;
+  var attributeAutoRefreshAttempted = false;
+  function configuredAttributeShop() { return (erpStorage.get('erp_shops_data') || []).filter(function (item) { return item.credentialsConfigured; })[0] || null; }
+  function attributeLibraryIsStale(summary) { var stamp = Date.parse(summary && (summary.updatedAt || summary.completedAt) || ''); return !Number.isFinite(stamp) || Date.now() - stamp >= ATTRIBUTE_AUTO_REFRESH_MS; }
+  function startAttributeSync(force, automatic) {
+    var button = document.getElementById('btnSyncAttributes'), shop = configuredAttributeShop();
+    if (!shop) { if (!automatic) toast('请先在店铺列表配置 OZON 接口密钥', 'err'); return Promise.resolve(false); }
+    button.disabled = true; button.textContent = automatic ? '自动刷新中…' : '正在启动…';
+    return erpStorage.request('/api/category-attributes/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clientId: String(shop.clientId), force: force === true }) }).then(function (response) {
+      return response.json().then(function (payload) { if (!response.ok) throw new Error(payload.error || '启动失败'); return payload; });
+    }).then(function () { if (!automatic) toast('三级类目属性刷新已进入任务中心', 'ok'); return refreshAttributeStatus(); }).catch(function (error) {
+      var map = { permission_denied: '当前账号没有同步权限', shop_credentials_not_found: '店铺接口密钥不存在', category_attribute_client_id_required: '没有找到可用店铺' };
+      if (!automatic) toast('启动失败：' + (map[error.message] || '请检查店铺接口配置'), 'err');
+      button.disabled = false; button.textContent = '刷新全部属性'; return false;
+    });
+  }
+  function maybeAutoRefreshAttributes(summary, running) {
+    if (running || attributeAutoRefreshAttempted || !attributeLibraryIsStale(summary)) return;
+    if (!configuredAttributeShop()) return;
+    attributeAutoRefreshAttempted = true;
+    startAttributeSync(true, true);
+  }
+  function refreshAttributeStatus() {
+    if (attributePollTimer) { clearTimeout(attributePollTimer); attributePollTimer = null; }
+    return erpStorage.request('/api/category-attributes/status').then(function (response) {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.json();
+    }).then(function (payload) {
+      var summary = payload.summary || {}, running = summary.status === 'running' || (payload.job && payload.job.status === 'running');
+      var text = running ? '同步中：' + Number(summary.processedCategories || 0) + '/' + Number(summary.totalCategories || 0) :
+        '三级类目 ' + Number(summary.successfulCategories || 0) + '/' + Number(summary.totalCategories || 0) +
+        ' · 必填属性 ' + Number(summary.requiredAttributes || 0) + ' · 可选属性 ' + Number(summary.optionalAttributes || 0) +
+        ' · 未获取 ' + Number(summary.failedCategories || 0);
+      var host = document.getElementById('attributeLibrarySummary');
+      host.textContent = text; host.title = text;
+      renderAttributeFailures(payload.failures || []);
+      document.getElementById('btnSyncAttributes').textContent = running ? '同步进行中' : '刷新全部属性';
+      document.getElementById('btnSyncAttributes').disabled = running;
+      if (running) attributePollTimer = setTimeout(refreshAttributeStatus, 2000);
+      else if (summary.successfulCategories) cacheAttributeLibrary(summary.updatedAt);
+      if (!running) maybeAutoRefreshAttributes(summary, running);
+    }).catch(function () { document.getElementById('attributeLibrarySummary').textContent = '类目属性同步状态读取失败'; });
+  }
+  document.getElementById('btnAttributeFailures').addEventListener('click', function () {
+    var shown = document.getElementById('attributeFailures').classList.toggle('show');
+    this.textContent = shown ? '收起清单' : '失败清单';
+  });
+  document.getElementById('btnSyncAttributes').addEventListener('click', function () { startAttributeSync(true, false); });
+  // Sync
+  var SYNC_COOLDOWN = 60000;
+  var lastSyncAt = 0;
+  var syncStream = window.WYERP_SYNC_STREAM;
+  var ozonThrottle = syncStream.createThrottlePool({ minDelay: 2000, maxDelay: 4000 });
+  function callOzon(shop, endpoint, body) {
+    var command = erpStorage.ozonCommandForEndpoint(endpoint);
+    var idempotencyKey = command.writes ? erpStorage.createIdempotencyKey() : '';
+    return syncStream.requestJsonWithRetry(function () {
+      return ozonThrottle(shop.clientId).then(function () {
+        return erpStorage.request('/api/integrations/ozon/commands', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}) },
+          body: JSON.stringify({ clientId: String(shop.clientId), command: command.name, body: body || {} })
+        });
+      });
+    }, {
+      maxRetries: 5,
+      onStage: function (stage) {
+        if (stage.phase === 'backoff') document.getElementById('btnSync').textContent = '限流等待 ' + Math.max(1, Math.ceil(stage.waitMs / 1000)) + ' 秒…';
+      }
+    });
+  }
+  function mapLocalizedTree(chineseTree, russianTree) {
+    var ruL1 = {}, ruL2 = {}, ruL3 = {};
+    (russianTree || []).forEach(function (l1) {
+      var l1Id = String(l1.description_category_id || '');
+      ruL1[l1Id] = l1.category_name || '';
+      (l1.children || []).forEach(function (l2) {
+        var l2Id = String(l2.description_category_id || '');
+        ruL2[l1Id + ':' + l2Id] = l2.category_name || '';
+        (l2.children || []).forEach(function (l3) { ruL3[l2Id + ':' + String(l3.type_id || '')] = l3.type_name || l3.category_name || ''; });
+      });
+    });
+    return (chineseTree || []).map(function (l1) {
+      var l1Id = String(l1.description_category_id || '');
+      var children = (l1.children || []).map(function (l2) {
+        var l2Id = String(l2.description_category_id || '');
+        var types = (l2.children || []).map(function (l3) {
+          var typeId = String(l3.type_id || '');
+          return { id: typeId, descriptionCategoryId: String(l3.description_category_id || l2Id), ru: ruL3[l2Id + ':' + typeId] || '', name: l3.type_name || l3.category_name || '', disabled: !!(l1.disabled || l2.disabled || l3.disabled) };
+        });
+        return { id: l2Id, ru: ruL2[l1Id + ':' + l2Id] || '', name: l2.category_name || '', n: types.length, children: types };
+      });
+      return { id: l1Id, ru: ruL1[l1Id] || '', name: l1.category_name || '', n: children.length, children: children };
+    });
+  }
+  document.getElementById('btnSync').addEventListener('click', function () {
+    var btn = this;
+    if (btn.classList.contains('sync-loading')) return;
+    var shops = erpStorage.get('erp_shops_data') || [];
+    var shop = shops.filter(function (s) { return s.credentialsConfigured; })[0];
+    if (!shop) { toast('请先在店铺列表添加带密钥的店铺', 'err'); return; }
+    var now = Date.now();
+    if (now - lastSyncAt < SYNC_COOLDOWN) {
+      var sec = Math.ceil((SYNC_COOLDOWN - (now - lastSyncAt)) / 1000);
+      toast('同步过于频繁，请 ' + sec + ' 秒后再试', 'warn');
+      return;
+    }
+    lastSyncAt = Date.now();
+    btn.classList.add('sync-loading');
+    var origin = btn.textContent;
+    btn.textContent = '同步中…';
+    var taskProgress = syncStream.progress.begin('类目同步：正在获取类目树');
+    taskProgress.update(10, '类目同步 · ' + shop.name + '：等待 OZON 返回类目树');
+    Promise.all([
+      callOzon(shop, '/v1/description-category/tree', { language: 'ZH_HANS' }),
+      callOzon(shop, '/v1/description-category/tree', { language: 'DEFAULT' }).catch(function () { return { result: [] }; })
+    ]).then(function (responses) {
+      var tree = responses[0] && responses[0].result;
+      if (!Array.isArray(tree)) throw new Error('接口未返回中文类目树');
+      var mapped = mapLocalizedTree(tree, responses[1] && responses[1].result);
+      data = {
+        updated: new Date().toISOString(),
+        source: 'OZON /v1/description-category/tree (ZH_HANS + DEFAULT)',
+        counts: {
+          l1: mapped.length,
+          l2: mapped.reduce(function (a, l1) { return a + l1.children.length; }, 0),
+          l3: mapped.reduce(function (a, l1) { return a + l1.children.reduce(function (b, l2) { return b + l2.children.length; }, 0); }, 0)
+        },
+        tree: mapped
+      };
+      selL1 = ''; selL2 = ''; selL3 = '';
+      return erpStorage.set('erp_category_tree', data).then(function () {
+        renderAll();
+        var message = '类目同步完成：一级 ' + data.counts.l1 + ' · 二级 ' + data.counts.l2 + ' · 三级 ' + data.counts.l3;
+        taskProgress.finish(message);
+        toast(message, 'ok', 5000);
+      });
+    }).catch(function (e) {
+      var reason = e && e.message ? e.message : String(e);
+      taskProgress.fail('类目同步失败：' + reason, reason);
+      toast('类目同步失败：' + reason, 'err', 5000);
+    }).then(function () {
+      btn.classList.remove('sync-loading');
+      btn.textContent = origin;
+    });
+  });
+  document.addEventListener('erp-storage-audit-updated', function (event) { if (event.detail && event.detail.key === 'erp_rate') renderTable(); });
+  erpStorage.init(['erp_category_tree', 'erp_shops_data', 'erp_rate']).then(function () {
+    data = loadData(); renderAll();
+    repairStoredCategoryNames();
+    refreshAttributeStatus();
+  });
+  window.addEventListener('beforeunload', function () { if (attributePollTimer) clearTimeout(attributePollTimer); });
+})();
+</script>
+<script src="../assets/sidebar.js"></script>
+</body>
+</html>

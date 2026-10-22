@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>分析 - 网研ERP</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .analysis-page { --accent: var(--primary); }
+  .analysis-page .content { padding: 16px 20px 24px; }
+
+  /* 筛选栏 */
+  .ana-filter {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 14px;
+  }
+  .ana-filter label { font-size: 12px; color: var(--text-muted); font-weight: 500; white-space: nowrap; }
+  .ana-filter .input, .ana-filter select.select { height: 32px; font-size: 13px; }
+  .ana-filter .shop-select { min-width: 180px; }
+  .ana-filter .date-pair { display: inline-flex; align-items: center; gap: 4px; }
+  html body .ana-filter .date-pair input[type="date"] { height: 32px !important; width: 140px !important; padding: 0 10px !important; border: 1px solid var(--line, #e2e8f0) !important; border-radius: 8px !important; background: var(--card, #fff) !important; color: var(--text, #1e293b) !important; font-size: 12px !important; outline: none !important; transition: border-color .15s, box-shadow .15s; -webkit-appearance: none; }
+  html body .ana-filter .date-pair input[type="date"]:hover { border-color: var(--primary, #2563EB) !important; }
+  html body .ana-filter .date-pair input[type="date"]:focus { border-color: var(--primary, #2563EB) !important; box-shadow: 0 0 0 3px rgba(37,99,235,.12) !important; }
+  .ana-filter .date-sep { color: var(--text-faint, #94a3b8); font-size: 12px; padding: 0 2px; }
+  .ana-presets { display: inline-flex; gap: 4px; }
+  .ana-presets button {
+    height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--card); color: var(--text-muted); font-size: 12px; cursor: pointer;
+    transition: all .15s;
+  }
+  .ana-presets button:hover { border-color: var(--primary); color: var(--primary); }
+  .ana-presets button[data-active="true"] {
+    background: var(--primary); border-color: var(--primary); color: #fff;
+  }
+  /* 任务#40：数据源扩展按钮（天眼/订单管理/seerfar），三个按钮统一尺寸样式，参考刷新按钮体系 */
+  .ana-src-btn {
+    height: 32px; padding: 0 14px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--card); color: var(--text-muted); font-size: 12px; font-weight: 500;
+    cursor: pointer; white-space: nowrap; transition: all .15s;
+  }
+  .ana-src-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .ana-price-note { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+  .ana-price-note s { color: var(--text-faint); margin-right: 4px; }
+  .ana-price-note strong { color: var(--primary); }
+  .ana-source-meta { font-size: 11px; color: var(--text-faint); margin-left: 8px; }
+  .ana-table-tools { display:flex; align-items:center; gap:8px; }
+  .ana-more-btn { height:30px; padding:0 10px; font-size:11px; }
+  .metric-stack { line-height:1.45; white-space:nowrap; }
+  .metric-stack small { display:block; color:var(--text-faint); font-size:10px; font-weight:400; }
+  .ana-toast {
+    position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%);
+    background: var(--card); color: var(--text); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 16px; font-size: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.18); z-index: 9000; display: none;
+  }
+
+  /* KPI 卡片 */
+  .ana-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 14px; }
+  .ana-kpis.orders-kpi-layout { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ana-kpi {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px 12px; position: relative; overflow: hidden;
+  }
+  .ana-kpi::before {
+    content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px;
+  }
+  .ana-kpi.kpi-blue::before { background: #2563EB; }
+  .ana-kpi.kpi-green::before { background: #16a34a; }
+  .ana-kpi.kpi-amber::before { background: #d97706; }
+  .ana-kpi.kpi-rose::before { background: #dc2626; }
+  .ana-kpi.kpi-violet::before { background: #7c3aed; }
+  .ana-kpi.kpi-cyan::before { background: #0891b2; }
+  .ana-kpi .kpi-label { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 6px; }
+  .ana-kpi .kpi-value { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -.3px; line-height: 1.1; }
+  .ana-kpi .kpi-value small { font-size: 12px; font-weight: 400; color: var(--text-faint); margin-left: 4px; }
+  .ana-kpi .kpi-sub { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+
+  /* 图表面板 */
+  .ana-chart-panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px; margin-bottom: 14px;
+  }
+  .ana-chart-head {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+  }
+  .ana-chart-head h3 { font-size: 14px; font-weight: 700; color: var(--text); }
+  .ana-chart-head span { font-size: 11px; color: var(--text-faint); }
+  .ana-chart-wrap { width: 100%; height: 220px; }
+
+  /* 分析数据功能页：参考在线商品状态页签，获取按钮只负责写入对应数据集。 */
+  .ana-data-tabs-bar {
+    display: flex; align-items: flex-end; min-height: 42px; margin: -2px 0 0;
+    padding: 0 16px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px 10px 0 0; border-bottom: 0;
+  }
+  .ana-data-tabs { display: flex; align-items: flex-end; gap: 26px; min-width: 0; overflow-x: auto; }
+  .ana-data-tab {
+    border: 0; border-bottom: 2px solid transparent; background: transparent;
+    color: var(--text-muted); padding: 11px 0 10px; font-size: 13px; cursor: pointer;
+    white-space: nowrap;
+  }
+  .ana-data-tab strong {
+    display: inline-block; margin-left: 5px; padding: 1px 7px; border-radius: 10px;
+    background: var(--surface-hover); font-size: 11px; font-weight: 600;
+  }
+  .ana-data-tab.on { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+  .ana-data-tab.on strong { background: var(--primary); color: #fff; }
+
+  /* 表格 */
+  .ana-table-panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 0 0 10px 10px; overflow: hidden;
+  }
+  .ana-table-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--line);
+  }
+  .ana-table-head h3 { font-size: 14px; font-weight: 700; color: var(--text); }
+  /* 表格右上角搜索框复用全站 .search-input 规格（280px/36px/圆角8px/主题变量），此处只补搜索图标与左内边距 */
+  .ana-table-head .search-box { position: relative; display: inline-flex; align-items: center; }
+  .ana-table-head .search-box svg {
+    position: absolute; left: 10px; width: 15px; height: 15px; color: var(--text-faint);
+    fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    pointer-events: none;
+  }
+  .ana-table-head .search-box input.search-input { padding-left: 32px !important; }
+  .ana-table-wrap { max-height: 440px; overflow-y: auto; }
+  .ana-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .ana-table thead th {
+    position: sticky; top: 0; background: var(--surface-hover);
+    text-align: center; font-weight: 600; color: var(--text-muted);
+    padding: 8px 14px; border-bottom: 1px solid var(--line);
+    cursor: pointer; user-select: none; white-space: normal; line-height: 1.3; min-width: 60px;
+  }
+  .ana-table thead th:hover { color: var(--primary); }
+  .ana-table tbody td {
+    padding: 8px 14px; border-bottom: 1px solid var(--line); color: var(--text);
+  }
+  .ana-table tbody tr:hover { background: var(--surface-hover); }
+  .ana-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .ana-table td.seq-cell { text-align:center; width:52px; min-width:52px; font-variant-numeric:tabular-nums; }
+  .ana-table tbody tr.ana-total-row td { background: color-mix(in srgb, var(--primary) 7%, var(--card)); font-weight: 700; border-bottom: 1px solid color-mix(in srgb, var(--primary) 22%, var(--line)); }
+  .ana-table tbody tr.ana-total-row:hover td { background: color-mix(in srgb, var(--primary) 10%, var(--card)); }
+  .ana-total-main { color: var(--primary); font-weight: 800; }
+  .ana-total-sub { display:block; margin-top:2px; color:var(--text-faint); font-size:10px; font-weight:500; white-space:nowrap; }
+  .ana-table th.num { text-align: right; }
+  .ana-table .sku-cell { width: 216px; min-width: 216px; max-width: 216px; font-weight: 600; color: var(--text); line-height: 1.4; }
+  .ana-table .sku-cell .sku-row { display: flex; align-items: flex-start; gap: 8px; }
+  .ana-table .sku-cell .ana-thumb { flex: none; position: relative; }
+  .ana-table .sku-cell .ana-thumb img { width: 40px; height: 40px; border-radius: 5px; object-fit: cover; display: block; background: var(--surface); border: 1px solid var(--line); cursor: zoom-in; transition: transform .12s ease; }
+  .ana-table .sku-cell .ana-thumb .ana-thumb-ph { width: 40px; height: 40px; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: var(--text-faint); font-size: 18px; background: var(--surface, #f7f8fa); border: 1px solid var(--line); cursor: default; }
+  .ana-table .sku-cell .ana-text { flex: 1; min-width: 0; }
+  .ana-table .sku-cell .ana-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ana-table .sku-cell .ana-offer { display: block; font-weight: 400; color: var(--text-faint); font-size: 11px; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ana-table .sku-cell .ana-sku { min-width:0; font-weight:400; color:var(--text-faint); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ana-table .sku-cell .ana-copy-line { display:flex; align-items:center; gap:3px; min-width:0; margin-top:1px; }
+  .ana-table .sku-cell .ana-copy-line .inline-icon-btn { flex:0 0 22px; }
+  #ana-img-zoom { position: fixed; pointer-events: none; z-index: 9999; display: none; padding: 6px; background: var(--card); border: 1px solid var(--popup-border,var(--line)); border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,.28); }
+  #ana-img-zoom img { width: 400px; height: 400px; object-fit: cover; border-radius: 6px; display: block; }
+  .ana-empty { text-align: center; color: var(--text-faint); padding: 48px 16px; font-size: 13px; }
+  .ana-table thead th .sort { display: inline-flex; flex-direction: column; justify-content: center; gap: 2px; margin-left: 4px; vertical-align: middle; width: 8px; height: 16px; }
+  .ana-table thead th .sort i { width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; }
+  .ana-table thead th .sort i.up { border-bottom: 5px solid #cbd5e1; }
+  .ana-table thead th .sort i.down { border-top: 5px solid #cbd5e1; }
+  .ana-table thead th[data-active-sort="asc"] .sort i.up { border-bottom-color: #2563EB; }
+  .ana-table thead th[data-active-sort="desc"] .sort i.down { border-top-color: #7c3aed; }
+  .ana-table .cat-cell { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-muted); font-size:12px; }
+  .ana-table .category-cell { width:112px; min-width:112px; max-width:112px; }
+  .ana-table .shop-cell-analysis { max-width:138px; }
+  .ana-table th[data-col="product"] { width:216px; min-width:216px; max-width:216px; }
+  .ana-table th[data-col="category"] { width:112px; min-width:112px; max-width:112px; }
+  .ana-table td .dim { color: var(--text-faint); }
+
+  @media (max-width: 1100px) { .ana-kpis { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 760px) { .ana-kpis { grid-template-columns: repeat(2, 1fr); } }
+</style>
+<script src="../assets/theme-restore.js"></script>
+</head>
+<body class="analysis-page">
+<div class="sidebar"><div class="logo">网研<span>ERP</span></div><nav class="menu"></nav></div>
+<div class="main-content">
+  <div class="header"><div class="header-left"><strong>分析</strong><span class="breadcrumb">网研ERP <span>/</span> 分析</span></div><div class="header-right"><span class="user-name">管理员</span><button class="icon-btn">🔔</button><span class="avatar">管</span></div></div>
+  <main class="content ui-page">
+
+    <div class="ana-filter">
+      <label>店铺</label>
+      <select class="select shop-select" id="shopSelect"><option value="">全部店铺</option></select>
+      <label>时间</label>
+      <div class="ana-presets" id="presets">
+        <button data-range="today">今天</button>
+        <button data-range="yesterday">昨天</button>
+        <button data-range="week">周</button>
+        <button data-range="month" data-active="true">月</button>
+        <button data-range="quarter">季度</button>
+        <button data-range="year">年</button>
+        <button data-range="all">全部</button>
+      </div>
+      <div class="date-pair" id="datePair">
+        <input class="input" id="dateFrom" type="date">
+        <span class="date-sep">→</span>
+        <input class="input" id="dateTo" type="date">
+      </div>
+      <button class="btn btn-primary" id="refreshBtn">刷新</button>
+      <button class="ana-src-btn" id="srcOrdersBtn" type="button" data-ana-tip="数据来源：ERP已同步订单&#10;不消耗AI豆">获取订单数据</button>
+      <button class="ana-src-btn" id="srcTianyanBtn" type="button" data-ana-tip="数据来源：Ozon Seller分析 / 天眼&#10;按分析页当前选择的起止日期获取&#10;已接入17项天眼指标&#10;单日趋势按小时，多日趋势按日期&#10;同店铺同周期当天缓存复用">获取天眼数据</button>
+      <button class="ana-src-btn" id="srcSeerfarBtn" type="button" data-ana-tip="数据来源：Seerfar&#10;固定近30天&#10;价格读取系统管理员当前配置">获取seerfar数据</button>
+      <span class="ana-price-note" id="seerfarPriceNote"><strong>正在读取价格…</strong></span>
+    </div>
+
+    <div class="ana-kpis" id="kpiRow" hidden>
+      <div class="ana-kpi kpi-blue"><div class="kpi-label">订购商品数量</div><div class="kpi-value" data-kpi="units">--<small>件</small></div><div class="kpi-sub" data-kpi="unitsSub"></div></div>
+      <div class="ana-kpi kpi-green"><div class="kpi-label">订购金额</div><div class="kpi-value" data-kpi="revenue">--<small>₽</small></div><div class="kpi-sub" data-kpi="revenueSub"></div></div>
+      <div class="ana-kpi kpi-amber"><div class="kpi-label">涉及商品</div><div class="kpi-value" data-kpi="products">--<small>SKU</small></div><div class="kpi-sub" data-kpi="productsSub"></div></div>
+      <div class="ana-kpi kpi-rose"><div class="kpi-label">已取消订单</div><div class="kpi-value" data-kpi="cancelled">--<small>单</small></div><div class="kpi-sub" data-kpi="cancelledSub"></div></div>
+      <div class="ana-kpi kpi-violet"><div class="kpi-label">唯一访问者</div><div class="kpi-value" data-kpi="visitors">--<small>人</small></div><div class="kpi-sub" data-kpi="visitorsSub">待扩展采集</div></div>
+      <div class="ana-kpi kpi-cyan"><div class="kpi-label">整体转化率</div><div class="kpi-value" data-kpi="conversion">--</div><div class="kpi-sub" data-kpi="conversionSub">待扩展采集</div></div>
+    </div>
+
+    <div class="ana-chart-panel" id="chartPanel" hidden>
+      <div class="ana-chart-head"><h3 id="chartTitle">订购商品数量（按天）</h3><span id="chartRange"></span></div>
+      <div class="ana-chart-wrap" id="chartWrap" style="width:100%;height:260px;"></div>
+    </div>
+
+    <div class="ana-data-tabs-bar" id="analysisDataTabsBar">
+      <div class="ana-data-tabs" id="analysisDataTabs" role="tablist" aria-label="分析数据来源">
+        <button class="ana-data-tab on" type="button" data-analysis-tab="all">所有 <strong id="tabCountAll">0</strong></button>
+        <button class="ana-data-tab" type="button" data-analysis-tab="orders">订单数据 <strong id="tabCountOrders">0</strong></button>
+        <button class="ana-data-tab" type="button" data-analysis-tab="tianyan">天眼数据 <strong id="tabCountTianyan">0</strong></button>
+        <button class="ana-data-tab" type="button" data-analysis-tab="seerfar">Seerfar数据 <strong id="tabCountSeerfar">0</strong></button>
+      </div>
+    </div>
+
+    <div class="ana-table-panel" id="tablePanel" hidden>
+      <div class="ana-table-head">
+        <div><h3 id="tableTitle">全部来源商品明细</h3><span class="ana-source-meta" id="sourceMeta">数据源：订单 + 天眼 + Seerfar · 同店铺按SKU合并 · 仅显示非空列</span></div>
+        <div class="ana-table-tools">
+          <button class="btn ana-more-btn" id="seerfarMoreBtn" type="button" hidden>继续获取下100条</button>
+          <div class="search-box"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="input search-input" id="skuSearch" placeholder="搜索 SKU / 商品名"></div>
+        </div>
+      </div>
+      <div class="ana-table-wrap">
+        <table class="ana-table" id="anaTable">
+          <thead id="anaHead"></thead>
+          <tbody id="anaBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="ana-empty" id="emptyHint">正在加载数据...</div>
+
+  </main>
+</div>
+<div class="ana-toast" id="anaToast" role="status"></div>
+<script src="../assets/brand.js"></script><script src="../assets/storage.js?v=20260925-seerfar-analysis2"></script><script src="../assets/order-statistics.js"></script><script src="../assets/shop-analysis-browser-cache.js"></script><script src="../assets/inline-action-icons.js"></script><script src="../assets/sku-mask.js"></script><script src="../assets/ozon-product-link.js?v=20261005-ozonlink01"></script><script src="../assets/table-pagination.js?v=20261002-b07b2"></script><script src="../assets/sidebar.js"></script><script src="../assets/echarts.min.js"></script><script src="../assets/category-trans.js?v=20260919-ana01"></script><script src="../assets/online-product-format.js?v=20260919-ana01"></script>
+<script>
+(function(){'use strict';
+
+var shops=[], orders=[], shopOptions=[], onlineProductByShopSku={};
+var activePreset='month', customFrom='', customTo='', activeSource='all';
+var tianyanRows=[], tianyanByRange={}, tianyanMetaByRange={}, activeTianyanRangeKey='', seerfarByShop={};
+var seerfarRows=[], seerfarSummary=null, seerfarShopId='', seerfarNextPage=1, seerfarHasNextPage=false, seerfarFetchedAt='', seerfarChargedBean=0;
+var seerfarRequestKeys={}, seerfarSucceededPages={};
+var seerfarPriceBean=null;
+var orderStatistics=window.WYERP_ORDER_STATISTICS, analysisCache=window.WYERP_SHOP_ANALYSIS_CACHE, actionIcons=window.WYERP_INLINE_ACTION_ICONS, skuMask=window.WYERP_SKU_MASK, ozonProductLink=window.WYERP_OZON_PRODUCT_LINK;
+var analysisCacheScope='',analysisCacheDate='';
+if(!orderStatistics||!analysisCache||!actionIcons||!skuMask||!ozonProductLink)throw new Error('分析页订单统计、缓存、行内图标、SKU掩码或Ozon商品链接模块加载失败');
+function applySeerfarPrice(pricing){
+  var item=pricing&&pricing.analysis?pricing.analysis:pricing;
+  var value=Number(item&&(item.effectiveBean!=null?item.effectiveBean:item.beanPerBatch));
+  if(!Number.isFinite(value)||value<=0)return;
+  seerfarPriceBean=value;
+  document.getElementById('seerfarPriceNote').innerHTML='<strong>'+value+' AI豆/100条</strong>';
+  document.getElementById('srcSeerfarBtn').dataset.anaTip='数据来源：Seerfar\\n数据范围：固定近30天\\n计费：'+value+' AI豆/100条\\n不足100条仍按一批计费';
+  document.getElementById('seerfarMoreBtn').textContent='继续获取下100条（'+value+' AI豆）';
+}
+function loadAiPricing(){
+  return erpStorage.request('/api/domain/ai-pricing').then(function(response){return response.json().then(function(data){if(response.ok)applySeerfarPrice(data.pricing);});}).catch(function(){});
+}
+
+function fmt(n, digits){if(!Number.isFinite(+n))return'--';return Number(+n).toLocaleString('zh-CN',{maximumFractionDigits:digits==null?0:digits});}
+function amountNumber(value){return orderStatistics.number(value);}
+function orderAmountCny(order){return orderStatistics.orderAmountCny(order,order&&order.finance);}
+function orderAmountRub(order){
+  var value=orderStatistics.actualRevenueRub(order&&order.finance);
+  return value===null||value===undefined||!Number.isFinite(Number(value))?null:Math.round(Number(value)*100)/100;
+}
+function moneyValue(value,currency){var n=nullNumber(value);if(n===null)return'<span class="dim">—</span>';return currency==='RUB'?fmt(n,2)+' ₽':'¥'+fmt(n,2);}
+function maskSku(value){return skuMask.mask(value);}
+function copyIcon(){return actionIcons.copy();}
+function firstCategory(value){
+  var full=String(value||'').trim();
+  if(!full)return'--';
+  return (full.split(/\s*(?:>|＞|\/)\s*/)[0]||full).trim()||full;
+}
+function categoryCell(value){
+  var full=String(value||'').trim();
+  return '<td class="cat-cell category-cell" data-ana-tip="'+esc(full)+'">'+esc(full?firstCategory(full):'--')+'</td>';
+}
+
+function dateOf(v){if(!v)return null;var d=new Date(v);if(isNaN(d.getTime()))return null;return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
+function fmtDate(d){if(!d)return'';return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+function rangePreset(key){
+  var now=new Date();now.setHours(23,59,59,999);
+  var today=new Date();today.setHours(0,0,0,0);
+  switch(key){
+    case 'today': return {start:today, end:now};
+    case 'yesterday': {
+      var y=new Date(today);y.setDate(y.getDate()-1);
+      var ye=new Date(y);ye.setHours(23,59,59,999);
+      return {start:y, end:ye};
+    }
+    case 'week': {
+      // 本周一到今天
+      var w=new Date(today);var dow=w.getDay();if(dow===0)dow=7;w.setDate(w.getDate()-(dow-1));
+      return {start:w, end:now};
+    }
+    case 'month': {
+      var m=new Date(today);m.setDate(m.getDate()-29);
+      return {start:m, end:now};
+    }
+    case 'quarter': {
+      var q=new Date(today.getFullYear(),Math.floor(today.getMonth()/3)*3,1);
+      return {start:q, end:now};
+    }
+    case 'year': {
+      var y=new Date(today.getFullYear(),0,1);
+      return {start:y, end:now};
+    }
+    default: return {start:new Date(today.getFullYear(),today.getMonth(),1), end:now};
+  }
+}
+
+function onlineProductAliases(p){
+  var out=[];
+  [p&&p.article,p&&p.sku,p&&p.productId,p&&p.offer_id,p&&p.offerId,p&&p.id].forEach(function(value){
+    value=String(value||'').trim();
+    if(value&&out.indexOf(value)<0)out.push(value);
+  });
+  return out;
+}
+function onlineProductCategory(p){
+  var rawLevels=[p&&p.cat1,p&&p.cat2,p&&p.cat3].map(function(v){return String(v||'').trim();}).filter(function(v,i,arr){return v&&arr.indexOf(v)===i;});
+  var levels=rawLevels.map(function(v){var translated=typeof translateCat==='function'?String(translateCat(v)||'').trim():'';return translated||v;}).filter(function(v,i,arr){return v&&arr.indexOf(v)===i;});
+  return levels.join(' > ')||String(p&&p.categoryPath||p&&p.category||'').trim();
+}
+function onlineProductLookupKey(shopName,sku){return String(shopName||'').trim()+'\u0000'+String(sku||'').trim();}
+function indexOnlineProduct(p){
+  if(!p)return;
+  var shopName=String(p.shop||p.shopName||'').trim();
+  if(!shopName)return;
+  var meta={category:onlineProductCategory(p),img:String(p.img||p.image||p.primaryImage||p.imageUrl||'').trim(),source:'erp_online_products'};
+  onlineProductAliases(p).forEach(function(alias){onlineProductByShopSku[onlineProductLookupKey(shopName,alias)]=meta;});
+}
+function onlineProductMeta(shopName,candidates){
+  shopName=String(shopName||'').trim();
+  candidates=Array.isArray(candidates)?candidates:[candidates];
+  for(var i=0;i<candidates.length;i++){
+    var sku=String(candidates[i]||'').trim();
+    if(!shopName||!sku)continue;
+    var meta=onlineProductByShopSku[onlineProductLookupKey(shopName,sku)];
+    if(meta)return meta;
+  }
+  return null;
+}
+function enrichIdentityFromOnline(row){
+  if(!row)return row;
+  var meta=onlineProductMeta(row.shopName,[row.sku,row.offerId,row.productId]);
+  if(meta){
+    if(!row.category&&meta.category)row.category=meta.category;
+    if(!row.img&&meta.img)row.img=meta.img;
+  }
+  return row;
+}
+function loadShops(){
+  shops=Array.isArray(erpStorage.get('erp_shops_data'))?erpStorage.get('erp_shops_data'):[];
+  orders=Array.isArray(erpStorage.get('erp_orders_data'))?erpStorage.get('erp_orders_data'):[];
+  var prods=Array.isArray(erpStorage.get('erp_online_products'))?erpStorage.get('erp_online_products'):[];
+  onlineProductByShopSku={};
+  prods.forEach(indexOnlineProduct);
+  shopOptions=[];
+  var seen={};
+  shops.forEach(function(s){
+    if(!s)return;
+    var name=String(s.name||'').trim();if(!name)return;
+    var id=String(s.externalShopId||s.clientId||s.id||'').trim();
+    var key=id||('name:'+name);
+    if(seen[key])return;seen[key]=true;
+    shopOptions.push({name:name,id:id});
+  });
+  shopOptions.sort(function(a,b){return a.name.localeCompare(b.name,'zh');});
+  var sel=document.getElementById('shopSelect');
+  var previousShop=sel.value;
+  function optionValue(item){return item.id?'id:'+item.id:'name:'+item.name;}
+  sel.innerHTML='<option value="">全部店铺</option>'+shopOptions.map(function(s){return'<option value="'+esc(optionValue(s))+'">'+esc(s.name)+'</option>';}).join('');
+  sel.value=shopOptions.some(function(item){return optionValue(item)===previousShop;}) ? previousShop : '';
+}
+
+function orderShopId(o){return String(o.clientId||o.externalShopId||o.shop_external_id||'').trim();}
+function matchShop(o,s){
+  if(!s)return true;
+  var oid=orderShopId(o);
+  // A name is not a trusted identifier: never combine different shop IDs just because labels match.
+  if(s.id)return !!oid&&oid===s.id;
+  return !oid&&String(o.shop||o.shopName||'').trim()===s.name;
+}
+function shopNameById(id,fallback){
+  id=String(id||'').trim();
+  for(var i=0;i<shopOptions.length;i++)if(id&&String(shopOptions[i].id||'')===id)return shopOptions[i].name;
+  return String(fallback||id||'未知店铺').trim();
+}
+function orderShopInfo(o){
+  var id=orderShopId(o);
+  var name=String(o&&(o.shop||o.shopName)||'').trim();
+  name=shopNameById(id,name);
+  return {id:id,name:name,key:id?('id:'+id):('name:'+name)};
+}
+function rowMatchesSelectedShop(row){
+  var sel=selectedShop();
+  if(!sel)return true;
+  var rid=String(row&&row.shopId||'').trim();
+  var rname=String(row&&row.shopName||'').trim();
+  if(sel.id&&rid)return rid===sel.id;
+  return rname===sel.name;
+}
+function selectedShop(){
+  var v=document.getElementById('shopSelect').value;
+  for(var i=0;i<shopOptions.length;i++){
+    var expected=shopOptions[i].id?'id:'+shopOptions[i].id:'name:'+shopOptions[i].name;
+    if(expected===v)return shopOptions[i];
+  }
+  return null;
+}
+function orderDateOf(o){return dateOf(o.acceptedAt||o.accepted_at||o.trackDate||o.date||o.orderTime);}
+function filterOrders(){
+  var sel=selectedShop();
+  var range=activePreset==='custom'?rangeCustom(customFrom,customTo):(activePreset==='all'?null:rangePreset(activePreset));
+  // 同步日期框显示（预设模式）
+  if(range){
+    document.getElementById('dateFrom').value=fmtDate(range.start);
+    document.getElementById('dateTo').value=fmtDate(range.end);
+  } else {
+    document.getElementById('dateFrom').value='';
+    document.getElementById('dateTo').value='';
+  }
+  return orders.filter(function(o){
+    if(!o)return false;
+    if(sel&&!matchShop(o,sel))return false;
+    if(!range)return true; // all 模式不过滤日期
+    var d=orderDateOf(o);
+    if(!d)return false;
+    d.setHours(0,0,0,0);
+    return d>=range.start&&d<=range.end;
+  });
+}
+
+function rangeCustom(f,t){var s=dateOf(f),e=dateOf(t);if(!s){s=new Date();s.setHours(0,0,0,0);}if(!e){e=new Date();e.setHours(23,59,59,999);}s.setHours(0,0,0,0);e.setHours(23,59,59,999);return{start:s,end:e};}
+
+function aggregate(filtered,options){
+  options=options||{};
+  var separateShops=options.byShop===true;
+  var byDate={},bySku={};
+  var totalUnits=0,totalRevenue=0,totalRevenueRub=0,totalRevenueSeen=false,totalRevenueRubSeen=false,cancelled=0,returned=0;
+
+  filtered.forEach(function(o){
+    if(o.status==='已取消')cancelled++;
+    var ret=o.ret||'';
+    if(ret==='在仓库'||ret==='已到退货仓库'||ret==='正在运往仓库'||ret==='已销毁'||o.retRel)returned++;
+
+    var d=orderDateOf(o),key=d?fmtDate(d):'未知';
+    if(!byDate[key])byDate[key]=0;
+    var shopInfo=orderShopInfo(o);
+    var items=(o.items||[]).filter(function(item){return !!item;});
+    var actualCny=orderAmountCny(o),actualRub=orderAmountRub(o);
+    if(actualCny!==null){totalRevenue+=actualCny;totalRevenueSeen=true;}
+    if(actualRub!==null){totalRevenueRub+=actualRub;totalRevenueRubSeen=true;}
+
+    var itemBases=items.map(function(item){
+      var qty=amountNumber(item.qty!=null?item.qty:item.quantity),price=amountNumber(item.price);
+      return qty!==null&&qty>0&&price!==null&&price>=0?qty*price:0;
+    });
+    var baseTotal=itemBases.reduce(function(sum,value){return sum+value;},0);
+    var qtyTotal=items.reduce(function(sum,item){
+      var qty=amountNumber(item.qty!=null?item.qty:item.quantity);
+      return sum+(qty!==null&&qty>0?qty:0);
+    },0);
+
+    items.forEach(function(item,itemIndex){
+      var sku=String(item.sku||item.offerId||item.offer_id||'');
+      var offerId=String(item.offerId||item.offer_id||'');
+      var name=String(item.name||item.title||sku||'未知');
+      var qty=amountNumber(item.qty!=null?item.qty:item.quantity);
+      var units=qty!==null?qty:0;
+      var share=items.length<=1?1:(baseTotal>0?itemBases[itemIndex]/baseTotal:(qtyTotal>0?units/qtyTotal:1/items.length));
+      var revenue=actualCny!==null?actualCny*share:(itemBases[itemIndex]||null);
+      var revenueRub=actualRub!==null?actualRub*share:null;
+
+      byDate[key]+=units;
+      totalUnits+=units;
+      var identity=sku||offerId||name;
+      var rowKey=(separateShops?shopInfo.key+'|':'')+identity;
+      if(!bySku[rowKey]){
+        var onlineMeta=onlineProductMeta(shopInfo.name,[sku,offerId,item.productId,item.id]);
+        bySku[rowKey]={
+          shopId:shopInfo.id,shopName:shopInfo.name,shopKey:shopInfo.key,
+          sku:sku,offerId:offerId,name:name,
+          category:String(item.category||item.categoryPath||'').trim()||(onlineMeta&&onlineMeta.category)||'',
+          img:String(item.img||item.image||item.imageUrl||'').trim()||(onlineMeta&&onlineMeta.img)||'',
+          units:0,revenue:0,revenueSeen:false,revenueRub:0,revenueRubSeen:false,orders:0,cancelled:0,returned:0
+        };
+      }
+      bySku[rowKey].units+=units;
+      if(revenue!==null){bySku[rowKey].revenue+=revenue;bySku[rowKey].revenueSeen=true;}
+      if(revenueRub!==null){bySku[rowKey].revenueRub+=revenueRub;bySku[rowKey].revenueRubSeen=true;}
+      bySku[rowKey].orders++;
+      if(o.status==='已取消')bySku[rowKey].cancelled++;
+      if(ret==='在仓库'||ret==='已到退货仓库'||ret==='正在运往仓库'||ret==='已销毁'||o.retRel)bySku[rowKey].returned++;
+    });
+  });
+
+  var skuList=Object.values(bySku).map(function(row){
+    row.revenue=row.revenueSeen?Math.round(row.revenue*100)/100:null;
+    row.revenueRub=row.revenueRubSeen?Math.round(row.revenueRub*100)/100:null;
+    delete row.revenueSeen;delete row.revenueRubSeen;
+    return row;
+  }).sort(function(a,b){return b.units-a.units;});
+
+  return {
+    totalUnits:totalUnits,
+    totalRevenue:totalRevenueSeen?Math.round(totalRevenue*100)/100:null,
+    totalRevenueRub:totalRevenueRubSeen?Math.round(totalRevenueRub*100)/100:null,
+    productCount:skuList.length,cancelled:cancelled,returned:returned,
+    daily:Object.keys(byDate).sort().map(function(k){return{date:k,units:byDate[k]};}),
+    skus:skuList
+  };
+}
+
+function setKpi(key,label,valueHtml,sub){
+  var value=document.querySelector('[data-kpi="'+key+'"]');
+  if(!value)return;
+  var card=value.closest('.ana-kpi');
+  var labelEl=card&&card.querySelector('.kpi-label');
+  var subEl=document.querySelector('[data-kpi="'+key+'Sub"]');
+  if(labelEl)labelEl.textContent=label;
+  value.innerHTML=valueHtml;
+  if(subEl)subEl.textContent=sub||'';
+}
+function setKpiVisible(key,visible){
+  var value=document.querySelector('[data-kpi="'+key+'"]');
+  var card=value&&value.closest('.ana-kpi');
+  if(card)card.hidden=!visible;
+}
+function showAllKpiCards(){
+  var row=document.getElementById('kpiRow');
+  if(row)row.classList.remove('orders-kpi-layout');
+  ['units','revenue','products','cancelled','visitors','conversion'].forEach(function(key){setKpiVisible(key,true);});
+}
+function renderKPIs(data){
+  document.getElementById('kpiRow').hidden=false;
+  showAllKpiCards();
+  document.getElementById('kpiRow').classList.add('orders-kpi-layout');
+  setKpiVisible('visitors',false);
+  setKpiVisible('conversion',false);
+  setKpi('units','订购商品数量',fmt(data.totalUnits)+'<small>件</small>','涉及 '+data.productCount+' 个 SKU');
+  setKpi('revenue','订购金额',moneyValue(data.totalRevenue,'CNY'),'卢布金额 '+(data.totalRevenueRub===null?'—':fmt(data.totalRevenueRub,2)+' ₽')+' · 均来自订单管理');
+  setKpi('products','涉及商品',fmt(data.productCount)+'<small>SKU</small>','订单数据');
+  setKpi('cancelled','已取消订单',fmt(data.cancelled)+'<small>单</small>','已退回 '+data.returned+' 单');
+  setKpi('visitors','唯一访问者','--<small>人</small>','订单数据不含访客指标');
+  setKpi('conversion','整体转化率','--','订单数据不含访客转化指标');
+}
+function renderTianyanKPIs(rows){
+  showAllKpiCards();
+  rows=Array.isArray(rows)?rows:[];
+  var meta=tianyanMetaForView(),summary=meta&&meta.summary&&typeof meta.summary==='object'?meta.summary:{};
+  var units=tianyanSummaryNumber('ordered_units','units');
+  var revenue=tianyanSummaryNumber('revenue','revenue');
+  var visitors=tianyanSummaryNumber('session_view','visitors');
+  var cartHits=tianyanSummaryNumber('hits_tocart','cartHits');
+  var conversion=nullNumber(summary.conv_tocart);
+  if(conversion===null&&visitors!==null&&cartHits!==null)conversion=visitors===0?0:cartHits/visitors*100;
+  document.getElementById('kpiRow').hidden=false;
+  setKpi('units','天眼订购数量',units===null?'--':fmt(units)+'<small>件</small>','当前筛选周期');
+  setKpi('revenue','天眼订购金额',revenue===null?'--':fmt(revenue,2)+'<small>₽</small>','Ozon Seller分析');
+  setKpi('products','天眼商品',fmt(rows.length)+'<small>SKU</small>','当前筛选结果');
+  setKpi('cancelled','加购总数',cartHits===null?'--':fmt(cartHits)+'<small>次</small>','当前筛选周期');
+  setKpi('visitors','唯一访问者',visitors===null?'--':fmt(visitors)+'<small>人</small>','优先使用Ozon周期总计');
+  setKpi('conversion','加购转化率',conversion===null?'--':fmt(conversion,2)+'<small>%</small>','总加购 ÷ 总访客');
+}
+
+function summarizeSeerfarRows(rows){
+  rows=Array.isArray(rows)?rows:[];
+  var fulfillment={};
+  rows.forEach(function(row){
+    var key=String(row&&row.fulfillment||'').trim();if(key)fulfillment[key]=(fulfillment[key]||0)+1;
+  });
+  var sales=sumRows(rows,'sales'),revenue=sumRows(rows,'revenue');
+  return{
+    totalSales:sales===null?0:sales,
+    totalRevenue:revenue===null?0:revenue,
+    productCount:rows.length,
+    rating:weightedAvgRows(rows,'reviewRating','reviewCount'),
+    dailySales:sales===null?0:sales/30,
+    fulfillment:fulfillment
+  };
+}
+function renderSeerfarKPIs(data,rows){
+  showAllKpiCards();
+  rows=Array.isArray(rows)?rows:[];
+  var calculated=summarizeSeerfarRows(rows);
+  document.getElementById('kpiRow').hidden=false;
+  var fulfill=calculated.fulfillment&&typeof calculated.fulfillment==='object'?Object.keys(calculated.fulfillment).map(function(k){return k+' '+calculated.fulfillment[k];}).join(' · '):'--';
+  setKpi('units','近30天销量',fmt(calculated.totalSales)+'<small>件</small>','Seerfar近30天');
+  setKpi('revenue','近30天销售额',fmt(calculated.totalRevenue,2)+'<small>₽</small>','Seerfar近30天');
+  setKpi('products','Seerfar商品',fmt(rows.length)+'<small>SKU</small>','当前已获取数据集');
+  setKpi('cancelled','商品加权评分',calculated.rating==null?'--':fmt(calculated.rating,2),'按各商品评论数加权，不额外请求店铺总评分');
+  setKpi('visitors','日均销量',fmt(calculated.dailySales,2)+'<small>件</small>','当前商品近30天销量÷30');
+  setKpi('conversion','履约结构',esc(fulfill||'--'),'按当前商品数统计');
+}
+function renderAllKPIs(rows,orderData){
+  showAllKpiCards();
+  rows=Array.isArray(rows)?rows:[];orderData=orderData||{};
+  document.getElementById('kpiRow').hidden=false;
+  var tMeta=tianyanMetaForView(),summary=tMeta&&tMeta.summary&&typeof tMeta.summary==='object'?tMeta.summary:{};
+  var visitors=nullNumber(summary.session_view);
+  if(visitors===null)visitors=sumRows(rows,'tianyanVisitors');
+  var cartHits=nullNumber(summary.hits_tocart);
+  if(cartHits===null)cartHits=sumRows(rows,'tianyanTotalCartHits');
+  var conversion=nullNumber(summary.conv_tocart);
+  if(conversion===null&&visitors!==null&&cartHits!==null)conversion=visitors===0?0:cartHits/visitors*100;
+  var sfSales=sumRows(rows,'seerfarSales');
+  setKpi('units','订单商品数量',fmt(orderData.totalUnits)+'<small>件</small>','订单管理');
+  setKpi('revenue','订单金额',moneyValue(orderData.totalRevenue,'CNY'),'卢布金额 '+(orderData.totalRevenueRub===null||orderData.totalRevenueRub===undefined?'—':fmt(orderData.totalRevenueRub,2)+' ₽'));
+  setKpi('products','合并商品',fmt(rows.length)+'<small>SKU</small>','订单 + 天眼 + Seerfar');
+  setKpi('cancelled','天眼唯一访问者',visitors===null?'--':fmt(visitors)+'<small>人</small>','当前天眼周期');
+  setKpi('visitors','Seerfar近30天销量',sfSales===null?'--':fmt(sfSales)+'<small>件</small>','当前已获取Seerfar数据');
+  setKpi('conversion','天眼加购转化率',conversion===null?'--':fmt(conversion,2)+'<small>%</small>','总加购 ÷ 总访客');
+}
+
+var _chart=null;
+function chartHasData(series){return series.some(function(s){return (s.data||[]).some(function(v){return v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));});});}
+function chartRowLabel(row,includeShop){
+  var id=row.sku?maskSku(row.sku):String(row.offerId||row.name||'--').trim()||'--';
+  if(id.length>18)id=id.slice(0,18)+'…';
+  if(includeShop){var shop=String(row.shopName||row.shopId||'').trim();if(shop){if(shop.length>8)shop=shop.slice(0,8)+'…';id=shop+' · '+id;}}
+  return id;
+}
+function setChartEmpty(title,rangeText,message){
+  var panel=document.getElementById('chartPanel');panel.hidden=false;
+  document.getElementById('chartTitle').textContent=title||'数据趋势';
+  document.getElementById('chartRange').textContent=rangeText||'无数据';
+  var wrap=document.getElementById('chartWrap');if(!_chart)_chart=echarts.init(wrap);
+  _chart.clear();
+  _chart.setOption({
+    title:{text:message||'暂无数据',left:'center',top:'middle',textStyle:{color:'#94a3b8',fontSize:13}},
+    grid:{left:44,right:20,top:16,bottom:32},
+    xAxis:{type:'category',data:[],axisLine:{lineStyle:{color:'#e5e7eb'}},axisTick:{show:false},axisLabel:{show:false}},
+    yAxis:{type:'value',min:0,max:1,interval:0.25,axisLine:{show:false},axisTick:{show:false},splitLine:{lineStyle:{color:'#f1f5f9'}},axisLabel:{color:'#94a3b8',fontSize:10,formatter:function(v){return Number.isInteger(v)?v:'';}}},
+    series:[{type:'line',data:[]}]
+  });
+}
+function renderLineChart(model){
+  model=model||{};
+  var labels=Array.isArray(model.labels)?model.labels:[];
+  var series=(Array.isArray(model.series)?model.series:[]).filter(function(s){return s&&Array.isArray(s.data);});
+  if(!labels.length||!chartHasData(series)){setChartEmpty(model.title,model.rangeText,model.emptyText);return;}
+  var panel=document.getElementById('chartPanel');panel.hidden=false;
+  document.getElementById('chartTitle').textContent=model.title||'数据趋势';
+  document.getElementById('chartRange').textContent=model.rangeText||('当前 '+labels.length+' 项');
+  var wrap=document.getElementById('chartWrap');if(!_chart)_chart=echarts.init(wrap);
+  _chart.clear();
+  _chart.setOption({
+    tooltip:{trigger:'axis',confine:true,position:function(point){return [point[0]+14,point[1]+14];}},
+    legend:{show:series.length>1,top:0,textStyle:{color:'#64748b',fontSize:10}},
+    grid:{left:44,right:20,top:series.length>1?34:16,bottom:38},
+    xAxis:{type:'category',data:labels,axisLine:{lineStyle:{color:'#e5e7eb'}},axisLabel:{color:'#94a3b8',fontSize:10,hideOverlap:true,interval:'auto'},axisTick:{show:false}},
+    yAxis:{type:'value',axisLine:{show:false},axisTick:{show:false},splitLine:{lineStyle:{color:'#f1f5f9'}},axisLabel:{color:'#94a3b8',fontSize:10}},
+    series:series.map(function(item){return{name:item.name,type:'line',smooth:true,connectNulls:false,data:item.data,symbolSize:5,lineStyle:{width:2.2}};})
+  });
+}
+function renderOrderChart(daily){
+  daily=Array.isArray(daily)?daily:[];
+  renderLineChart({
+    title:'订购商品数量（按天）',
+    rangeText:daily.length?'最近 '+daily.length+' 天':'无数据',
+    labels:daily.map(function(d){return String(d.date||'').slice(5);}),
+    series:[{name:'订购数量',data:daily.map(function(d){return nullNumber(d.units);})}],
+    emptyText:'暂无订单趋势数据'
+  });
+}
+function tianyanTimelineSeries(timeline){
+  var points=timeline&&Array.isArray(timeline.points)?timeline.points:[];
+  var defs=[
+    ['ordered_units','订购数量'],
+    ['session_view','唯一访问者'],
+    ['hits_view','浏览总量'],
+    ['hits_tocart','加购总量']
+  ];
+  var available=[];
+  defs.forEach(function(def){
+    var values=points.map(function(point){return nullNumber(point&&point.values&&point.values[def[0]]);});
+    var hasAny=values.some(function(value){return value!==null;});
+    var hasNonZero=values.some(function(value){return value!==null&&value!==0;});
+    if(hasAny)available.push({name:def[1],data:values,hasNonZero:hasNonZero,key:def[0]});
+  });
+  var useful=available.filter(function(item){return item.hasNonZero;});
+  if(useful.length)return useful.slice(0,3);
+  return available.slice(0,1);
+}
+function renderTianyanChart(rows){
+  rows=Array.isArray(rows)?rows:[];
+  var meta=tianyanMetaForView();
+  var timeline=meta&&meta.timeline&&typeof meta.timeline==='object'?meta.timeline:null;
+  var points=timeline&&Array.isArray(timeline.points)?timeline.points:[];
+  if(!points.length){
+    setChartEmpty('天眼核心指标（按时间）',activeTianyanRangeKey||'当前周期','当前周期还没有时间趋势，请点击“获取天眼数据”');
+    return;
+  }
+  var granularity=String(timeline.granularity||'day');
+  var labels=points.map(function(point){
+    var label=String(point&&point.label||'');
+    if(label)return label;
+    var key=String(point&&point.key||'');
+    return granularity==='hour'?key.slice(11,16):key.slice(5,10);
+  });
+  var series=tianyanTimelineSeries(timeline);
+  if(!series.length){
+    setChartEmpty(granularity==='hour'?'天眼核心指标（按小时）':'天眼核心指标（按日期）',activeTianyanRangeKey||'', '当前周期没有可绘制的天眼核心指标');
+    return;
+  }
+  renderLineChart({
+    title:granularity==='hour'?'天眼核心指标（按小时）':'天眼核心指标（按日期）',
+    rangeText:(meta&&meta.dateFrom&&meta.dateTo)?(meta.dateFrom===meta.dateTo?meta.dateFrom:(meta.dateFrom+' → '+meta.dateTo)):(activeTianyanRangeKey||''),
+    labels:labels,
+    series:series,
+    emptyText:'暂无天眼时间趋势数据'
+  });
+}
+function renderSeerfarChart(rows){
+  rows=Array.isArray(rows)?rows:[];
+  var list=rows.slice().sort(function(a,b){return (Number(b.sales)||0)-(Number(a.sales)||0);});
+  renderLineChart({title:'Seerfar近30天销量（按SKU）',rangeText:'当前 '+list.length+' 个SKU',labels:list.map(function(r){return chartRowLabel(r,true);}),series:[{name:'近30天销量',data:list.map(function(r){return nullNumber(r.sales);})}],emptyText:'暂无Seerfar销量数据'});
+}
+function renderAllChart(rows){
+  rows=Array.isArray(rows)?rows:[];
+  var list=rows.slice().sort(function(a,b){
+    return ((Number(b.orderUnits)||0)+(Number(b.tianyanUnits)||0)+(Number(b.seerfarSales)||0))-((Number(a.orderUnits)||0)+(Number(a.tianyanUnits)||0)+(Number(a.seerfarSales)||0));
+  });
+  var series=[];
+  if(list.some(function(r){return hasValue(r.orderUnits);})){series.push({name:'订单数量',data:list.map(function(r){return nullNumber(r.orderUnits);})});}
+  if(list.some(function(r){return hasValue(r.tianyanUnits);})){series.push({name:'天眼订购数量',data:list.map(function(r){return nullNumber(r.tianyanUnits);})});}
+  else if(list.some(function(r){return hasValue(r.tianyanVisitors);})){series.push({name:'天眼唯一访问者',data:list.map(function(r){return nullNumber(r.tianyanVisitors);})});}
+  if(list.some(function(r){return hasValue(r.seerfarSales);})){series.push({name:'Seerfar近30天销量',data:list.map(function(r){return nullNumber(r.seerfarSales);})});}
+  renderLineChart({title:'多来源核心指标（按店铺 + SKU）',rangeText:'当前 '+list.length+' 行',labels:list.map(function(r){return chartRowLabel(r,true);}),series:series,emptyText:'暂无可绘制的数据'});
+}
+
+var sortKey='orderUnits', sortDir=-1;
+var SOURCE_COLUMNS={
+  orders:[
+    {id:'index',label:'序号'},{id:'shop',label:'店铺',sort:'shopName'},{id:'category',label:'类目'},{id:'product',label:'商品',sort:'name'},
+    {id:'units',label:'订购<br>数量',sort:'units',num:true},{id:'revenue',label:'订单金额<br>（CNY）',sort:'revenue',num:true,title:'人民币订单金额 = 订单商品人民币单价 × 数量'},
+    {id:'revenueRub',label:'卢布金额<br>（RUB）',sort:'revenueRub',num:true,title:'订单管理真实卢布金额：优先 finance.sellerGrossRub，其次 finance.orderAmountRub'},
+    {id:'cancelled',label:'已取消',sort:'cancelled',num:true},{id:'returned',label:'已退回',sort:'returned',num:true}
+  ],
+  tianyan:[
+    {id:'index',label:'序号'},{id:'shop',label:'店铺',sort:'shopName'},{id:'category',label:'类目'},{id:'product',label:'商品',sort:'name'},
+    {label:'订购<br>数量',sort:'units',num:true,title:'Ozon指标 ordered_units'},{label:'订购<br>金额',sort:'revenue',num:true,title:'Ozon指标 revenue'},
+    {label:'唯一身份<br>访问者',sort:'visitors',num:true,title:'历史已确认字段 session_view'},
+    {label:'搜索<br>访客',sort:'searchVisitors',num:true,title:'已知待确认字段 session_view_search'},{label:'商品卡<br>访客',sort:'cardVisitors',num:true,title:'历史已确认字段 session_view_pdp'},
+    {label:'搜索<br>浏览量',sort:'searchViews',num:true,title:'已知Premium字段 hits_view_search'},{label:'商品卡<br>浏览量',sort:'cardViews',num:true,title:'已知Premium字段 hits_view_pdp'},{label:'浏览<br>总量',sort:'views',num:true,title:'已知Premium字段 hits_view'},
+    {label:'搜索<br>加购',sort:'searchCartHits',num:true,title:'已知待确认字段 hits_tocart_search'},{label:'商品卡<br>加购',sort:'cardCartHits',num:true,title:'已知待确认字段 hits_tocart_pdp'},{label:'加购<br>总数',sort:'cartHits',num:true,title:'已知待确认字段 hits_tocart'},
+    {label:'加购<br>转化率',sort:'conversion',num:true,title:'历史已确认指标；当前原始key以被动记录为准（conv_tocart）'},
+    {label:'搜索加购<br>转化率',sort:'searchCartRate',num:true,title:'已知待确认字段 conv_tocart_search'},{label:'商品卡加购<br>转化率',sort:'cardCartRate',num:true,title:'已知待确认字段 conv_tocart_pdp'},
+    {label:'退货',sort:'returns',num:true,title:'历史已确认字段 returns'},{label:'取消',sort:'cancellations',num:true,title:'历史已确认字段 cancellations'},
+    {label:'搜索/目录<br>位置',sort:'searchPosition',num:true,title:'历史已确认字段 position_category'}
+  ],
+  seerfar:[
+    {id:'index',label:'序号'},{id:'shop',label:'店铺',sort:'shopName'},{id:'category',label:'类目'},{id:'product',label:'商品',sort:'name'},{label:'近30天<br>销量',sort:'sales',num:true},{label:'近30天<br>销售额',sort:'revenue',num:true},
+    {label:'价格 / 毛利',sort:'price',num:true},{label:'评分 / 评论',sort:'reviewRating',num:true},
+    {label:'商品卡浏览 / 搜索曝光',sort:'sessionCount',num:true},{label:'商品卡加购 / 搜索加购',sort:'convToCartPdp',num:true},
+    {label:'展示转化 / 订单转化',sort:'orderConversionRate',num:true},{label:'广告费用 / 平均折扣',sort:'drr',num:true,title:'字段来源：Seerfar drr 原始值\n官方文档当前未标明单位'},
+    {label:'促销占比 / 退货取消率',sort:'promoRevenueShare',num:true},{label:'展示总量 / 错失销售额',sort:'views',num:true}
+  ]
+};
+var ALL_COLUMN_DEFS=[
+  {id:'index',label:'序号',always:true},
+  {id:'shop',label:'店铺',sort:'shopName',always:true},
+  {id:'category',label:'类目',keys:['category']},
+  {id:'product',label:'商品',sort:'name',always:true},
+  {id:'orderUnits',label:'订单<br>数量',sort:'orderUnits',num:true,keys:['orderUnits']},
+  {id:'orderRevenue',label:'订单金额<br>（CNY）',sort:'orderRevenue',num:true,keys:['orderRevenue'],digits:2,currency:'CNY'},
+  {id:'orderRevenueRub',label:'卢布金额<br>（RUB）',sort:'orderRevenueRub',num:true,keys:['orderRevenueRub'],digits:2,currency:'RUB'},
+  {id:'orderCancelled',label:'订单<br>已取消',sort:'orderCancelled',num:true,keys:['orderCancelled']},
+  {id:'orderReturned',label:'订单<br>已退回',sort:'orderReturned',num:true,keys:['orderReturned']},
+  {id:'tianyanUnits',label:'天眼订购<br>数量',sort:'tianyanUnits',num:true,keys:['tianyanUnits']},
+  {id:'tianyanRevenue',label:'天眼订购<br>金额',sort:'tianyanRevenue',num:true,keys:['tianyanRevenue'],digits:2},
+  {id:'tianyanVisitors',label:'唯一身份<br>访问者',sort:'tianyanVisitors',num:true,keys:['tianyanVisitors']},
+  {id:'tianyanSessions',label:'商品卡访客 / 搜索访客',sort:'tianyanCardVisitors',num:true,keys:['tianyanCardVisitors','tianyanSearchVisitors'],pair:['商品卡','tianyanCardVisitors',0,'','搜索','tianyanSearchVisitors',0,'']},
+  {id:'tianyanViews',label:'商品卡浏览 / 搜索浏览',sort:'tianyanCardViews',num:true,keys:['tianyanCardViews','tianyanSearchViews'],pair:['商品卡','tianyanCardViews',0,'','搜索','tianyanSearchViews',0,'']},
+  {id:'tianyanCartHits',label:'商品卡加购 / 搜索加购',sort:'tianyanCardCartHits',num:true,keys:['tianyanCardCartHits','tianyanSearchCartHits'],pair:['商品卡','tianyanCardCartHits',0,'','搜索','tianyanSearchCartHits',0,'']},
+  {id:'tianyanConversion',label:'加购<br>转化率',sort:'tianyanConversion',num:true,keys:['tianyanConversion'],digits:2,suffix:'%'},
+  {id:'tianyanCartRates',label:'商品卡加购率 / 搜索加购率',sort:'tianyanCardCartRate',num:true,keys:['tianyanCardCartRate','tianyanSearchCartRate'],pair:['商品卡','tianyanCardCartRate',2,'%','搜索','tianyanSearchCartRate',2,'%']},
+  {id:'tianyanTotals',label:'浏览总量 / 加购总量',sort:'tianyanTotalViews',num:true,keys:['tianyanTotalViews','tianyanTotalCartHits'],pair:['浏览','tianyanTotalViews',0,'','加购','tianyanTotalCartHits',0,'']},
+  {id:'tianyanReturnCancel',label:'退货 / 取消',sort:'tianyanReturns',num:true,keys:['tianyanReturns','tianyanCancellations'],pair:['退货','tianyanReturns',0,'','取消','tianyanCancellations',0,'']},
+  {id:'tianyanSearchPosition',label:'搜索/目录<br>位置',sort:'tianyanSearchPosition',num:true,keys:['tianyanSearchPosition']},
+  {id:'seerfarSales',label:'Seerfar近30天<br>销量',sort:'seerfarSales',num:true,keys:['seerfarSales']},
+  {id:'seerfarRevenue',label:'Seerfar近30天<br>销售额',sort:'seerfarRevenue',num:true,keys:['seerfarRevenue'],digits:2},
+  {id:'seerfarPriceMargin',label:'价格 / 毛利',sort:'seerfarPrice',num:true,keys:['seerfarPrice','seerfarGrossMargin'],pair:['价格','seerfarPrice',2,' ₽','毛利率','seerfarGrossMargin',2,'%']},
+  {id:'seerfarRatingReview',label:'评分 / 评论',sort:'seerfarReviewRating',num:true,keys:['seerfarReviewRating','seerfarReviewCount'],pair:['评分','seerfarReviewRating',2,'','评论','seerfarReviewCount',0,'']},
+  {id:'seerfarBrowseExposure',label:'商品卡浏览 / 搜索曝光',sort:'seerfarSessionCount',num:true,keys:['seerfarSessionCount','seerfarSessionCountSearch'],pair:['商品卡','seerfarSessionCount',0,'','搜索曝光','seerfarSessionCountSearch',0,'']},
+  {id:'seerfarCart',label:'商品卡加购 / 搜索加购',sort:'seerfarConvToCartPdp',num:true,keys:['seerfarConvToCartPdp','seerfarConvToCartSearch'],pair:['商品卡','seerfarConvToCartPdp',2,'%','搜索','seerfarConvToCartSearch',2,'%']},
+  {id:'seerfarConversion',label:'展示转化 / 订单转化',sort:'seerfarOrderConversionRate',num:true,keys:['seerfarConvViewToOrder','seerfarOrderConversionRate'],pair:['展示','seerfarConvViewToOrder',2,'%','订单','seerfarOrderConversionRate',2,'%']},
+  {id:'seerfarDrrDiscount',label:'广告费用 / 平均折扣',sort:'seerfarDrr',num:true,keys:['seerfarDrr','seerfarDiscount'],pair:['广告费用','seerfarDrr',2,'','平均折扣','seerfarDiscount',2,'%']},
+  {id:'seerfarPromoReturn',label:'促销占比 / 退货取消率',sort:'seerfarPromoRevenueShare',num:true,keys:['seerfarPromoRevenueShare','seerfarReturnCancellationRate'],pair:['促销占比','seerfarPromoRevenueShare',2,'%','退货取消','seerfarReturnCancellationRate',2,'%']},
+  {id:'seerfarViewsMissed',label:'展示总量 / 错失销售额',sort:'seerfarViews',num:true,keys:['seerfarViews','seerfarMissedRevenue'],pair:['展示总量','seerfarViews',0,'','错失销售额','seerfarMissedRevenue',2,'']}
+];
+var currentAllColumns=ALL_COLUMN_DEFS.filter(function(c){return c.always;});
+
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function sortHtml(){return '<span class="sort"><i class="up"></i><i class="down"></i></span>';}
+function hasValue(v){return v!==null&&v!==undefined&&v!=='';}
+function allVisibleColumns(rows){
+  return ALL_COLUMN_DEFS.filter(function(c){
+    if(c.always)return true;
+    return rows.some(function(r){return (c.keys||[]).some(function(k){return hasValue(r[k]);});});
+  });
+}
+function columnsForView(rows){
+  if(activeSource==='all'){currentAllColumns=allVisibleColumns(rows||[]);return currentAllColumns;}
+  return SOURCE_COLUMNS[activeSource]||SOURCE_COLUMNS.orders;
+}
+function renderTableHead(rows){
+  var cols=columnsForView(rows);
+  document.getElementById('anaHead').innerHTML='<tr>'+cols.map(function(c){return '<th scope="col"'+(c.id?' data-col="'+esc(c.id)+'"':'')+(c.sort?' data-sort="'+esc(c.sort)+'"':'')+(c.num?' class="num"':'')+(c.title?' data-ana-tip="'+esc(c.title)+'"':'')+'>'+c.label+(c.sort?sortHtml():'')+'</th>';}).join('')+'</tr>';
+  syncSortIcons();
+}
+function cmpRows(a,b){
+  var va=a[sortKey], vb=b[sortKey];
+  if(typeof va==='string'||typeof vb==='string')return sortDir*String(va==null?'':va).localeCompare(String(vb==null?'':vb),'zh');
+  va=(va===null||va===undefined||va==='')?0:Number(va)||0; vb=(vb===null||vb===undefined||vb==='')?0:Number(vb)||0;
+  if(sortDir===1){if(va===0&&vb!==0)return 1;if(vb===0&&va!==0)return -1;}
+  return sortDir*(va-vb);
+}
+function syncSortIcons(){
+  var ths=document.querySelectorAll('#anaTable thead th[data-sort]');
+  for(var i=0;i<ths.length;i++){
+    if(ths[i].dataset.sort===sortKey)ths[i].setAttribute('data-active-sort',sortDir===1?'asc':'desc');
+    else ths[i].removeAttribute('data-active-sort');
+  }
+}
+function productCell(r){
+  var nameFull=String(r.name||''),offerFull=String(r.offerId||''),skuFull=String(r.sku||''),imgSrc=String(r.img||'').trim();
+  var maskedSku=skuFull?maskSku(skuFull):'';
+  var nameVisible=(skuFull&&nameFull===skuFull)?maskedSku:nameFull;
+  var limit=Math.max(Math.min((offerFull||maskedSku).length+3,18),8);
+  var nameShow=nameVisible.length>limit?nameVisible.slice(0,limit)+'…':nameVisible;
+  var thumbHtml=imgSrc?'<div class="ana-thumb"><img src="'+esc(imgSrc)+'" alt="" data-ana-img-fallback></div>':'<div class="ana-thumb"><div class="ana-thumb-ph">🖼</div></div>';
+  var meta='';
+  if(offerFull)meta+='<span class="ana-copy-line"><span class="ana-sku" title="货号: '+esc(offerFull)+'">货号: '+esc(offerFull)+'</span><button type="button" class="inline-icon-btn meta-copy-btn" data-inline-copy="'+esc(offerFull)+'" data-copy-label="货号" title="复制货号" aria-label="复制货号">'+copyIcon()+'</button></span>';
+  if(skuFull)meta+='<span class="ana-copy-line"><span class="ana-sku" title="SKU: '+esc(maskedSku)+'">SKU: '+esc(maskedSku)+'</span><button type="button" class="inline-icon-btn meta-copy-btn" data-inline-copy="'+esc(skuFull)+'" data-copy-label="SKU" title="复制SKU" aria-label="复制SKU">'+copyIcon()+'</button></span>';
+  if(r.fulfillment)meta+='<span class="ana-sku">'+esc(String(r.fulfillment))+'</span>';
+  if(r.upDays!==null&&r.upDays!==undefined&&r.upDays!=='')meta+='<span class="ana-sku">上架 '+esc(r.upDays)+' 天</span>';
+  return '<td class="sku-cell"><div class="sku-row">'+thumbHtml+'<div class="ana-text">'+ozonProductLink.titleHtml(r,nameShow||'--',{className:'ana-name ozon-product-title-link',fullLabel:nameVisible||'--'})+meta+'</div></div></td>';
+}
+function nullNumber(v){return v===null||v===undefined||v===''?null:(Number.isFinite(Number(v))?Number(v):null);}
+function pv(v,digits,suffix){var n=nullNumber(v);return n===null?'<span class="dim">—</span>':fmt(n,digits)+(suffix||'');}
+function pairCell(aLabel,aValue,bLabel,bValue){return '<td class="num metric-stack"><small>'+esc(aLabel)+'</small>'+aValue+'<small>'+esc(bLabel)+'</small>'+bValue+'</td>';}
+function shopCell(r){return '<td class="cat-cell shop-cell-analysis">'+esc(r.shopName||r.shopId||'未知店铺')+'</td>';}
+
+function totalNumericValues(rows,key,positiveOnly){
+  var values=[],hadNumber=false;
+  (Array.isArray(rows)?rows:[]).forEach(function(row){
+    var n=nullNumber(row&&row[key]);
+    if(n===null)return;
+    hadNumber=true;
+    if(!positiveOnly||n>0)values.push(n);
+  });
+  return{values:values,hadNumber:hadNumber};
+}
+function sumRows(rows,key){
+  var info=totalNumericValues(rows,key,false);
+  if(!info.hadNumber)return null;
+  return info.values.reduce(function(sum,n){return sum+n;},0);
+}
+function avgRows(rows,key,positiveOnly){
+  var info=totalNumericValues(rows,key,positiveOnly===true);
+  if(!info.values.length)return info.hadNumber?0:null;
+  return info.values.reduce(function(sum,n){return sum+n;},0)/info.values.length;
+}
+function weightedAvgRows(rows,valueKey,weightKey){
+  var weighted=0,totalWeight=0,fallback=[];
+  (Array.isArray(rows)?rows:[]).forEach(function(row){
+    var value=nullNumber(row&&row[valueKey]);if(value===null)return;
+    fallback.push(value);
+    var weight=nullNumber(row&&row[weightKey]);
+    if(weight!==null&&weight>0){weighted+=value*weight;totalWeight+=weight;}
+  });
+  if(totalWeight>0)return weighted/totalWeight;
+  if(!fallback.length)return null;
+  return fallback.reduce(function(sum,n){return sum+n;},0)/fallback.length;
+}
+function ratioRows(rows,numeratorKey,denominatorKey){
+  var numerator=sumRows(rows,numeratorKey),denominator=sumRows(rows,denominatorKey);
+  if(numerator===null||denominator===null)return null;
+  if(denominator===0)return 0;
+  return numerator/denominator*100;
+}
+function distinctRows(rows,key){
+  var set=new Set();
+  (Array.isArray(rows)?rows:[]).forEach(function(row){var value=String(row&&row[key]||'').trim();if(value)set.add(value);});
+  return set.size;
+}
+function distinctProducts(rows){
+  var set=new Set();
+  (Array.isArray(rows)?rows:[]).forEach(function(row,index){
+    var shop=String(row&&row.shopName||'').trim();
+    var sku=String(row&&row.sku||'').trim();
+    if(shop&&sku)set.add(shop+'|'+sku);
+    else set.add('row:'+index);
+  });
+  return set.size;
+}
+function totalTextCell(main,sub,className){
+  return '<td class="'+(className||'cat-cell')+'"><span class="ana-total-main">'+esc(main)+'</span>'+(sub?'<span class="ana-total-sub">'+esc(sub)+'</span>':'')+'</td>';
+}
+function distinctShops(rows){
+  var set=new Set();
+  (Array.isArray(rows)?rows:[]).forEach(function(row){var name=String(row&&row.shopName||'').trim();if(name)set.add(name);});
+  return set.size;
+}
+function totalIndexCell(){return totalTextCell('总计','','seq-cell');}
+function totalShopCell(rows){return totalTextCell(distinctShops(rows)+' 个店铺','','cat-cell');}
+function totalCategoryCell(rows){return totalTextCell(distinctRows(rows,'category')+' 个类目','','cat-cell');}
+function totalProductCell(rows){return totalTextCell(distinctProducts(rows)+' 个商品','','sku-cell');}
+
+var TOTAL_SUM_KEYS=new Set([
+  'units','revenue','revenueRub','cancelled','returned','visitors','searchVisitors','cardVisitors','searchViews','cardViews','views',
+  'searchCartHits','cardCartHits','cartHits','returns','cancellations','sales','reviewCount','sessionCount','sessionCountSearch','drr','missedRevenue',
+  'orderUnits','orderRevenue','orderRevenueRub','orderCancelled','orderReturned',
+  'tianyanUnits','tianyanRevenue','tianyanVisitors','tianyanSearchVisitors','tianyanCardVisitors','tianyanSearchViews','tianyanCardViews','tianyanTotalViews',
+  'tianyanSearchCartHits','tianyanCardCartHits','tianyanTotalCartHits','tianyanReturns','tianyanCancellations',
+  'seerfarSales','seerfarRevenue','seerfarReviewCount','seerfarSessionCount','seerfarSessionCountSearch','seerfarDrr','seerfarViews','seerfarMissedRevenue'
+]);
+var TOTAL_AVG_KEYS=new Set([
+  'price','grossMargin','reviewRating','convToCartPdp','convToCartSearch','convViewToOrder','orderConversionRate','discount','promoRevenueShare','returnCancellationRate',
+  'seerfarPrice','seerfarGrossMargin','seerfarReviewRating','seerfarConvToCartPdp','seerfarConvToCartSearch','seerfarConvViewToOrder','seerfarOrderConversionRate',
+  'seerfarDiscount','seerfarPromoRevenueShare','seerfarReturnCancellationRate'
+]);
+function totalMetricValue(rows,key){
+  if(key==='conversion')return ratioRows(rows,'cartHits','visitors');
+  if(key==='searchCartRate')return ratioRows(rows,'searchCartHits','searchVisitors');
+  if(key==='cardCartRate')return ratioRows(rows,'cardCartHits','cardVisitors');
+  if(key==='tianyanConversion')return ratioRows(rows,'tianyanTotalCartHits','tianyanVisitors');
+  if(key==='tianyanSearchCartRate')return ratioRows(rows,'tianyanSearchCartHits','tianyanSearchVisitors');
+  if(key==='tianyanCardCartRate')return ratioRows(rows,'tianyanCardCartHits','tianyanCardVisitors');
+  if(key==='searchPosition'||key==='tianyanSearchPosition')return avgRows(rows,key,true);
+  if(key==='reviewRating')return weightedAvgRows(rows,'reviewRating','reviewCount');
+  if(key==='seerfarReviewRating')return weightedAvgRows(rows,'seerfarReviewRating','seerfarReviewCount');
+  if(TOTAL_SUM_KEYS.has(key))return sumRows(rows,key);
+  if(TOTAL_AVG_KEYS.has(key))return avgRows(rows,key,false);
+  return avgRows(rows,key,false);
+}
+function totalRowTitle(){
+  return '统计口径：数量、金额、浏览、加购、评论等求和；评分按评论数加权计算；价格、毛利率、折扣、位置及Seerfar比率取平均；天眼加购转化率按总加购÷总访客重新计算。';
+}
+function totalOrderRow(rows){
+  if(activeSource==='tianyan'){
+    return '<tr class="ana-total-row" data-ana-tip="'+esc(totalRowTitle())+'">'+totalIndexCell()+totalShopCell(rows)+totalCategoryCell(rows)+totalProductCell(rows)+
+      '<td class="num">'+pv(sumRows(rows,'units'))+'</td><td class="num">'+pv(sumRows(rows,'revenue'),2)+'</td><td class="num">'+pv(sumRows(rows,'visitors'))+'</td>'+
+      '<td class="num">'+pv(sumRows(rows,'searchVisitors'))+'</td><td class="num">'+pv(sumRows(rows,'cardVisitors'))+'</td>'+
+      '<td class="num">'+pv(sumRows(rows,'searchViews'))+'</td><td class="num">'+pv(sumRows(rows,'cardViews'))+'</td><td class="num">'+pv(sumRows(rows,'views'))+'</td>'+
+      '<td class="num">'+pv(sumRows(rows,'searchCartHits'))+'</td><td class="num">'+pv(sumRows(rows,'cardCartHits'))+'</td><td class="num">'+pv(sumRows(rows,'cartHits'))+'</td>'+
+      '<td class="num">'+pv(ratioRows(rows,'cartHits','visitors'),2,'%')+'</td><td class="num">'+pv(ratioRows(rows,'searchCartHits','searchVisitors'),2,'%')+'</td><td class="num">'+pv(ratioRows(rows,'cardCartHits','cardVisitors'),2,'%')+'</td>'+
+      '<td class="num">'+pv(sumRows(rows,'returns'))+'</td><td class="num">'+pv(sumRows(rows,'cancellations'))+'</td><td class="num">'+pv(avgRows(rows,'searchPosition',true),2)+'</td></tr>';
+  }
+  return '<tr class="ana-total-row" data-ana-tip="'+esc(totalRowTitle())+'">'+totalIndexCell()+totalShopCell(rows)+totalCategoryCell(rows)+totalProductCell(rows)+
+    '<td class="num">'+pv(sumRows(rows,'units'))+'</td><td class="num">'+moneyValue(sumRows(rows,'revenue'),'CNY')+'</td><td class="num">'+moneyValue(sumRows(rows,'revenueRub'),'RUB')+'</td><td class="num">'+pv(sumRows(rows,'cancelled'))+'</td><td class="num">'+pv(sumRows(rows,'returned'))+'</td></tr>';
+}
+function totalSeerfarRow(rows){
+  return '<tr class="ana-total-row" data-ana-tip="'+esc(totalRowTitle())+'">'+totalIndexCell()+totalShopCell(rows)+totalCategoryCell(rows)+totalProductCell(rows)+
+    '<td class="num">'+pv(sumRows(rows,'sales'))+'</td><td class="num">'+pv(sumRows(rows,'revenue'),2)+'</td>'+
+    pairCell('均价',pv(avgRows(rows,'price'),2,' ₽'),'平均毛利',pv(avgRows(rows,'grossMargin'),2,'%'))+
+    pairCell('加权评分',pv(weightedAvgRows(rows,'reviewRating','reviewCount'),2),'评论合计',pv(sumRows(rows,'reviewCount')))+
+    pairCell('商品卡合计',pv(sumRows(rows,'sessionCount')),'搜索曝光合计',pv(sumRows(rows,'sessionCountSearch')))+
+    pairCell('商品卡平均',pv(avgRows(rows,'convToCartPdp'),2,'%'),'搜索平均',pv(avgRows(rows,'convToCartSearch'),2,'%'))+
+    pairCell('展示平均',pv(avgRows(rows,'convViewToOrder'),2,'%'),'订单平均',pv(avgRows(rows,'orderConversionRate'),2,'%'))+
+    pairCell('广告费用合计',pv(sumRows(rows,'drr'),2),'平均折扣',pv(avgRows(rows,'discount'),2,'%'))+
+    pairCell('促销平均',pv(avgRows(rows,'promoRevenueShare'),2,'%'),'退货取消平均',pv(avgRows(rows,'returnCancellationRate'),2,'%'))+
+    pairCell('展示总量',pv(sumRows(rows,'views')),'错失销售额',pv(sumRows(rows,'missedRevenue'),2))+'</tr>';
+}
+function totalAllCell(column,rows){
+  if(column.id==='index')return totalIndexCell();
+  if(column.id==='shop')return totalShopCell(rows);
+  if(column.id==='category')return totalCategoryCell(rows);
+  if(column.id==='product')return totalProductCell(rows);
+  if(column.pair){
+    var p=column.pair;
+    return pairCell(p[0],pv(totalMetricValue(rows,p[1]),p[2],p[3]),p[4],pv(totalMetricValue(rows,p[5]),p[6],p[7]));
+  }
+  if(column.currency)return '<td class="num">'+moneyValue(totalMetricValue(rows,column.id),column.currency)+'</td>';
+  return '<td class="num">'+pv(totalMetricValue(rows,column.id),column.digits,column.suffix)+'</td>';
+}
+function totalAllRow(rows,cols){
+  return '<tr class="ana-total-row" data-ana-tip="'+esc(totalRowTitle())+'">'+cols.map(function(column){return totalAllCell(column,rows);}).join('')+'</tr>';
+}
+
+function seerfarBatchHasNext(data,page,products){
+  var count=Array.isArray(products)?products.length:0;
+  if(count<100)return false;
+  var total=Number(data&&data.productCount);
+  if(Number.isFinite(total)&&total>=0)return total>Number(page||1)*100;
+  return data&&data.hasNextPage===true;
+}
+function analysisToday(){return analysisCache.today();}
+function analysisRangeKey(source,shopId,rangeKey){return String(source||'')+'|'+String(shopId||'')+'|'+String(rangeKey||'');}
+function tianyanRowsForRange(rangeKey){
+  var byShop=tianyanByRange[String(rangeKey||'')]||{},rows=[];
+  Object.keys(byShop).forEach(function(shopId){(byShop[shopId]||[]).forEach(function(row){rows.push(row);});});
+  return rows;
+}
+function rememberTianyanRangeRows(rangeKey,shopId,rows){
+  rangeKey=String(rangeKey||'');shopId=String(shopId||'');
+  if(!rangeKey||!shopId)return;
+  if(!tianyanByRange[rangeKey])tianyanByRange[rangeKey]={};
+  tianyanByRange[rangeKey][shopId]=Array.isArray(rows)?rows.slice():[];
+}
+function rememberTianyanRangeMeta(rangeKey,shopId,meta){
+  rangeKey=String(rangeKey||'');shopId=String(shopId||'');
+  if(!rangeKey||!shopId)return;
+  if(!tianyanMetaByRange[rangeKey])tianyanMetaByRange[rangeKey]={};
+  tianyanMetaByRange[rangeKey][shopId]=meta&&typeof meta==='object'?meta:{};
+}
+function activateTianyanRange(rangeKey){
+  activeTianyanRangeKey=String(rangeKey||'');
+  tianyanRows=tianyanRowsForRange(activeTianyanRangeKey);
+}
+function selectedTianyanRangeKey(){
+  var range=tianyanRequestRange();
+  return range.dateFrom&&range.dateTo?(range.dateFrom+'..'+range.dateTo):'';
+}
+function syncTianyanRangeToSelection(){
+  var key=selectedTianyanRangeKey();
+  activateTianyanRange(key);
+  return key;
+}
+function persistAnalysisSnapshot(source,shopId,rangeKey,payload,fetchedAt){
+  if(!analysisCacheScope||!analysisCacheDate||!shopId||!rangeKey)return Promise.resolve(false);
+  return analysisCache.put({
+    scope:analysisCacheScope,acquiredDate:analysisCacheDate,source:source,shopId:String(shopId),
+    rangeKey:String(rangeKey),payload:payload,fetchedAt:fetchedAt||new Date().toISOString()
+  });
+}
+function persistSeerfarState(shopId){
+  shopId=String(shopId||'');
+  var state=seerfarByShop[shopId];
+  if(!state)return Promise.resolve(false);
+  return persistAnalysisSnapshot('seerfar',shopId,'past_30_days',state,state.fetchedAt);
+}
+function persistTianyanState(shop,data,rows){
+  var rangeKey=String(data&&data.dateFrom||'')+'..'+String(data&&data.dateTo||'');
+  return persistAnalysisSnapshot('tianyan',shop.id,rangeKey,{rows:rows,data:{
+    shopId:String(data&&data.shopId||shop.id),dateFrom:String(data&&data.dateFrom||''),dateTo:String(data&&data.dateTo||''),
+    capturedAt:String(data&&data.capturedAt||''),headers:Array.isArray(data&&data.headers)?data.headers:[],
+    summary:data&&data.summary&&typeof data.summary==='object'?data.summary:{},
+    timeline:data&&data.timeline&&typeof data.timeline==='object'?data.timeline:null,
+    totalCount:Number.isFinite(Number(data&&data.totalCount))?Number(data.totalCount):rows.length
+  }},data&&data.capturedAt);
+}
+function restoreAnalysisDayCache(){
+  analysisCacheDate=analysisToday();
+  return erpStorage.request('/api/auth/me').then(function(response){
+    if(!response.ok)throw new Error('无法确认当前分析缓存账号');
+    return response.json();
+  }).then(function(account){
+    var tenantId=erpStorage.getSelectedTenantId()||String(account.tenantId||'');
+    analysisCacheScope=analysisCache.scopeKey({userId:account.userId||account.username,tenantId:tenantId});
+    if(!analysisCacheScope)return[];
+    return analysisCache.listDay(analysisCacheScope,analysisCacheDate);
+  }).then(function(records){
+    var currentTianyan=tianyanRequestRange(),currentRange=currentTianyan.dateFrom&&currentTianyan.dateTo?(currentTianyan.dateFrom+'..'+currentTianyan.dateTo):'';
+    records.forEach(function(record){
+      if(!record||!record.payload)return;
+      if(record.source==='seerfar'&&record.rangeKey==='past_30_days'){
+        var state=record.payload||{};
+        seerfarByShop[String(record.shopId)]={
+          rows:Array.isArray(state.rows)?state.rows:[],summary:state.summary||null,
+          nextPage:Number(state.nextPage)||1,hasNextPage:state.hasNextPage===true,
+          fetchedAt:String(state.fetchedAt||record.fetchedAt||''),chargedBean:Number(state.chargedBean)||0,
+          requestKeys:state.requestKeys&&typeof state.requestKeys==='object'?state.requestKeys:{},
+          succeededPages:state.succeededPages&&typeof state.succeededPages==='object'?state.succeededPages:{}
+        };
+      }
+      if(record.source==='tianyan'){
+        var p=record.payload||{},rows=Array.isArray(p.rows)?p.rows:[],meta=p.data&&typeof p.data==='object'?p.data:{};
+        rememberTianyanRangeRows(record.rangeKey,record.shopId,rows);
+        rememberTianyanRangeMeta(record.rangeKey,record.shopId,meta);
+      }
+    });
+    activateTianyanRange(currentRange);
+    return records;
+  }).catch(function(){analysisCacheScope='';return[];});
+}
+function resetSeerfarCurrent(){
+  seerfarRows=[];seerfarSummary=null;seerfarShopId='';seerfarNextPage=1;seerfarHasNextPage=false;seerfarFetchedAt='';seerfarChargedBean=0;seerfarRequestKeys={};seerfarSucceededPages={};
+}
+function saveSeerfarCurrentState(){
+  if(!seerfarShopId)return;
+  seerfarByShop[seerfarShopId]={
+    rows:seerfarRows.slice(),summary:seerfarSummary,nextPage:seerfarNextPage,hasNextPage:seerfarHasNextPage,
+    fetchedAt:seerfarFetchedAt,chargedBean:seerfarChargedBean,
+    requestKeys:Object.assign({},seerfarRequestKeys),succeededPages:Object.assign({},seerfarSucceededPages)
+  };
+}
+function switchSeerfarShop(shopId){
+  shopId=String(shopId||'').trim();
+  if(seerfarShopId===shopId)return;
+  saveSeerfarCurrentState();
+  var state=shopId&&seerfarByShop[shopId];
+  resetSeerfarCurrent();
+  if(!state){seerfarShopId=shopId;return;}
+  seerfarShopId=shopId;
+  seerfarRows=state.rows.slice();seerfarSummary=state.summary;seerfarNextPage=state.nextPage;seerfarHasNextPage=state.hasNextPage;
+  seerfarFetchedAt=state.fetchedAt;seerfarChargedBean=state.chargedBean;
+  seerfarRequestKeys=Object.assign({},state.requestKeys);seerfarSucceededPages=Object.assign({},state.succeededPages);
+}
+function seerfarRowsForAll(){
+  saveSeerfarCurrentState();
+  var sel=selectedShop(), rows=[];
+  Object.keys(seerfarByShop).forEach(function(shopId){
+    if(sel&&sel.id&&shopId!==sel.id)return;
+    (seerfarByShop[shopId].rows||[]).forEach(function(row){if(rowMatchesSelectedShop(row))rows.push(row);});
+  });
+  return rows;
+}
+function tianyanRowsForView(){return tianyanRows.filter(rowMatchesSelectedShop);}
+function tianyanMetaForView(){
+  var byShop=tianyanMetaByRange[String(activeTianyanRangeKey||'')]||{};
+  var sel=selectedShop(), metas=[];
+  Object.keys(byShop).forEach(function(shopId){
+    if(sel&&sel.id&&String(sel.id)!==String(shopId))return;
+    var meta=byShop[shopId];if(meta&&typeof meta==='object')metas.push(meta);
+  });
+  if(!metas.length)return null;
+  if(metas.length===1)return metas[0];
+
+  var additive=['ordered_units','revenue','session_view','session_view_search','session_view_pdp','hits_view_search','hits_view_pdp','hits_view','hits_tocart_search','hits_tocart_pdp','hits_tocart','cancellations','returns'];
+  var summary={},positionValues=[];
+  metas.forEach(function(meta){
+    var source=meta.summary&&typeof meta.summary==='object'?meta.summary:{};
+    additive.forEach(function(key){var n=nullNumber(source[key]);if(n!==null)summary[key]=(summary[key]||0)+n;});
+    var pos=nullNumber(source.position_category);if(pos!==null&&pos>0)positionValues.push(pos);
+  });
+  if(positionValues.length)summary.position_category=positionValues.reduce(function(a,b){return a+b;},0)/positionValues.length;
+  if(hasValue(summary.hits_tocart)&&hasValue(summary.session_view))summary.conv_tocart=summary.session_view===0?0:summary.hits_tocart/summary.session_view*100;
+  if(hasValue(summary.hits_tocart_search)&&hasValue(summary.session_view_search))summary.conv_tocart_search=summary.session_view_search===0?0:summary.hits_tocart_search/summary.session_view_search*100;
+  if(hasValue(summary.hits_tocart_pdp)&&hasValue(summary.session_view_pdp))summary.conv_tocart_pdp=summary.session_view_pdp===0?0:summary.hits_tocart_pdp/summary.session_view_pdp*100;
+
+  var timelineMap={},granularity='';
+  metas.forEach(function(meta){
+    var timeline=meta.timeline&&typeof meta.timeline==='object'?meta.timeline:null;
+    if(!timeline||!Array.isArray(timeline.points))return;
+    if(!granularity)granularity=String(timeline.granularity||'');
+    timeline.points.forEach(function(point){
+      var key=String(point&&point.key||point&&point.label||'');if(!key)return;
+      if(!timelineMap[key])timelineMap[key]={key:key,label:String(point.label||key),values:{}};
+      var values=point.values&&typeof point.values==='object'?point.values:{};
+      additive.forEach(function(metric){var n=nullNumber(values[metric]);if(n!==null)timelineMap[key].values[metric]=(timelineMap[key].values[metric]||0)+n;});
+    });
+  });
+  var points=Object.keys(timelineMap).sort().map(function(key){return timelineMap[key];});
+  return{
+    shopId:'all',dateFrom:metas[0].dateFrom,dateTo:metas[0].dateTo,capturedAt:'',
+    summary:summary,timeline:points.length?{granularity:granularity||'day',points:points,failedPoints:0}:null,
+    totalCount:metas.reduce(function(sum,meta){return sum+(Number(meta.totalCount)||0);},0)
+  };
+}
+function tianyanSummaryNumber(rawKey,rowKey){
+  var meta=tianyanMetaForView(),summary=meta&&meta.summary&&typeof meta.summary==='object'?meta.summary:{};
+  var exact=nullNumber(summary[rawKey]);if(exact!==null)return exact;
+  return sumRows(tianyanRowsForView(),rowKey);
+}
+
+function mergeIdentity(target,row){
+  if(!target.name&&row.name)target.name=row.name;
+  if(!target.offerId&&row.offerId)target.offerId=row.offerId;
+  if(!target.category&&row.category)target.category=row.category;
+  if(!target.img&&row.img)target.img=row.img;
+  if(!target.fulfillment&&row.fulfillment)target.fulfillment=row.fulfillment;
+  if(!hasValue(target.upDays)&&hasValue(row.upDays))target.upDays=row.upDays;
+}
+function allMergeTarget(map,row,source){
+  var shopId=String(row.shopId||'').trim();
+  var shopName=String(shopNameById(shopId,row.shopName)||'').trim();
+  var sku=String(row.sku||'').trim();
+  var fallback=String(row.offerId||row.name||'').trim();
+  var shopKey='name:'+shopName;
+  var identity=sku?('sku:'+sku):(source+':fallback:'+fallback);
+  var key=shopKey+'|'+identity;
+  if(!map[key])map[key]={shopId:shopId,shopName:shopName,shopKey:shopKey,sku:sku,offerId:String(row.offerId||''),name:String(row.name||sku||fallback||'未知'),category:String(row.category||''),img:String(row.img||'')};
+  mergeIdentity(map[key],row);
+  return map[key];
+}
+function buildAllRows(){
+  var map={};
+  aggregate(filterOrders(),{byShop:true}).skus.forEach(function(row){
+    var t=allMergeTarget(map,row,'orders');
+    t.orderUnits=row.units;t.orderRevenue=row.revenue;t.orderRevenueRub=row.revenueRub;t.orderCancelled=row.cancelled;t.orderReturned=row.returned;
+  });
+  tianyanRowsForView().forEach(function(row){
+    var t=allMergeTarget(map,row,'tianyan');
+    t.tianyanUnits=nullNumber(row.units);t.tianyanRevenue=nullNumber(row.revenue);t.tianyanVisitors=nullNumber(row.visitors);
+    t.tianyanSearchVisitors=nullNumber(row.searchVisitors);t.tianyanCardVisitors=nullNumber(row.cardVisitors);
+    t.tianyanSearchViews=nullNumber(row.searchViews);t.tianyanCardViews=nullNumber(row.cardViews);t.tianyanTotalViews=nullNumber(row.views);
+    t.tianyanSearchCartHits=nullNumber(row.searchCartHits);t.tianyanCardCartHits=nullNumber(row.cardCartHits);t.tianyanTotalCartHits=nullNumber(row.cartHits);
+    t.tianyanConversion=nullNumber(row.conversion);t.tianyanSearchCartRate=nullNumber(row.searchCartRate);t.tianyanCardCartRate=nullNumber(row.cardCartRate);
+    t.tianyanReturns=nullNumber(row.returns);t.tianyanCancellations=nullNumber(row.cancellations);t.tianyanSearchPosition=nullNumber(row.searchPosition);
+  });
+  seerfarRowsForAll().forEach(function(row){
+    var t=allMergeTarget(map,row,'seerfar');
+    t.seerfarSales=nullNumber(row.sales);t.seerfarRevenue=nullNumber(row.revenue);t.seerfarPrice=nullNumber(row.price);t.seerfarGrossMargin=nullNumber(row.grossMargin);
+    t.seerfarReviewRating=nullNumber(row.reviewRating);t.seerfarReviewCount=nullNumber(row.reviewCount);t.seerfarSessionCount=nullNumber(row.sessionCount);t.seerfarSessionCountSearch=nullNumber(row.sessionCountSearch);
+    t.seerfarConvToCartPdp=nullNumber(row.convToCartPdp);t.seerfarConvToCartSearch=nullNumber(row.convToCartSearch);t.seerfarConvViewToOrder=nullNumber(row.convViewToOrder);t.seerfarOrderConversionRate=nullNumber(row.orderConversionRate);
+    t.seerfarDrr=nullNumber(row.drr);t.seerfarDiscount=nullNumber(row.discount);t.seerfarPromoRevenueShare=nullNumber(row.promoRevenueShare);t.seerfarReturnCancellationRate=nullNumber(row.returnCancellationRate);
+    t.seerfarViews=nullNumber(row.views);t.seerfarMissedRevenue=nullNumber(row.missedRevenue);
+  });
+  return Object.values(map).map(function(row){return enrichIdentityFromOnline(row);});
+}
+function allMetricCell(column,row,rowIndex){
+  if(column.id==='index')return '<td class="seq-cell">'+(rowIndex+1)+'</td>';
+  if(column.id==='shop')return '<td class="cat-cell shop-cell-analysis">'+esc(row.shopName||row.shopId||'未知店铺')+'</td>';
+  if(column.id==='category')return categoryCell(row.category);
+  if(column.id==='product')return productCell(row);
+  if(column.pair){var p=column.pair;return pairCell(p[0],pv(row[p[1]],p[2],p[3]),p[4],pv(row[p[5]],p[6],p[7]));}
+  if(column.currency)return '<td class="num">'+moneyValue(row[column.id],column.currency)+'</td>';
+  return '<td class="num">'+pv(row[column.id],column.digits,column.suffix)+'</td>';
+}
+function renderAllRows(rows,cols,emptyMessage){
+  var tbody=document.getElementById('anaBody');
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="'+cols.length+'" class="ana-empty">'+esc(emptyMessage||'暂无已获取的分析数据')+'</td></tr>';return;}
+  tbody.innerHTML=totalAllRow(rows,cols)+rows.map(function(row,rowIndex){return '<tr>'+cols.map(function(c){return allMetricCell(c,row,rowIndex);}).join('')+'</tr>';}).join('');
+}
+function renderOrderRows(rows,emptyMessage){
+  var tbody=document.getElementById('anaBody'), cols=SOURCE_COLUMNS[activeSource]||SOURCE_COLUMNS.orders;
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="'+cols.length+'" class="ana-empty">'+esc(emptyMessage||'暂无数据')+'</td></tr>';return;}
+  tbody.innerHTML=totalOrderRow(rows)+rows.map(function(r,rowIndex){
+    var catFull=String(r.category||'');
+    if(activeSource==='tianyan'){
+      return '<tr><td class="seq-cell">'+(rowIndex+1)+'</td>'+shopCell(r)+categoryCell(catFull)+productCell(r)+
+        '<td class="num">'+pv(r.units)+'</td><td class="num">'+pv(r.revenue,2)+'</td><td class="num">'+pv(r.visitors)+'</td>'+
+        '<td class="num">'+pv(r.searchVisitors)+'</td><td class="num">'+pv(r.cardVisitors)+'</td>'+
+        '<td class="num">'+pv(r.searchViews)+'</td><td class="num">'+pv(r.cardViews)+'</td><td class="num">'+pv(r.views)+'</td>'+
+        '<td class="num">'+pv(r.searchCartHits)+'</td><td class="num">'+pv(r.cardCartHits)+'</td><td class="num">'+pv(r.cartHits)+'</td>'+
+        '<td class="num">'+pv(r.conversion,2,'%')+'</td><td class="num">'+pv(r.searchCartRate,2,'%')+'</td><td class="num">'+pv(r.cardCartRate,2,'%')+'</td>'+
+        '<td class="num">'+pv(r.returns)+'</td><td class="num">'+pv(r.cancellations)+'</td><td class="num">'+pv(r.searchPosition)+'</td></tr>';
+    }
+    return '<tr><td class="seq-cell">'+(rowIndex+1)+'</td>'+shopCell(r)+categoryCell(catFull)+productCell(r)+'<td class="num">'+pv(r.units)+'</td><td class="num">'+moneyValue(r.revenue,'CNY')+'</td><td class="num">'+moneyValue(r.revenueRub,'RUB')+'</td><td class="num">'+pv(r.cancelled)+'</td><td class="num">'+pv(r.returned)+'</td></tr>';
+  }).join('');
+}
+function renderSeerfarRows(rows,emptyMessage){
+  var tbody=document.getElementById('anaBody');
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="'+SOURCE_COLUMNS.seerfar.length+'" class="ana-empty">'+esc(emptyMessage||'请选择一个店铺后点击“获取seerfar数据”')+'</td></tr>';return;}
+  tbody.innerHTML=totalSeerfarRow(rows)+rows.map(function(r,rowIndex){
+    var catFull=String(r.category||'');
+    return '<tr><td class="seq-cell">'+(rowIndex+1)+'</td>'+shopCell(r)+categoryCell(catFull)+productCell(r)+
+      '<td class="num">'+pv(r.sales)+'</td><td class="num">'+pv(r.revenue,2)+'</td>'+
+      pairCell('价格',pv(r.price,2,' ₽'),'毛利率',pv(r.grossMargin,2,'%'))+
+      pairCell('评分',pv(r.reviewRating,2),'评论',pv(r.reviewCount))+
+      pairCell('商品卡',pv(r.sessionCount),'搜索曝光',pv(r.sessionCountSearch))+
+      pairCell('商品卡',pv(r.convToCartPdp,2,'%'),'搜索',pv(r.convToCartSearch,2,'%'))+
+      pairCell('展示',pv(r.convViewToOrder,2,'%'),'订单',pv(r.orderConversionRate,2,'%'))+
+      pairCell('广告费用',pv(r.drr,2),'平均折扣',pv(r.discount,2,'%'))+
+      pairCell('促销占比',pv(r.promoRevenueShare,2,'%'),'退货取消',pv(r.returnCancellationRate,2,'%'))+
+      pairCell('展示总量',pv(r.views),'错失销售额',pv(r.missedRevenue,2))+'</tr>';
+  }).join('');
+}
+function normalizeSeerfarProduct(p,shop){
+  p=p&&typeof p==='object'?p:{};shop=shop||{};
+  var ci=p.categoryInfo&&typeof p.categoryInfo==='object'?p.categoryInfo:{};
+  var fulfillment=Array.isArray(p.fulfillment)?p.fulfillment.join(' / '):String(p.fulfillment||'');
+  var shopName=String(shop.name||'');
+  var sku=String(p.sku||'');
+  var onlineMeta=onlineProductMeta(shopName,[sku,p.productId,p.offerId,p.id]);
+  return {
+    shopId:String(shop.id||''),shopName:shopName,
+    category:String(ci.cnTitlePath||ci.titlePath||(ci.category&&ci.category.cnTitle)||'').trim()||(onlineMeta&&onlineMeta.category)||'',
+    name:String(p.title||p.sku||''),sku:sku,offerId:'',img:String(p.imageUrl||'').trim()||(onlineMeta&&onlineMeta.img)||'',fulfillment:fulfillment,upDays:p.upDays,
+    sales:nullNumber(p.sales),revenue:nullNumber(p.revenue),price:nullNumber(p.price),grossMargin:nullNumber(p.grossMargin),
+    reviewRating:nullNumber(p.reviewRating),reviewCount:nullNumber(p.reviewCount),sessionCount:nullNumber(p.sessionCount),sessionCountSearch:nullNumber(p.sessionCountSearch),
+    convToCartPdp:nullNumber(p.convToCartPdp),convToCartSearch:nullNumber(p.convToCartSearch),convViewToOrder:nullNumber(p.convViewToOrder),orderConversionRate:nullNumber(p.orderConversionRate),
+    drr:nullNumber(p.drr),discount:nullNumber(p.discount),promoRevenueShare:nullNumber(p.promoRevenueShare),returnCancellationRate:nullNumber(p.returnCancellationRate),
+    views:nullNumber(p.views),missedRevenue:nullNumber(p.missedRevenue)
+  };
+}
+function renderTable(rows,emptyMessage){
+  document.getElementById('tablePanel').hidden=false;
+  var list=rows.slice().sort(cmpRows);
+  var search=document.getElementById('skuSearch').value.trim().toLowerCase();
+  if(search)list=list.filter(function(r){
+    return String(r.sku||'').toLowerCase().indexOf(search)>=0||String(r.name||'').toLowerCase().indexOf(search)>=0||
+      String(r.category||'').toLowerCase().indexOf(search)>=0||String(r.shopName||'').toLowerCase().indexOf(search)>=0;
+  });
+  var cols=columnsForView(list);
+  renderTableHead(list);
+  if(activeSource==='all')renderAllRows(list,cols,emptyMessage);
+  else if(activeSource==='seerfar')renderSeerfarRows(list,emptyMessage);
+  else renderOrderRows(list,emptyMessage);
+}
+function clearSeerfarState(){
+  saveSeerfarCurrentState();resetSeerfarCurrent();
+  document.getElementById('seerfarMoreBtn').hidden=true;
+}
+function sourceMetaText(){
+  if(activeSource==='all')return '数据源：订单数据 + 天眼数据 + Seerfar数据 · 按店铺名 + SKU合并 · 仅显示非空列';
+  if(activeSource==='orders')return '数据源：订单管理';
+  if(activeSource==='tianyan')return tianyanRowsForView().length?'数据源：Ozon Seller分析 · 17项天眼指标 · 周期 '+(activeTianyanRangeKey||'已获取'):'数据源：Ozon Seller分析 · 请先在 Ozon 获取天眼数据';
+  if(activeSource==='seerfar'&&!selectedShop()){var loaded=seerfarRowsForAll().length;return '数据源：Seerfar · 已加载 '+loaded+' 条跨店铺数据 · 查看不扣费';}
+  if(!seerfarSummary)return '数据源：Seerfar · 固定近30天 · '+(seerfarPriceBean==null?'按当前配置计费':seerfarPriceBean+' AI豆/100条');
+  var total=Number(seerfarSummary.productCount)||seerfarRows.length;
+  var cache=seerfarFetchedAt?(' · 数据时间 '+String(seerfarFetchedAt).replace('T',' ').slice(0,19)):'';
+  return '数据源：Seerfar近30天 · 已获取 '+seerfarRows.length+'/'+total+' 条 · 本次已扣 '+seerfarChargedBean+' AI豆'+cache;
+}
+function updateDataTabCounts(){
+  document.getElementById('tabCountOrders').textContent=aggregate(filterOrders(),{byShop:true}).skus.length;
+  document.getElementById('tabCountTianyan').textContent=tianyanRowsForView().length;
+  document.getElementById('tabCountSeerfar').textContent=seerfarRowsForAll().length;
+  document.getElementById('tabCountAll').textContent=buildAllRows().length;
+}
+function updateSourceChrome(){
+  document.querySelectorAll('#analysisDataTabs [data-analysis-tab]').forEach(function(btn){btn.classList.toggle('on',btn.dataset.analysisTab===activeSource);});
+  document.getElementById('tableTitle').textContent=activeSource==='all'?'全部来源商品明细':activeSource==='orders'?'订单商品明细':activeSource==='tianyan'?'天眼Premium商品指标':'Seerfar近30天商品指标';
+  document.getElementById('sourceMeta').textContent=sourceMetaText();
+  var lockDates=activeSource==='seerfar';
+  document.querySelectorAll('#presets button').forEach(function(btn){btn.disabled=lockDates;});
+  document.getElementById('dateFrom').disabled=lockDates;document.getElementById('dateTo').disabled=lockDates;
+  var shop=selectedShop();
+  document.getElementById('seerfarMoreBtn').hidden=!(activeSource==='seerfar'&&shop&&shop.id&&seerfarRows.length>=100&&seerfarHasNextPage===true);
+  updateDataTabCounts();
+}
+function renderAllView(){
+  var filtered=filterOrders();
+  syncTianyanRangeToSelection();
+  var orderData=aggregate(filtered),rows=buildAllRows();
+  document.getElementById('emptyHint').hidden=rows.length>0;
+  renderAllKPIs(rows,orderData);
+  renderAllChart(rows);
+  updateSourceChrome();
+  renderTable(rows,rows.length?'没有匹配的合并数据':'当前还没有可合并的数据，请先获取订单、天眼或Seerfar数据');
+}
+function renderOrdersView(){
+  var filtered=filterOrders();updateSourceChrome();
+  if(!filtered.length){
+    var withDate=0;orders.forEach(function(o){if(o&&orderDateOf(o))withDate++;});
+    var hint=document.getElementById('emptyHint');hint.hidden=false;
+    hint.textContent='当前筛选没有订单 · 本地共 '+orders.length+' 单（含有效日期 '+withDate+' 单）· 可点“刷新”重新拉取服务器数据';
+    renderKPIs(aggregate(filtered));renderOrderChart([]);renderTable([],'暂无订单数据');return;
+  }
+  document.getElementById('emptyHint').hidden=true;
+  var data=aggregate(filtered),tableData=aggregate(filtered,{byShop:true});document.getElementById('kpiRow').hidden=false;document.getElementById('chartPanel').hidden=false;
+  renderKPIs(data);renderOrderChart(data.daily);renderTable(tableData.skus);
+}
+function renderSeerfarView(){
+  document.getElementById('emptyHint').hidden=true;
+  var shop=selectedShop();
+  if(!shop||!shop.id){
+    saveSeerfarCurrentState();
+    var allRows=seerfarRowsForAll();
+    renderSeerfarKPIs(null,allRows);
+    updateSourceChrome();
+    renderSeerfarChart(allRows);
+    renderTable(allRows,allRows.length?'没有匹配的Seerfar商品':'当前尚未获取任何店铺的Seerfar数据');
+    return;
+  }
+  switchSeerfarShop(shop.id);
+  renderSeerfarKPIs(seerfarSummary,seerfarRows);
+  updateSourceChrome();renderSeerfarChart(seerfarRows);renderTable(seerfarRows,seerfarRows.length?'没有匹配的Seerfar商品':'该店铺尚未获取Seerfar数据');
+}
+function renderTianyanView(){
+  filterOrders();
+  syncTianyanRangeToSelection();
+  var rows=tianyanRowsForView();
+  document.getElementById('emptyHint').hidden=rows.length>0;
+  renderTianyanKPIs(rows);
+  updateSourceChrome();
+  renderTianyanChart(rows);
+  renderTable(rows,rows.length?'没有匹配的天眼数据':'当前周期尚未获取天眼数据，请选择具体店铺后点击上方“获取天眼数据”');
+}
+function renderCurrentSource(){
+  if(activeSource==='all'){renderAllView();return;}
+  if(activeSource==='orders'){renderOrdersView();return;}
+  if(activeSource==='seerfar'){renderSeerfarView();return;}
+  renderTianyanView();
+}
+function refresh(){renderCurrentSource();}
+
+function moscowTodayText(){
+  var parts=new Intl.DateTimeFormat('en-US',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  var map={};parts.forEach(function(item){map[item.type]=item.value;});
+  return map.year+'-'+map.month+'-'+map.day;
+}
+function addIsoDays(text,delta){
+  var d=new Date(String(text||'')+'T00:00:00Z');if(!Number.isFinite(d.getTime()))return'';d.setUTCDate(d.getUTCDate()+Number(delta||0));return d.toISOString().slice(0,10);
+}
+function tianyanRequestRange(){
+  var from=String(document.getElementById('dateFrom').value||'').trim();
+  var to=String(document.getElementById('dateTo').value||'').trim();
+  if(!from||!to){
+    if(activePreset==='all')return{dateFrom:'',dateTo:'',days:0};
+    var preset=activePreset==='custom'?rangeCustom(customFrom,customTo):rangePreset(activePreset);
+    if(preset){from=fmtDate(preset.start);to=fmtDate(preset.end);}
+  }
+  var start=Date.parse(from+'T00:00:00Z'),end=Date.parse(to+'T00:00:00Z');
+  var days=Number.isFinite(start)&&Number.isFinite(end)&&end>=start?Math.floor((end-start)/86400000)+1:0;
+  return{dateFrom:from,dateTo:to,days:days};
+}
+function workspaceBridgeWindow(){try{return window.top&&window.top!==window?window.top:window;}catch(_){return window;}}
+function requestTianyanRangeFromPlugin(shop,range){
+  return new Promise(function(resolve,reject){
+    var bridge=workspaceBridgeWindow();
+    var requestId='tianyan-range-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+    var waitMs=range.days<=1?80000:(range.days<=7?120000:190000);
+    var settled=false;
+    var ackTimer=setTimeout(function(){fail('当前ERP页面没有检测到同一浏览器里的网研ERP插件。请用已安装插件的同一浏览器打开ERP，并刷新页面后重试。','same_browser_plugin_missing');},1800);
+    var timer=setTimeout(function(){fail('读取当前天眼周期超时，请确认 Ozon Seller“我的分析”页面已打开并刷新。','tianyan_read_timeout');},waitMs);
+    function cleanup(){
+      clearTimeout(ackTimer);clearTimeout(timer);
+      bridge.removeEventListener('wyerp:tianyan-range-bridge-ack',onAck);
+      bridge.removeEventListener('wyerp:tianyan-range-result',onResult);
+    }
+    function fail(message,code){
+      if(settled)return;settled=true;cleanup();
+      var error=new Error(message||'天眼周期读取失败。');error.code=code||'tianyan_read_failed';reject(error);
+    }
+    function onAck(event){
+      var detail=event&&event.detail||{};if(detail.requestId!==requestId)return;
+      clearTimeout(ackTimer);
+    }
+    function onResult(event){
+      var detail=event&&event.detail||{};if(detail.requestId!==requestId)return;
+      if(detail.ok!==true){fail(detail.message||'天眼周期读取失败。',detail.code||'tianyan_read_failed');return;}
+      if(settled)return;settled=true;cleanup();resolve(detail.data||{});
+    }
+    bridge.addEventListener('wyerp:tianyan-range-bridge-ack',onAck);
+    bridge.addEventListener('wyerp:tianyan-range-result',onResult);
+    try{
+      bridge.dispatchEvent(new bridge.CustomEvent('wyerp:tianyan-range',{detail:{
+        requestId:requestId,clientId:shop.id,dateFrom:range.dateFrom,dateTo:range.dateTo
+      }}));
+    }catch(error){fail('天眼插件桥调用失败，请刷新ERP页面后重试。','plugin_bridge_failed');}
+  });
+}
+function requestTianyanPassiveLatestFromPlugin(shop){
+  return new Promise(function(resolve){
+    var bridge=workspaceBridgeWindow();
+    var requestId='tianyan-passive-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+    var timer=setTimeout(function(){bridge.removeEventListener('wyerp:tianyan-passive-latest-result',onResult);resolve(null);},3500);
+    function onResult(event){
+      var detail=event&&event.detail||{};if(detail.requestId!==requestId)return;
+      clearTimeout(timer);bridge.removeEventListener('wyerp:tianyan-passive-latest-result',onResult);
+      resolve(detail.ok===true&&detail.data&&typeof detail.data==='object'?detail.data:null);
+    }
+    bridge.addEventListener('wyerp:tianyan-passive-latest-result',onResult);
+    bridge.dispatchEvent(new bridge.CustomEvent('wyerp:tianyan-passive-latest',{detail:{requestId:requestId,clientId:shop.id}}));
+  });
+}
+function tianyanPassiveSku(row){return String(row&&(row.sku||row.product_id||row.productId||row.offer_id||row.offerId||row.id)||'').trim();}
+function normalizeTianyanCacheRow(item,shop,data){
+  item=item&&typeof item==='object'?item:{};var sku=String(item.sku||'').trim(),values=item.values&&typeof item.values==='object'?item.values:{};
+  var shopName=String(shop.name||shopNameById(data.shopId,''));
+  var productId=String(item.productId||'');
+  var onlineMeta=onlineProductMeta(shopName,[sku,productId]);
+  return{
+    shopId:String(data.shopId||shop.id||''),shopName:shopName,
+    sku:sku,offerId:productId,name:String(item.product||sku||'未知'),
+    category:String(item.category||'').trim()||(onlineMeta&&onlineMeta.category)||'',
+    img:String(item.img||'').trim()||(onlineMeta&&onlineMeta.img)||'',
+    units:nullNumber(values.ordered_units),revenue:nullNumber(values.revenue),
+    visitors:nullNumber(values.session_view),searchVisitors:nullNumber(values.session_view_search),cardVisitors:nullNumber(values.session_view_pdp),
+    searchViews:nullNumber(values.hits_view_search),cardViews:nullNumber(values.hits_view_pdp),views:nullNumber(values.hits_view),
+    searchCartHits:nullNumber(values.hits_tocart_search),cardCartHits:nullNumber(values.hits_tocart_pdp),cartHits:nullNumber(values.hits_tocart),
+    conversion:nullNumber(values.conv_tocart),searchCartRate:nullNumber(values.conv_tocart_search),cardCartRate:nullNumber(values.conv_tocart_pdp),
+    returns:nullNumber(values.returns),cancellations:nullNumber(values.cancellations),searchPosition:nullNumber(values.position_category),
+    range:{dateFrom:String(data.dateFrom||''),dateTo:String(data.dateTo||'')},fetchedAt:String(data.capturedAt||''),source:'ozon_tianyan_cache'
+  };
+}
+function usableTianyanProductRow(row){
+  return Boolean(row&&String(row.sku||'').trim()&&String(row.category||'').trim()&&String(row.img||'').trim());
+}
+function fetchTianyanCachedData(){
+  var shop=selectedShop();activeSource='tianyan';sortKey='units';sortDir=-1;
+  if(!shop||!shop.id){renderTianyanView();showAnaToast('请先选择一个具体店铺，再获取天眼数据');return Promise.resolve();}
+  var range=tianyanRequestRange();
+  if(!range.dateFrom||!range.dateTo||range.days<1||range.days>90){
+    renderTianyanView();showAnaToast('天眼只支持当前选择的1至90天日期范围，请先选择昨天、周、月或自定义日期');return Promise.resolve();
+  }
+  var rangeKey=range.dateFrom+'..'+range.dateTo;
+  var cachedRows=tianyanByRange[rangeKey]&&tianyanByRange[rangeKey][String(shop.id)];
+  var cachedMeta=tianyanMetaByRange[rangeKey]&&tianyanMetaByRange[rangeKey][String(shop.id)];
+  if(Array.isArray(cachedRows)&&cachedRows.length&&cachedMeta&&cachedMeta.timeline&&Array.isArray(cachedMeta.timeline.points)&&cachedMeta.timeline.points.length){
+    activateTianyanRange(rangeKey);
+    showAnaToast('今天已获取过 '+range.dateFrom+' 至 '+range.dateTo+' 的天眼数据，已直接使用缓存');
+    renderTianyanView();
+    return Promise.resolve({cached:true,rows:cachedRows});
+  }
+
+  var btn=document.getElementById('srcTianyanBtn'),oldText=btn.textContent;
+  btn.disabled=true;btn.textContent='获取中…';
+  return requestTianyanRangeFromPlugin(shop,range).then(function(data){
+    var returnedShop=String(data.shopId||'').trim();
+    if(returnedShop&&returnedShop!==String(shop.id))throw new Error('天眼返回店铺与当前选择店铺不一致，请切换到对应 Ozon Seller 店铺。');
+    if(String(data.dateFrom||'')!==range.dateFrom||String(data.dateTo||'')!==range.dateTo)throw new Error('天眼返回的日期范围与分析页当前筛选不一致。');
+
+    var incomingRows=Array.isArray(data.rows)?data.rows:[];
+    var normalizedIncoming=incomingRows.map(function(item){return normalizeTianyanCacheRow(item,shop,data);}).filter(usableTianyanProductRow);
+    var normalizedRows=Array.isArray(cachedRows)&&cachedRows.length?cachedRows:normalizedIncoming;
+    var meta={
+      shopId:String(shop.id),dateFrom:range.dateFrom,dateTo:range.dateTo,
+      capturedAt:String(data.capturedAt||new Date().toISOString()),
+      headers:Array.isArray(data.headers)?data.headers:[],
+      summary:data.summary&&typeof data.summary==='object'?data.summary:{},
+      timeline:data.timeline&&typeof data.timeline==='object'?data.timeline:null,
+      totalCount:Number.isFinite(Number(data.totalCount))?Number(data.totalCount):normalizedRows.length
+    };
+    rememberTianyanRangeRows(rangeKey,shop.id,normalizedRows);
+    rememberTianyanRangeMeta(rangeKey,shop.id,meta);
+    activateTianyanRange(rangeKey);
+    persistTianyanState(shop,meta,normalizedRows).catch(function(){});
+
+    var failed=Number(meta.timeline&&meta.timeline.failedPoints)||0;
+    var trendText=meta.timeline?(meta.timeline.granularity==='hour'?'按小时':'按日期'):'无趋势';
+    showAnaToast('已获取 '+normalizedRows.length+' 条天眼数据 · '+range.dateFrom+' → '+range.dateTo+' · '+trendText+(failed?' · '+failed+' 个时间点失败':''));
+    renderTianyanView();
+    return data;
+  }).catch(function(error){
+    showAnaToast((error&&error.message)||'天眼数据获取失败。');
+    renderTianyanView();
+    throw error;
+  }).finally(function(){btn.disabled=false;btn.textContent=oldText;});
+}
+
+function createAnalysisRequestKey(){
+  if(window.crypto&&typeof window.crypto.randomUUID==='function')return 'seerfar-'+window.crypto.randomUUID();
+  return 'seerfar-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,14);
+}
+function fetchSeerfarPage(pageNumber,reset){
+  var shop=selectedShop();
+  if(!shop||!shop.id){showAnaToast('请先选择一个具体店铺，再获取Seerfar数据');renderSeerfarView();return Promise.resolve();}
+  switchSeerfarShop(shop.id);
+  var page=Number(pageNumber)||1;
+  var succeeded=Boolean(seerfarSucceededPages[page]);
+  if(!seerfarRequestKeys[page]||succeeded)seerfarRequestKeys[page]=createAnalysisRequestKey();
+  var requestKey=seerfarRequestKeys[page];
+  var btn=page===1?document.getElementById('srcSeerfarBtn'):document.getElementById('seerfarMoreBtn');
+  btn.disabled=true;
+  var oldText=btn.textContent;
+  btn.textContent=page===1?'获取中…':'正在获取…';
+  return erpStorage.request('/api/shop-analysis/seerfar',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Idempotency-Key':requestKey},
+    body:JSON.stringify({shopId:shop.id,pageNumber:page})
+  }).then(function(response){
+    return response.json().catch(function(){return{};}).then(function(payload){
+      if(!response.ok){var requestError=new Error(payload.message||'Seerfar数据获取失败，请稍后重试。');requestError.billingReleased=payload.billingReleased===true;throw requestError;}
+      var data=payload.data&&typeof payload.data==='object'?payload.data:{};
+      var products=Array.isArray(data.products)?data.products:[];
+      if(reset||page===1){seerfarRows=[];seerfarSummary=data;seerfarChargedBean=0;}
+      var seen={};seerfarRows.forEach(function(r){seen[String(r.sku)]=true;});
+      products.forEach(function(product){var row=normalizeSeerfarProduct(product,shop);if(!seen[row.sku]){seen[row.sku]=true;seerfarRows.push(row);}});
+      seerfarFetchedAt=String(payload.fetchedAt||'');
+      seerfarHasNextPage=seerfarBatchHasNext(data,page,products);
+      seerfarNextPage=seerfarHasNextPage?page+1:page;
+      seerfarChargedBean+=Number(payload.billing&&payload.billing.chargedBean)||0;
+      applySeerfarPrice(payload.pricing);
+      seerfarSucceededPages[page]=true;
+      saveSeerfarCurrentState();
+      persistSeerfarState(shop.id).catch(function(){});
+      if(payload.billing&&payload.billing.balanceBean!==null&&payload.billing.balanceBean!==undefined){
+        showAnaToast('已获取 '+products.length+' 条，扣除 '+payload.billing.chargedBean+' AI豆，余额 '+payload.billing.balanceBean+' AI豆');
+      }else showAnaToast('已获取 '+products.length+' 条Seerfar数据');
+      renderSeerfarView();
+      return payload;
+    });
+  }).catch(function(error){
+    if(error&&error.billingReleased===true)delete seerfarRequestKeys[page];
+    showAnaToast((error&&error.message)||'Seerfar数据获取失败，请稍后重试。');
+    throw error;
+  }).finally(function(){btn.disabled=false;btn.textContent=oldText;});
+}
+// 预设按钮
+document.getElementById('presets').addEventListener('click', function(e){
+  var b=e.target.closest('button[data-range]');
+  if(!b||b.disabled)return;
+  document.querySelectorAll('#presets button').forEach(function(x){x.removeAttribute('data-active');});
+  b.dataset.active='true';
+  activePreset=b.dataset.range;
+  if(activeSource!=='seerfar')renderCurrentSource();
+});
+document.getElementById('dateFrom').onchange=function(){if(activeSource==='seerfar')return;customFrom=this.value;activePreset='custom';document.querySelectorAll('#presets button').forEach(function(x){x.removeAttribute('data-active');});renderCurrentSource();};
+document.getElementById('dateTo').onchange=function(){if(activeSource==='seerfar')return;customTo=this.value;activePreset='custom';document.querySelectorAll('#presets button').forEach(function(x){x.removeAttribute('data-active');});renderCurrentSource();};
+document.getElementById('shopSelect').onchange=function(){saveSeerfarCurrentState();var shop=selectedShop();if(shop&&shop.id)switchSeerfarShop(shop.id);renderCurrentSource();};
+document.getElementById('skuSearch').oninput=renderCurrentSource;
+document.getElementById('refreshBtn').onclick=function(){
+  var btn=this;
+  btn.disabled=true;btn.textContent='刷新中…';
+  erpStorage.reload(['erp_orders_data','erp_shops_data','erp_online_products']).then(function(){
+    btn.disabled=false;btn.textContent='刷新';
+    loadShops();renderCurrentSource();
+  }).catch(function(err){
+    btn.disabled=false;btn.textContent='刷新';
+    var hint=document.getElementById('emptyHint');
+    hint.hidden=false;hint.textContent='刷新失败：'+((err&&err.message)||err);
+  });
+};
+
+var _anaToastTimer=null;
+function showAnaToast(text){
+  var el=document.getElementById('anaToast');
+  el.textContent=text;
+  el.style.display='block';
+  if(_anaToastTimer)clearTimeout(_anaToastTimer);
+  _anaToastTimer=setTimeout(function(){el.style.display='none';_anaToastTimer=null;},2600);
+}
+document.getElementById('srcOrdersBtn').onclick=function(){activeSource='orders';sortKey='units';sortDir=-1;renderOrdersView();};
+document.getElementById('srcTianyanBtn').onclick=function(){fetchTianyanCachedData().catch(function(){});};
+document.getElementById('srcSeerfarBtn').onclick=function(){
+  activeSource='seerfar';sortKey='sales';sortDir=-1;
+  var shop=selectedShop();
+  if(!shop||!shop.id){renderSeerfarView();showAnaToast('请先选择一个具体店铺，再获取Seerfar数据');return;}
+  switchSeerfarShop(shop.id);
+  updateSourceChrome();
+  fetchSeerfarPage(1,true).catch(function(){});
+};
+document.getElementById('analysisDataTabs').addEventListener('click',function(e){
+  var tab=e.target.closest('[data-analysis-tab]');
+  if(!tab)return;
+  activeSource=tab.dataset.analysisTab;
+  sortKey=activeSource==='all'?'orderUnits':activeSource==='seerfar'?'sales':'units';
+  sortDir=-1;
+  renderCurrentSource();
+});
+loadAiPricing();
+document.getElementById('seerfarMoreBtn').onclick=function(){fetchSeerfarPage(seerfarNextPage,false).catch(function(){});};
+
+// 表头排序
+function copyAnalysisText(value,label,button){
+  var text=String(value==null?'':value);
+  function ok(){if(button){button.classList.add('copied');setTimeout(function(){button.classList.remove('copied');},900);}showAnaToast((label||'内容')+'已复制');}
+  function fallback(){
+    var area=document.createElement('textarea');area.value=text;area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();
+    try{document.execCommand('copy');ok();}catch(_){showAnaToast('复制失败，请重试');}
+    document.body.removeChild(area);
+  }
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(ok,fallback);else fallback();
+}
+document.getElementById('anaTable').addEventListener('click',function(e){
+  var inlineCopy=e.target.closest('[data-inline-copy]');
+  if(inlineCopy){copyAnalysisText(inlineCopy.dataset.inlineCopy,inlineCopy.dataset.copyLabel,inlineCopy);return;}
+  var th=e.target.closest('th[data-sort]');
+  if(!th)return;
+  var key=th.dataset.sort;
+  if(sortKey===key)sortDir=-sortDir;else{sortKey=key;sortDir=-1;}
+  renderCurrentSource();
+});
+
+// ---- 商品图片加载失败回退（CSP 兼容，事件委托） ----
+document.addEventListener('error',function(event){
+  var t=event.target;
+  if(t&&t.tagName==='IMG'&&t.hasAttribute('data-ana-img-fallback')){
+    var parent=t.parentNode;
+    if(parent&&parent.classList.contains('ana-thumb')){
+      parent.innerHTML='<div class="ana-thumb-ph">🖼</div>';
+    }
+  }
+},true);
+
+// ---- 商品图片悬停放大：悬浮预览跟随鼠标 ----
+var anaZoomEl=document.createElement('div');
+anaZoomEl.id='ana-img-zoom';
+document.body.appendChild(anaZoomEl);
+function anaMoveZoom(e){
+  if(anaZoomEl.style.display!=='block')return;
+  var previewSize=400,padding=12;
+  var left=e.clientX+18,top=e.clientY+18;
+  if(left+previewSize>window.innerWidth-padding)left=e.clientX-previewSize-18;
+  if(top+previewSize>window.innerHeight-padding)top=e.clientY-previewSize-18;
+  anaZoomEl.style.left=Math.max(padding,left)+'px';
+  anaZoomEl.style.top=Math.max(padding,top)+'px';
+}
+document.getElementById('anaTable').addEventListener('mouseover',function(e){
+  var img=e.target.closest?e.target.closest('.ana-thumb img'):null;
+  if(!img||!img.src)return;
+  anaZoomEl.innerHTML='';
+  var c=img.cloneNode(false);
+  c.removeAttribute('onerror');
+  c.removeAttribute('data-ana-img-fallback');
+  c.style.width='400px';c.style.height='400px';
+  anaZoomEl.appendChild(c);
+  anaZoomEl.style.display='block';
+  anaMoveZoom(e);
+});
+document.getElementById('anaTable').addEventListener('mouseout',function(e){
+  var img=e.target.closest?e.target.closest('.ana-thumb img'):null;
+  if(img)anaZoomEl.style.display='none';
+});
+document.getElementById('anaTable').addEventListener('mousemove',anaMoveZoom);
+
+// 初始化
+erpStorage.init(['erp_orders_data','erp_shops_data','erp_online_products']).then(function(){
+  loadShops();
+  return restoreAnalysisDayCache();
+}).then(function(){
+  // 初始化日期框（默认"月"）
+  var r=rangePreset('month');
+  document.getElementById('dateFrom').value=fmtDate(r.start);
+  document.getElementById('dateTo').value=fmtDate(r.end);
+  updateSourceChrome();
+  refresh();
+}).catch(function(err){
+  document.getElementById('emptyHint').textContent='加载数据失败：'+(err.message||err);
+});
+
+})();
+</script>
+</body></html>

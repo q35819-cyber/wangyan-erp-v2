@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据大屏 - 网研ERP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/ui.css">
+<style>
+  body {
+    background: #07091b;
+    color: #eef2ff;
+    overflow-x: hidden;
+  }
+  body > .sidebar,
+  body > .main-content > .header { display: none !important; }
+  body > .sidebar {
+    background: #0a0d25;
+    border-right-color: rgba(99,102,241,.28);
+    box-shadow: 12px 0 38px rgba(0,0,0,.22);
+  }
+  body > .sidebar .logo { color: #eef2ff; }
+  body > .sidebar .logo span { color: #67e8f9; }
+  body > .sidebar .menu-item { color: #9fadd2; }
+  body > .sidebar .menu-item:hover { background: rgba(99,102,241,.12); color: #dbeafe; }
+  body > .sidebar .menu-item.active {
+    background: linear-gradient(90deg, rgba(99,102,241,.24), rgba(34,211,238,.08));
+    color: #c4b5fd;
+    border-right-color: #8b5cf6;
+  }
+  body > .main-content > .header {
+    background: rgba(8,12,36,.96);
+    border-bottom-color: rgba(99,102,241,.26);
+    box-shadow: 0 10px 28px rgba(0,0,0,.16);
+  }
+  body > .main-content > .header .header-left strong { color: #eef2ff; }
+  body > .main-content > .header .breadcrumb,
+  body > .main-content > .header .user-name { color: #93a4cf; }
+  .main-content { background: transparent; margin-left: 0 !important; width: 100% !important; min-height: 100vh; }
+  .dashboard-screen {
+    --screen-border: rgba(99,102,241,.34);
+    --screen-border-strong: rgba(129,140,248,.56);
+    --screen-panel: rgba(10,14,42,.88);
+    --screen-panel-soft: rgba(19,24,62,.74);
+    --screen-text: #eef2ff;
+    --screen-muted: #8ea0cf;
+    --screen-purple: #9b87f5;
+    --screen-blue: #60a5fa;
+    --screen-cyan: #22d3ee;
+    --screen-gold: #fbbf24;
+    --screen-green: #34d399;
+    --screen-red: #fb7185;
+    min-height: 100vh;
+    padding: 14px;
+    position: relative;
+    isolation: isolate;
+  }
+  .dashboard-screen::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background:
+      radial-gradient(circle at 50% 8%, rgba(91,33,182,.28), transparent 34%),
+      radial-gradient(circle at 52% 46%, rgba(37,99,235,.12), transparent 28%),
+      linear-gradient(rgba(99,102,241,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(99,102,241,.045) 1px, transparent 1px);
+    background-size: auto, auto, 42px 42px, 42px 42px;
+  }
+  .screen-topbar {
+    min-height: 58px;
+    display: grid;
+    grid-template-columns: minmax(220px,1fr) auto minmax(320px,1fr);
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+    margin-bottom: 12px;
+    border: 1px solid var(--screen-border);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(31,34,82,.9), rgba(10,13,40,.92));
+    box-shadow: inset 0 1px rgba(255,255,255,.04), 0 12px 30px rgba(0,0,0,.18);
+  }
+  .screen-source {
+    color: var(--screen-muted);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .screen-title {
+    text-align: center;
+    min-width: 360px;
+  }
+  .screen-title strong {
+    display: block;
+    font-size: 25px;
+    letter-spacing: 3px;
+    color: #f8fafc;
+    text-shadow: 0 0 20px rgba(129,140,248,.5);
+  }
+  .screen-title span {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--screen-muted);
+    letter-spacing: 1px;
+  }
+  .screen-controls {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+  }
+  .dashboard-screen select {
+    min-width: 128px;
+    height: 34px;
+    border: 1px solid var(--screen-border);
+    border-radius: 8px;
+    background: rgba(8,12,36,.88);
+    color: var(--screen-text);
+    padding: 0 30px 0 10px;
+    font-size: 13px;
+  }
+  .screen-clock {
+    min-width: 134px;
+    text-align: right;
+    color: #c7d2fe;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .screen-grid {
+    display: grid;
+    grid-template-columns: minmax(240px,.82fr) minmax(520px,1.75fr) minmax(260px,.95fr);
+    gap: 12px;
+    align-items: stretch;
+    min-height: calc(100vh - 162px);
+  }
+  .screen-column {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    height: 100%;
+  }
+  .screen-column.side {
+    grid-template-rows: repeat(3, minmax(190px, 1fr));
+  }
+  .screen-column.center {
+    grid-template-rows: 340px minmax(0, 1fr);
+    align-content: stretch;
+  }
+  .screen-panel {
+    min-width: 0;
+    border: 1px solid var(--screen-border);
+    border-radius: 10px;
+    background: linear-gradient(150deg, rgba(17,22,61,.94), rgba(7,10,31,.96));
+    box-shadow: inset 0 1px rgba(255,255,255,.035), 0 10px 26px rgba(0,0,0,.18);
+    overflow: hidden;
+  }
+  .panel-head {
+    height: 42px;
+    padding: 0 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(99,102,241,.18);
+    color: #dbe4ff;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .panel-head::before {
+    content: "";
+    width: 3px;
+    height: 16px;
+    margin-right: 8px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, var(--screen-cyan), var(--screen-purple));
+    box-shadow: 0 0 10px rgba(34,211,238,.35);
+  }
+  .panel-head > span:first-child { margin-right: auto; }
+  .panel-unit {
+    color: var(--screen-muted);
+    font-weight: 400;
+    font-size: 11px;
+  }
+  .rank-list {
+    list-style: none;
+    margin: 0;
+    padding: 8px 12px 10px;
+  }
+  .rank-row {
+    display: grid;
+    grid-template-columns: 26px minmax(0,1fr) auto;
+    gap: 8px;
+    align-items: center;
+    min-height: 39px;
+    border-bottom: 1px solid rgba(99,102,241,.12);
+  }
+  .rank-row:last-child { border-bottom: none; }
+  .rank-no {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+    background: rgba(99,102,241,.18);
+    color: #a5b4fc;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .rank-no.top {
+    color: #211604;
+    background: linear-gradient(135deg,#fde68a,#f59e0b);
+    box-shadow: 0 0 12px rgba(245,158,11,.26);
+  }
+  .rank-main {
+    min-width: 0;
+    color: #d7def8;
+    font-size: 12px;
+  }
+  .rank-main .ozon-product-title-link,
+  .rank-main .product-title-ellipsis {
+    color: #d7def8;
+    font-size: 12px;
+  }
+  .rank-sub {
+    display: block;
+    margin-top: 2px;
+    color: var(--screen-muted);
+    font-size: 11px;
+  }
+  .rank-value {
+    text-align: right;
+    color: #f8fafc;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .rank-value small {
+    display: block;
+    margin-top: 2px;
+    color: var(--screen-muted);
+    font-size: 10px;
+    font-weight: 400;
+  }
+  .empty-line {
+    padding: 28px 12px;
+    color: var(--screen-muted);
+    text-align: center;
+    font-size: 12px;
+  }
+  .hero-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 340px;
+    min-height: 340px;
+    contain: layout paint;
+    text-align: center;
+    background:
+      radial-gradient(ellipse at 50% 52%, rgba(59,130,246,.22), transparent 34%),
+      radial-gradient(ellipse at 50% 44%, rgba(124,58,237,.25), transparent 54%),
+      linear-gradient(160deg, rgba(18,24,72,.96), rgba(7,9,29,.98));
+  }
+  .hero-panel::after {
+    content: "";
+    position: absolute;
+    inset: auto 8% 18px 8%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(34,211,238,.65), rgba(129,140,248,.8), transparent);
+    box-shadow: 0 0 20px rgba(34,211,238,.35);
+  }
+  .hero-label {
+    color: #9fb0dd;
+    font-size: 14px;
+    letter-spacing: 2px;
+  }
+  .hero-gmv {
+    margin-top: 8px;
+    color: #fff;
+    font-size: clamp(44px,4.3vw,72px);
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: -2px;
+    text-shadow: 0 0 28px rgba(99,102,241,.6);
+  }
+  .hero-cny {
+    margin-top: 9px;
+    color: #b8c4ea;
+    font-size: 13px;
+  }
+  .hero-orders {
+    margin-top: 22px;
+    color: #dbeafe;
+    font-size: 13px;
+  }
+  .hero-orders strong {
+    margin-left: 8px;
+    color: #fff;
+    font-size: 26px;
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-metrics {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 1px;
+    width: min(640px,82%);
+    margin: 24px auto 0;
+    border: 1px solid rgba(129,140,248,.22);
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(129,140,248,.16);
+  }
+  .hero-metric {
+    padding: 12px 10px;
+    background: rgba(8,12,38,.78);
+  }
+  .hero-metric span {
+    display: block;
+    color: var(--screen-muted);
+    font-size: 11px;
+  }
+  .hero-metric strong {
+    display: block;
+    margin-top: 5px;
+    color: #eef2ff;
+    font-size: 17px;
+    font-variant-numeric: tabular-nums;
+  }
+  .recent-panel {
+    min-height: 320px;
+    height: auto;
+    contain: layout paint;
+  }
+  .recent-wrap {
+    height: calc(100% - 42px);
+    min-height: 0;
+    overflow: hidden;
+  }
+  .recent-grid {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 52px 118px minmax(92px,.9fr) minmax(150px,1.65fr) minmax(86px,.75fr) 68px 60px;
+    align-items: center;
+  }
+  .recent-head {
+    height: 34px;
+    padding: 0 6px;
+    border-bottom: 1px solid rgba(99,102,241,.16);
+    background: rgba(10,14,42,.98);
+    color: #91a4d2;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .recent-carousel {
+    height: calc(100% - 34px);
+    overflow: hidden;
+    position: relative;
+    contain: strict;
+  }
+  .recent-track {
+    position: absolute;
+    inset: 0 0 auto 0;
+    will-change: transform;
+    transform: translate3d(0,0,0);
+  }
+  .recent-track.is-scrolling {
+    animation: recentMarquee var(--recent-duration, 28s) linear infinite;
+  }
+  .recent-carousel:hover .recent-track.is-scrolling {
+    animation-play-state: paused;
+  }
+  @keyframes recentMarquee {
+    from { transform: translate3d(0,0,0); }
+    to { transform: translate3d(0,-50%,0); }
+  }
+  .recent-row {
+    min-height: 40px;
+    padding: 0 6px;
+    border-bottom: 1px solid rgba(99,102,241,.1);
+    color: #cfd7f5;
+    font-size: 12px;
+  }
+  .recent-cell {
+    min-width: 0;
+    padding: 4px 4px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .recent-cell.shop,
+  .recent-cell.product { text-align: center; }
+  .recent-cell.product {
+    width: 100%;
+    justify-self: stretch;
+  }
+  .recent-cell.qty {
+    color: #c4b5fd;
+    font-weight: 700;
+    text-align: center;
+  }
+  .recent-cell.spec {
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+  .fulfillment-chip {
+    display: inline-flex;
+    min-width: 42px;
+    height: 22px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--primary-light);
+    color: var(--primary);
+    border: 1px solid var(--primary-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .2px;
+  }
+  .recent-thumb {
+    width: 34px;
+    height: 34px;
+    margin: 0 auto;
+    border-radius: 8px;
+    object-fit: cover;
+    display: block;
+    background: rgba(99,102,241,.12);
+    border: 1px solid rgba(129,140,248,.18);
+  }
+  .recent-thumb-placeholder {
+    width: 34px;
+    height: 34px;
+    margin: 0 auto;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, rgba(99,102,241,.22), rgba(34,211,238,.12));
+    border: 1px solid rgba(129,140,248,.18);
+    color: #a5b4fc;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .recent-empty {
+    padding: 32px 12px;
+    text-align: center;
+    color: var(--screen-muted);
+    font-size: 12px;
+  }
+  .chart-box { height: calc(100% - 42px); min-height: 145px; }
+  /* 数据大屏跟随网研ERP主题变量：浅色品牌蓝白，深色深空蓝金 */
+  body {
+    background: var(--bg);
+    color: var(--text);
+  }
+  body > .sidebar {
+    background: var(--sidebar-bg);
+    border-right-color: var(--line);
+    box-shadow: var(--shadow);
+  }
+  body > .sidebar .logo { color: var(--text); }
+  body > .sidebar .logo span { color: var(--primary); }
+  body > .sidebar .menu-item { color: var(--sidebar-text); }
+  body > .sidebar .menu-item:hover {
+    background: var(--sidebar-hover);
+    color: var(--primary);
+  }
+  body > .sidebar .menu-item.active {
+    background: var(--sidebar-active);
+    color: var(--primary);
+    border-right-color: var(--primary);
+  }
+  body > .main-content > .header {
+    background: var(--header-bg);
+    border-bottom-color: var(--line);
+    box-shadow: var(--shadow);
+  }
+  body > .main-content > .header .header-left strong { color: var(--text); }
+  body > .main-content > .header .breadcrumb,
+  body > .main-content > .header .user-name { color: var(--text-muted); }
+
+  .dashboard-screen {
+    --screen-border: var(--line);
+    --screen-border-strong: var(--line-strong);
+    --screen-panel: var(--card);
+    --screen-panel-soft: var(--surface);
+    --screen-text: var(--text);
+    --screen-muted: var(--text-muted);
+    --screen-purple: var(--primary);
+    --screen-blue: var(--blue);
+    --screen-cyan: var(--sky);
+    --screen-gold: var(--accent);
+    --screen-green: var(--green);
+    --screen-red: var(--red);
+    background: var(--bg);
+    color: var(--text);
+  }
+  .dashboard-screen::before {
+    background:
+      radial-gradient(circle at 50% 8%, color-mix(in srgb, var(--primary) 9%, transparent), transparent 34%),
+      linear-gradient(color-mix(in srgb, var(--line) 28%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--line) 28%, transparent) 1px, transparent 1px);
+    background-size: auto, 42px 42px, 42px 42px;
+  }
+  .screen-topbar {
+    border-color: var(--line);
+    background: var(--card);
+    box-shadow: var(--shadow);
+  }
+  .screen-title strong {
+    color: var(--text);
+    text-shadow: none;
+  }
+  .dashboard-screen select {
+    border-color: var(--input-border);
+    background: var(--input-bg);
+    color: var(--text);
+  }
+  .screen-clock { color: var(--text-muted); }
+  .screen-panel {
+    border-color: var(--line);
+    background: var(--card);
+    box-shadow: var(--shadow);
+  }
+  .panel-head {
+    border-bottom-color: var(--line);
+    color: var(--text);
+  }
+  .panel-head::before {
+    background: var(--primary);
+    box-shadow: none;
+  }
+  .rank-row { border-bottom-color: var(--line); }
+  .rank-no {
+    background: var(--primary-light);
+    color: var(--primary);
+  }
+  .rank-no.top {
+    color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: none;
+  }
+  .rank-main,
+  .rank-main .ozon-product-title-link,
+  .rank-main .product-title-ellipsis,
+  .rank-value { color: var(--text); }
+  .hero-panel {
+    background: var(--card);
+    border-color: var(--primary-muted);
+    box-shadow: var(--shadow-lg);
+  }
+  .hero-panel::after {
+    background: var(--primary);
+    box-shadow: none;
+    opacity: .55;
+  }
+  .hero-label,
+  .hero-cny,
+  .hero-orders { color: var(--text-muted); }
+  .hero-gmv {
+    color: var(--primary);
+    text-shadow: none;
+  }
+  .hero-orders strong,
+  .hero-metric strong { color: var(--text); }
+  .hero-metrics {
+    border-color: var(--line);
+    background: var(--line);
+  }
+  .hero-metric { background: var(--surface); }
+  .recent-head {
+    border-bottom-color: var(--line);
+    background: var(--surface);
+    color: var(--text-muted);
+  }
+  .recent-row {
+    border-bottom-color: var(--line);
+    color: var(--text);
+  }
+  .recent-cell.qty { color: var(--primary); }
+  .recent-thumb {
+    background: var(--surface);
+    border-color: var(--line);
+  }
+  .recent-thumb-placeholder {
+    background: var(--primary-light);
+    border-color: var(--line);
+    color: var(--primary);
+  }
+  body.theme-dark .dashboard-screen::before {
+    background:
+      radial-gradient(circle at 50% 8%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 34%),
+      linear-gradient(color-mix(in srgb, var(--line) 26%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--line) 26%, transparent) 1px, transparent 1px);
+    background-size: auto, 42px 42px, 42px 42px;
+  }
+  @media (max-width: 1450px) {
+    .screen-grid { grid-template-columns: minmax(220px,.82fr) minmax(460px,1.55fr) minmax(230px,.88fr); }
+    .screen-column.side { grid-template-rows: repeat(3,minmax(176px,1fr)); }
+    .hero-metrics { width: 90%; }
+  }
+  @media (max-width: 1120px) {
+    .screen-topbar { grid-template-columns: 1fr; padding: 12px 14px; }
+    .screen-title { order: -1; min-width: 0; }
+    .screen-controls { justify-content: center; flex-wrap: wrap; }
+    .screen-source, .screen-clock { text-align: center; }
+    .screen-grid { grid-template-columns: 1fr; min-height: 0; }
+    .screen-column { height: auto; }
+    .screen-column.side { grid-template-columns: repeat(3,1fr); grid-template-rows: none; }
+    .screen-column.center { grid-template-rows: 330px 320px; }
+    .hero-panel { height: 330px; min-height: 330px; }
+    .chart-box { min-height: 210px; }
+  }
+  @media (max-width: 760px) {
+    .dashboard-screen { padding: 8px; }
+    .dashboard-screen::before { left: 0; }
+    .screen-column.side { grid-template-columns: 1fr; }
+    .screen-title strong { font-size: 20px; letter-spacing: 1px; }
+    .hero-gmv { font-size: 42px; }
+    .hero-metrics { width: 94%; }
+    .recent-grid { grid-template-columns: 46px 106px minmax(82px,.8fr) minmax(118px,1.35fr) minmax(76px,.7fr) 62px 56px; }
+  }
+</style>
+<script src="../assets/theme-restore.js"></script>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">网研<span>ERP</span></div>
+    <nav class="menu"></nav>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <div class="header-left">
+        <strong>数据大屏</strong>
+        <span class="breadcrumb">网研ERP <span>/</span> 数据大屏</span>
+      </div>
+      <div class="header-right">
+        <span class="user-name">管理员</span>
+        <button class="icon-btn">🔔</button>
+        <span class="avatar">管</span>
+      </div>
+    </div>
+
+    <main class="content dashboard-screen ui-page">
+      <section class="screen-topbar">
+        <div class="screen-source" id="screenSource">数据来源：ERP已同步订单</div>
+        <div class="screen-title">
+          <strong>网研ERP 销售数据大屏</strong>
+          <span id="screenScope">经营数据加载中</span>
+        </div>
+        <div class="screen-controls">
+          <select id="dashboardShop" aria-label="店铺筛选"><option value="">全部店铺</option></select>
+          <select id="dashboardRange" aria-label="时间范围">
+            <option value="7">近7天</option>
+            <option value="30" selected>近30天</option>
+            <option value="90">近90天</option>
+          </select>
+          <span class="screen-clock" id="screenClock">--</span>
+        </div>
+      </section>
+
+      <section class="screen-grid">
+        <div class="screen-column side">
+          <section class="screen-panel">
+            <div class="panel-head"><span>店铺 TOP5</span><span class="panel-unit">按销售额</span></div>
+            <ol class="rank-list" id="shopTop"></ol>
+          </section>
+          <section class="screen-panel">
+            <div class="panel-head"><span>商品 TOP5</span><span class="panel-unit">按销量</span></div>
+            <ol class="rank-list" id="productTop"></ol>
+          </section>
+          <section class="screen-panel">
+            <div class="panel-head"><span>订单状态构成</span><span class="panel-unit">当前范围</span></div>
+            <div class="chart-box" id="statusChart"></div>
+          </section>
+        </div>
+
+        <div class="screen-column center">
+          <section class="screen-panel hero-panel">
+            <div class="hero-label">销售总额</div>
+            <div class="hero-gmv" id="heroGmv">-- ₽</div>
+            <div class="hero-cny" id="heroCny">约 ¥--</div>
+            <div class="hero-orders">有效订单<strong id="heroOrders">--</strong><span> 单</span></div>
+            <div class="hero-metrics">
+              <div class="hero-metric"><span>客单价</span><strong id="heroAov">-- ₽</strong></div>
+              <div class="hero-metric"><span>已签收订单</span><strong id="heroDelivered">-- 单</strong></div>
+              <div class="hero-metric"><span>取消率</span><strong id="heroCancelRate">--%</strong></div>
+            </div>
+          </section>
+
+          <section class="screen-panel recent-panel">
+            <div class="panel-head"><span>实时订单动态</span><span class="panel-unit" id="recentMeta">今日 --单 · --件</span></div>
+            <div class="recent-wrap" id="recentWrap">
+              <div class="recent-grid recent-head"><span>商品</span><span>日期时间</span><span>店铺</span><span>商品名称</span><span>规格</span><span>履约</span><span>数量</span></div>
+              <div class="recent-carousel" id="recentCarousel">
+                <div class="recent-track" id="recentOrders"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="screen-column side">
+          <section class="screen-panel">
+            <div class="panel-head"><span>订单趋势</span><span class="panel-unit">单</span></div>
+            <div class="chart-box" id="ordersTrend"></div>
+          </section>
+          <section class="screen-panel">
+            <div class="panel-head"><span>销售额趋势</span><span class="panel-unit">卢布（₽）</span></div>
+            <div class="chart-box" id="gmvTrend"></div>
+          </section>
+          <section class="screen-panel">
+            <div class="panel-head"><span>客单价趋势</span><span class="panel-unit">卢布 / 单</span></div>
+            <div class="chart-box" id="aovTrend"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+<script src="../assets/brand.js"></script>
+<script src="../assets/storage.js"></script>
+<script src="../assets/exchange-rate.js"></script>
+<script src="../assets/order-operations.js"></script>
+<script src="../assets/order-fee-classification.js?v=20260927-cpo1"></script>
+<script src="../assets/order-statistics.js?v=20261003-whdcancel01"></script>
+<script src="../assets/online-product-format.js"></script>
+<script src="../assets/online-product-profit.js?v=20260919-pft01"></script>
+<script src="../assets/order-fee-estimate.js?v=20260919-pft01"></script>
+<script src="../assets/ozon-product-link.js?v=20261005-ozonlink01"></script>
+<script src="../assets/echarts.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  var exchangeRate = window.WYERP_EXCHANGE_RATE;
+  var orderStatistics = window.WYERP_ORDER_STATISTICS;
+  var orderEstimator = window.WYERP_ORDER_FEE_ESTIMATE;
+  var orders = [], shops = [], products = [], logistics = null, charts = {};
+  var recentRows = [];
+  var shopFilter = document.getElementById('dashboardShop');
+  var rangeFilter = document.getElementById('dashboardRange');
+
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
+      return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c];
+    });
+  }
+  function pad(value) { return value < 10 ? '0' + value : String(value); }
+  function ymd(date) { return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()); }
+  function shortDate(value) { return String(value || '').slice(5, 10); }
+  function formatInt(value) { return Math.round(Number(value) || 0).toLocaleString('zh-CN'); }
+  function formatRub(value) {
+    if (value == null || value === '') return '—';
+    var n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    return n.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + ' ₽';
+  }
+  function formatCny(value) {
+    if (value == null || value === '') return '—';
+    var n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    return '¥' + n.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+  }
+  function compactRub(value) {
+    var n = Number(value) || 0;
+    if (Math.abs(n) >= 1000000) return (n / 1000000).toFixed(1) + 'M ₽';
+    if (Math.abs(n) >= 1000) return (n / 1000).toFixed(1) + 'K ₽';
+    return Math.round(n).toLocaleString('zh-CN') + ' ₽';
+  }
+  function orderDay(order) {
+    var match = String(order && order.orderTime || '').match(/(\d{4})-(\d{2})-(\d{2})/);
+    return match ? match[1] + '-' + match[2] + '-' + match[3] : '';
+  }
+  function orderTimeValue(order) {
+    var text = String(order && order.orderTime || '').trim();
+    var time = Date.parse(text.includes('T') ? text : text.replace(' ', 'T'));
+    return Number.isFinite(time) ? time : 0;
+  }
+  function statisticalRevenueRub(order, rate) {
+    if (!orderStatistics || !order) return 0;
+    var finance = order.finance || {};
+    var mode = orderStatistics.financeMode(order);
+    var zero = mode === 'zero' || mode === 'returned';
+    var destroyed = mode === 'destroyed';
+    var resaleOrigin = order.status === '已取消' && finance.resaleIncomeRub != null;
+    if (zero || destroyed || resaleOrigin || mode === 'calc' || mode === 'inwarehouse') return 0;
+    var amount = order.status === '已签收'
+      ? orderStatistics.actualRevenueRub(finance)
+      : orderStatistics.estimateRevenueRub(finance, rate);
+    amount = Number(amount);
+    return Number.isFinite(amount) && amount >= 0 ? amount : 0;
+  }
+  function isCancelled(order) {
+    return /取消|未接受/.test(String(order && order.status || ''));
+  }
+  function isDelivered(order) {
+    return ['已签收', '已送达'].indexOf(String(order && order.status || '')) >= 0;
+  }
+  function cnyPerRub() {
+    var raw = Number(erpStorage.get('erp_rate'));
+    if (Number.isFinite(raw) && raw > 0) {
+      if (raw < 1) return raw;
+      if (exchangeRate && typeof exchangeRate.cnyPerRub === 'function') {
+        var converted = Number(exchangeRate.cnyPerRub(raw));
+        if (Number.isFinite(converted) && converted > 0) return converted;
+      }
+      return 1 / raw;
+    }
+    return exchangeRate && Number.isFinite(Number(exchangeRate.FALLBACK_RUB_PER_CNY)) && Number(exchangeRate.FALLBACK_RUB_PER_CNY) > 0
+      ? 1 / Number(exchangeRate.FALLBACK_RUB_PER_CNY)
+      : 1 / 12;
+  }
+  function rangeInfo() {
+    var days = Number(rangeFilter.value) || 30;
+    var end = new Date();
+    var start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - days + 1);
+    return { days: days, from: ymd(start), to: ymd(end) };
+  }
+  function selectedOrders() {
+    var range = rangeInfo();
+    return orders.filter(function (order) {
+      if (!order) return false;
+      if (shopFilter.value && String(order.shop || '') !== shopFilter.value) return false;
+      var day = orderDay(order);
+      return day && day >= range.from && day <= range.to;
+    });
+  }
+  function dayBuckets(range) {
+    var result = [], cursor = new Date(range.from + 'T00:00:00');
+    for (var i = 0; i < range.days; i++) {
+      result.push({ day: ymd(cursor), orders: 0, gmv: 0 });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return result;
+  }
+  function calculationOrders(list, rate) {
+    if (!orderEstimator || typeof orderEstimator.projectOrders !== 'function') return list.slice();
+    var projected = orderEstimator.projectOrders(orders, products, logistics, { rate: rate || (1 / 12), market: '俄罗斯' });
+    var selected = new Set(list);
+    return projected.filter(function (order) { return selected.has(orders[order._sourceIndex]); });
+  }
+  function buildMetrics(list) {
+    var range = rangeInfo();
+    var buckets = dayBuckets(range);
+    var byDay = {};
+    buckets.forEach(function (row) { byDay[row.day] = row; });
+    var rate = cnyPerRub();
+    var calculated = calculationOrders(list, rate);
+    var official = orderStatistics ? orderStatistics.calculate(calculated, { rate: rate || (1 / 12), prepared: true }) : null;
+    var effective = [], cancelled = 0, delivered = 0;
+    var shopStats = {}, itemQty = {}, itemSku = {}, statusStats = {};
+    calculated.forEach(function (order) {
+      var status = String(order.status || '未知状态');
+      statusStats[status] = (statusStats[status] || 0) + 1;
+      if (isCancelled(order)) { cancelled++; return; }
+      effective.push(order);
+      if (isDelivered(order)) delivered++;
+      var amount = statisticalRevenueRub(order, rate || (1 / 12));
+      var day = orderDay(order);
+      if (byDay[day]) {
+        byDay[day].orders++;
+        byDay[day].gmv += amount;
+      }
+      var shopName = String(order.shop || '未命名店铺');
+      if (!shopStats[shopName]) shopStats[shopName] = { gmv: 0, orders: 0 };
+      shopStats[shopName].gmv += amount;
+      shopStats[shopName].orders++;
+      (Array.isArray(order.items) ? order.items : []).forEach(function (item) {
+        var name = String(item && (item.name || item.offerId || item.sku) || '未命名商品');
+        var qty = Number(item && (item.qty != null ? item.qty : item.quantity));
+        if (!(qty > 0)) qty = 1;
+        itemQty[name] = (itemQty[name] || 0) + qty;
+        if (!itemSku[name] && item && item.sku) itemSku[name] = String(item.sku);
+      });
+    });
+    var gmv = official && official.salesRub != null ? Number(official.salesRub) : null;
+    buckets.forEach(function (row) {
+      row.aov = row.orders > 0 ? row.gmv / row.orders : 0;
+    });
+    return {
+      range: range,
+      all: calculated,
+      effective: effective,
+      effectiveCount: official ? Math.max(0, Number(official.totalCount || 0) - Number(official.cancelledCount || 0)) : effective.length,
+      gmv: gmv,
+      cancelled: cancelled,
+      delivered: delivered,
+      aov: gmv != null && (official ? Math.max(0, Number(official.totalCount || 0) - Number(official.cancelledCount || 0)) : effective.length) ? gmv / (official ? Math.max(0, Number(official.totalCount || 0) - Number(official.cancelledCount || 0)) : effective.length) : null,
+      cancelRate: list.length ? cancelled / list.length * 100 : 0,
+      buckets: buckets,
+      shopStats: shopStats,
+      itemQty: itemQty,
+      itemSku: itemSku,
+      statusStats: statusStats
+    };
+  }
+  function renderClock() {
+    var now = new Date();
+    document.getElementById('screenClock').textContent = ymd(now) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+  }
+  function fillShopFilter() {
+    var names = {};
+    shops.forEach(function (shop) { if (shop && shop.name) names[String(shop.name)] = true; });
+    orders.forEach(function (order) { if (order && order.shop) names[String(order.shop)] = true; });
+    var current = shopFilter.value;
+    shopFilter.innerHTML = '<option value="">全部店铺</option>' + Object.keys(names).sort().map(function (name) {
+      return '<option value="' + esc(name) + '">' + esc(name) + '</option>';
+    }).join('');
+    if (current && names[current]) shopFilter.value = current;
+  }
+  function rankNumber(index) {
+    return '<span class="rank-no' + (index < 3 ? ' top' : '') + '">' + (index + 1) + '</span>';
+  }
+  function renderShopTop(metrics) {
+    var rows = Object.keys(metrics.shopStats).map(function (name) {
+      return { name: name, gmv: metrics.shopStats[name].gmv, orders: metrics.shopStats[name].orders };
+    }).sort(function (a, b) { return b.gmv - a.gmv; }).slice(0, 5);
+    document.getElementById('shopTop').innerHTML = rows.length ? rows.map(function (row, index) {
+      return '<li class="rank-row">' + rankNumber(index) +
+        '<span class="rank-main">' + esc(row.name) + '<span class="rank-sub">' + formatInt(row.orders) + ' 单</span></span>' +
+        '<span class="rank-value">' + compactRub(row.gmv) + '</span></li>';
+    }).join('') : '<li class="empty-line">当前范围暂无店铺成交数据</li>';
+  }
+  function renderProductTop(metrics) {
+    var itemQty = metrics.itemQty, itemSku = metrics.itemSku;
+    var names = Object.keys(itemQty).sort(function (a, b) { return itemQty[b] - itemQty[a]; }).slice(0, 5);
+    document.getElementById('productTop').innerHTML = names.length ? names.map(function (name, index) {
+      var link = window.WYERP_OZON_PRODUCT_LINK.titleHtml({ sku: itemSku[name] || '' }, name, { className: 'product-title-ellipsis ozon-product-title-link' });
+      return '<li class="rank-row">' + rankNumber(index) +
+        '<span class="rank-main">' + link + '<span class="rank-sub">销量排名</span></span>' +
+        '<span class="rank-value">' + formatInt(itemQty[name]) + '<small>件</small></span></li>';
+    }).join('') : '<li class="empty-line">当前范围暂无商品销量数据</li>';
+  }
+  function initChart(id) {
+    if (!charts[id]) charts[id] = echarts.init(document.getElementById(id));
+    return charts[id];
+  }
+  function themeCss(name, fallback) {
+    var root = document.querySelector('.dashboard-screen') || document.body;
+    var value = getComputedStyle(root).getPropertyValue(name).trim();
+    return value || fallback;
+  }
+  function chartTheme() {
+    return {
+      primary: themeCss('--primary', '#2563eb'),
+      blue: themeCss('--blue', '#3b82f6'),
+      accent: themeCss('--accent', '#f97316'),
+      green: themeCss('--green', '#10b981'),
+      yellow: themeCss('--yellow', '#f59e0b'),
+      red: themeCss('--red', '#ef4444'),
+      card: themeCss('--card', '#ffffff'),
+      text: themeCss('--text', '#1e293b'),
+      muted: themeCss('--text-muted', '#64748b'),
+      line: themeCss('--line', '#e2e8f0'),
+      lineStrong: themeCss('--line-strong', '#cbd5e1')
+    };
+  }
+  function axisStyle() {
+    var theme = chartTheme();
+    return {
+      axisLine: { lineStyle: { color: theme.line } },
+      axisTick: { show: false },
+      axisLabel: { color: theme.muted, fontSize: 10 },
+      splitLine: { lineStyle: { color: theme.line } }
+    };
+  }
+  function trendOption(labels, data, unit, color) {
+    var theme = chartTheme();
+    return {
+      animationDuration: 350,
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: theme.card,
+        borderColor: theme.lineStrong,
+        textStyle: { color: theme.text, fontSize: 11 },
+        valueFormatter: function (value) { return unit === '₽' ? formatRub(value) : formatInt(value) + (unit || ''); }
+      },
+      grid: { left: 44, right: 14, top: 18, bottom: 28 },
+      xAxis: Object.assign({ type: 'category', data: labels, boundaryGap: false }, axisStyle()),
+      yAxis: Object.assign({}, axisStyle(), { type: 'value', minInterval: unit === '单' ? 1 : 0, axisLabel: { color: theme.muted, fontSize: 10, formatter: function (value) { return unit === '₽' ? compactRub(value) : formatInt(value) + (unit || ''); } } }),
+      series: [{
+        type: 'line',
+        data: data,
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 4,
+        showSymbol: labels.length <= 30,
+        lineStyle: { width: 2, color: color },
+        itemStyle: { color: color },
+        areaStyle: { color: color, opacity: .09 }
+      }]
+    };
+  }
+  function renderCharts(metrics) {
+    var labels = metrics.buckets.map(function (row) { return shortDate(row.day); });
+    var theme = chartTheme();
+    initChart('ordersTrend').setOption(trendOption(labels, metrics.buckets.map(function (row) { return row.orders; }), '单', theme.blue), true);
+    initChart('gmvTrend').setOption(trendOption(labels, metrics.buckets.map(function (row) { return Math.round(row.gmv * 100) / 100; }), '₽', theme.primary), true);
+    initChart('aovTrend').setOption(trendOption(labels, metrics.buckets.map(function (row) { return Math.round(row.aov * 100) / 100; }), '₽', theme.accent), true);
+    var statusData = Object.keys(metrics.statusStats).map(function (name) {
+      return { name: name, value: metrics.statusStats[name] };
+    }).sort(function (a, b) { return b.value - a.value; });
+    initChart('statusChart').setOption({
+      animationDuration: 350,
+      color: [theme.primary, theme.blue, theme.green, theme.accent, theme.yellow, theme.red],
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}<br>{c} 单 · {d}%',
+        backgroundColor: theme.card,
+        borderColor: theme.lineStrong,
+        textStyle: { color: theme.text, fontSize: 11 }
+      },
+      legend: { show: false },
+      series: [{
+        type: 'pie',
+        radius: ['52%', '72%'],
+        center: ['50%', '52%'],
+        itemStyle: { borderColor: theme.card, borderWidth: 2 },
+        label: { color: theme.muted, fontSize: 10, formatter: '{b}\n{d}%' },
+        labelLine: { lineStyle: { color: theme.lineStrong }, length: 8, length2: 6 },
+        data: statusData
+      }]
+    }, true);
+  }
+  function productBySku(sku) {
+    var target = String(sku == null ? '' : sku).trim();
+    if (!target) return null;
+    for (var i = 0; i < products.length; i++) {
+      if (String(products[i] && products[i].sku || '').trim() === target) return products[i];
+    }
+    return null;
+  }
+  function productVariantBySku(product, sku) {
+    var target = String(sku == null ? '' : sku).trim();
+    if (!product || !target || !Array.isArray(product.variants)) return null;
+    for (var i = 0; i < product.variants.length; i++) {
+      if (String(product.variants[i] && product.variants[i].sku || '').trim() === target) return product.variants[i];
+    }
+    return null;
+  }
+  function onlineProductBySkuDeep(sku) {
+    var target = String(sku == null ? '' : sku).trim();
+    if (!target) return { product: null, variant: null };
+    for (var i = 0; i < products.length; i++) {
+      var product = products[i] || {};
+      if (String(product.sku || '').trim() === target) return { product: product, variant: productVariantBySku(product, target) };
+      var variant = productVariantBySku(product, target);
+      if (variant) return { product: product, variant: variant };
+    }
+    return { product: null, variant: null };
+  }
+  function orderDisplayInfo(order) {
+    var items = Array.isArray(order && order.items) ? order.items : [];
+    var first = items[0] || {};
+    var qty = items.reduce(function (sum, item) {
+      var value = Number(item && (item.qty != null ? item.qty : item.quantity));
+      return sum + (value > 0 ? value : 1);
+    }, 0);
+    var matched = onlineProductBySkuDeep(first.sku);
+    var product = matched.product;
+    var variant = matched.variant;
+    var image = String(first.img || first.image || first.imageUrl || (variant && (variant.image || (Array.isArray(variant.images) && variant.images[0]))) || (product && Array.isArray(product.images) && product.images[0]) || '').trim();
+    var title = String(first.name || first.title || first.offerId || first.sku || '商品').trim();
+    var spec = String(first.spec || first.specRu || (variant && (variant.colorName || variant.color || variant.sizeName || variant.size)) || (product && (product.colorName || product.color)) || '').trim();
+    if (items.length > 1) title += ' 等' + items.length + '款';
+    return { image: image, title: title, spec: spec || '—', qty: qty || 1 };
+  }
+  function todayOrderSummary() {
+    var today = ymd(new Date()), count = 0, qty = 0;
+    orders.forEach(function (order) {
+      if (!order || orderDay(order) !== today) return;
+      if (shopFilter.value && String(order.shop || '') !== shopFilter.value) return;
+      count++;
+      var items = Array.isArray(order.items) ? order.items : [];
+      items.forEach(function (item) {
+        var value = Number(item && (item.qty != null ? item.qty : item.quantity));
+        qty += value > 0 ? value : 1;
+      });
+    });
+    return { orders: count, qty: qty };
+  }
+  function recentDateTime(value) {
+    var text = String(value == null ? '' : value).replace('T', ' ');
+    var match = text.match(/\d{4}-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
+    if (match) return match[1] + '-' + match[2] + ' ' + match[3] + ':' + match[4];
+    return text.replace(/^\d{4}-/, '').slice(0, 11) || '--';
+  }
+  function compactProductTitle(value) {
+    var chars = Array.from(String(value == null ? '' : value).trim());
+    return chars.length > 18 ? chars.slice(0, 18).join('') + '…' : chars.join('');
+  }
+  function shopForOrder(order) {
+    var name = String(order && order.shop || '').trim();
+    var clientId = String(order && order.clientId || '').trim();
+    for (var i = 0; i < shops.length; i++) {
+      var shop = shops[i] || {};
+      if (name && String(shop.name || '').trim() === name) return shop;
+      if (clientId && String(shop.clientId || '').trim() === clientId) return shop;
+    }
+    return null;
+  }
+  function normalizeFulfillment(value) {
+    var upper = String(value == null ? '' : value).trim().toUpperCase();
+    if (!upper) return '';
+    if (upper === 'RFBS') return 'rFBS';
+    return upper;
+  }
+  function fulfillmentLabel(order) {
+    var explicit = normalizeFulfillment(order && (order.deliverySchema || order.delivery_schema || order.fulfillmentSchema));
+    if (explicit) return explicit;
+    var shop = shopForOrder(order);
+    var fromShop = normalizeFulfillment(shop && shop.fulfillmentSchema);
+    if (fromShop) return fromShop;
+    var warehouses = shop && Array.isArray(shop.warehouseOptions) ? shop.warehouseOptions : [];
+    if (warehouses.some(function (item) { return item && item.isRfbs === true; })) return 'rFBS';
+    return '—';
+  }
+  function recentRowHtml(order) {
+    var time = recentDateTime(order.orderTime);
+    var info = orderDisplayInfo(order);
+    var displayTitle = compactProductTitle(info.title);
+    var imageHtml = info.image
+      ? '<img class="recent-thumb" src="' + esc(info.image) + '" alt="">'
+      : '<span class="recent-thumb-placeholder">图</span>';
+    return '<div class="recent-grid recent-row">' +
+      '<span class="recent-cell">' + imageHtml + '</span>' +
+      '<span class="recent-cell">' + esc(time || '--') + '</span>' +
+      '<span class="recent-cell shop" title="' + esc(order.shop || '未命名店铺') + '">' + esc(order.shop || '未命名店铺') + '</span>' +
+      '<span class="recent-cell product" title="' + esc(info.title) + '">' + esc(displayTitle) + '</span>' +
+      '<span class="recent-cell spec" title="' + esc(info.spec) + '">' + esc(info.spec) + '</span>' +
+      '<span class="recent-cell"><span class="fulfillment-chip">' + esc(fulfillmentLabel(order)) + '</span></span>' +
+      '<span class="recent-cell qty">×' + formatInt(info.qty) + '件</span>' +
+    '</div>';
+  }
+  function recentVisibleCount() {
+    return 6;
+  }
+  function renderRecent(metrics) {
+    recentRows = metrics.all.slice().sort(function (a, b) { return orderTimeValue(b) - orderTimeValue(a); });
+    var host = document.getElementById('recentOrders');
+    var today = todayOrderSummary();
+    document.getElementById('recentMeta').textContent = '今日 ' + formatInt(today.orders) + '单 · ' + formatInt(today.qty) + '件';
+    host.classList.remove('is-scrolling');
+    host.style.removeProperty('--recent-duration');
+    if (!recentRows.length) {
+      host.innerHTML = '<div class="recent-empty">当前筛选范围暂无订单</div>';
+      return;
+    }
+    var html = recentRows.map(recentRowHtml).join('');
+    if (recentRows.length > recentVisibleCount()) {
+      host.innerHTML = html + html;
+      host.style.setProperty('--recent-duration', Math.max(20, recentRows.length * 2.8) + 's');
+      host.classList.add('is-scrolling');
+    } else {
+      host.innerHTML = html;
+    }
+  }
+  function render() {
+    var metrics = buildMetrics(selectedOrders());
+    var rate = cnyPerRub();
+    document.getElementById('heroGmv').textContent = formatRub(metrics.gmv);
+    document.getElementById('heroCny').textContent = metrics.gmv != null && rate > 0 ? '约 ' + formatCny(metrics.gmv * rate) : '约 ¥—';
+    document.getElementById('heroOrders').textContent = formatInt(metrics.effectiveCount);
+    document.getElementById('heroAov').textContent = formatRub(metrics.aov);
+    document.getElementById('heroDelivered').textContent = formatInt(metrics.delivered) + ' 单';
+    document.getElementById('heroCancelRate').textContent = metrics.cancelRate.toFixed(1) + '%';
+    document.getElementById('screenScope').textContent =
+      (shopFilter.value || '全部店铺') + ' · ' + metrics.range.from + ' 至 ' + metrics.range.to +
+      ' · 共 ' + formatInt(metrics.all.length) + ' 单';
+    document.getElementById('screenSource').textContent = '数据来源：ERP已同步订单 · 销售额与订单统计同口径';
+    renderShopTop(metrics);
+    renderProductTop(metrics);
+    renderCharts(metrics);
+    renderRecent(metrics);
+  }
+  function refreshOrdersFromStorage(skipRender) {
+    orders = Array.isArray(erpStorage.get('erp_orders_data')) ? erpStorage.get('erp_orders_data') : [];
+    shops = Array.isArray(erpStorage.get('erp_shops_data')) ? erpStorage.get('erp_shops_data') : [];
+    products = Array.isArray(erpStorage.get('erp_online_products')) ? erpStorage.get('erp_online_products') : [];
+    fillShopFilter();
+    if (skipRender !== true) render();
+  }
+
+  shopFilter.onchange = render;
+  rangeFilter.onchange = render;
+  window.addEventListener('resize', function () {
+    Object.keys(charts).forEach(function (key) { if (charts[key]) charts[key].resize(); });
+  });
+  if (typeof MutationObserver !== 'undefined') {
+    new MutationObserver(function (records) {
+      if (!records.some(function (record) { return record.attributeName === 'class'; })) return;
+      if (orders.length) render();
+    }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  }
+  document.addEventListener('erp-storage-audit-updated', function (event) {
+    if (!event.detail) return;
+    if (event.detail.key === 'erp_orders_data' || event.detail.key === 'erp_shops_data' || event.detail.key === 'erp_online_products') refreshOrdersFromStorage();
+    else if (event.detail.key === 'erp_rate') render();
+  });
+  renderClock();
+  setInterval(renderClock, 1000);
+  erpStorage.init(['erp_orders_data', 'erp_shops_data', 'erp_online_products', 'erp_rate']).then(function () {
+    refreshOrdersFromStorage(true);
+    return erpStorage.request('/api/logistics-configs');
+  }).then(function (response) {
+    return response && response.ok ? response.json() : null;
+  }).then(function (data) {
+    logistics = data || null;
+    render();
+  }).catch(function () {
+    logistics = null;
+    render();
+  });
+})();
+</script>
+<script src="../assets/sidebar.js"></script>
+</body>
+</html>

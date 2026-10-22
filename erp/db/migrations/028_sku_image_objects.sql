@@ -1,0 +1,45 @@
+CREATE TABLE sku_image_objects (
+  id uuid PRIMARY KEY,
+  tenant_id bigint NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+  private_object_key varchar(512) NOT NULL,
+  publish_object_key varchar(512),
+  sha256 char(64) NOT NULL,
+  mime_type varchar(64) NOT NULL CHECK (mime_type IN ('image/jpeg','image/png','image/bmp','image/heic','image/heif','image/webp','image/avif','image/gif')),
+  extension varchar(12) NOT NULL CHECK (extension ~ '^\.[a-z0-9]{2,8}$'),
+  size_bytes bigint NOT NULL CHECK (size_bytes > 0),
+  width integer CHECK (width IS NULL OR width > 0),
+  height integer CHECK (height IS NULL OR height > 0),
+  frame_count integer NOT NULL DEFAULT 1 CHECK (frame_count = 1),
+  source_type varchar(32) NOT NULL CHECK (source_type IN ('local_upload','collection','online','edit','ai_candidate')),
+  object_role varchar(24) NOT NULL DEFAULT 'original' CHECK (object_role IN ('original','working','publish','candidate')),
+  state varchar(24) NOT NULL DEFAULT 'stored' CHECK (state IN ('stored','processing','ready','failed','candidate')),
+  parent_object_id uuid,
+  processing_summary jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_by_user_id bigint NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, id),
+  UNIQUE (tenant_id, sha256),
+  UNIQUE (tenant_id, private_object_key),
+  FOREIGN KEY (tenant_id, parent_object_id) REFERENCES sku_image_objects(tenant_id, id) ON DELETE RESTRICT,
+  FOREIGN KEY (tenant_id, created_by_user_id) REFERENCES tenant_members(tenant_id, user_id) ON DELETE RESTRICT
+);
+CREATE TABLE sku_image_links (
+  id uuid PRIMARY KEY,
+  tenant_id bigint NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+  client_id varchar(120) NOT NULL,
+  product_ref varchar(180) NOT NULL,
+  variant_ref varchar(180) NOT NULL,
+  image_object_id uuid NOT NULL,
+  sort_order integer NOT NULL CHECK (sort_order >= 0 AND sort_order < 30),
+  is_cover boolean NOT NULL DEFAULT false,
+  association_version integer NOT NULL DEFAULT 1 CHECK (association_version > 0),
+  created_by_user_id bigint NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, client_id, product_ref, variant_ref, image_object_id),
+  CONSTRAINT sku_image_links_order_uniq UNIQUE (tenant_id, client_id, product_ref, variant_ref, sort_order) DEFERRABLE INITIALLY IMMEDIATE,
+  FOREIGN KEY (tenant_id, image_object_id) REFERENCES sku_image_objects(tenant_id, id) ON DELETE RESTRICT,
+  FOREIGN KEY (tenant_id, created_by_user_id) REFERENCES tenant_members(tenant_id, user_id) ON DELETE RESTRICT
+);
+CREATE UNIQUE INDEX sku_image_links_one_cover_idx ON sku_image_links(tenant_id, client_id, product_ref, variant_ref) WHERE is_cover;
+GRANT SELECT, INSERT, UPDATE, DELETE ON sku_image_objects, sku_image_links TO wyerp_app;

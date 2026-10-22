@@ -1,0 +1,55 @@
+{
+  "name": "wyerp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "网研ERP 本地服务与数据库迁移工具",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:cluster": "node cluster.js",
+    "sync:category-attributes": "node scripts/sync-category-attributes.js",
+    "verify:category-attributes": "node scripts/verify-category-attributes.js",
+    "project:category-attributes": "node --max-old-space-size=2048 scripts/project-category-attributes.js",
+    "build:ozon-commissions": "node scripts/build-ozon-commission-catalog.js",
+    "check:production-staging": "node auth/production-staging-probe.js",
+    "build:release-manifest": "node auth/release-manifest-generator.js",
+    "check:production-rollout": "node auth/production-rollout.js",
+    "check:production-release-gate": "node auth/production-release-gate.js",
+    "check:production-continuity": "node auth/production-continuity.js",
+    "check:production-readiness": "node auth/production-readiness.js",
+    "db:migrate": "node db/migrate.js",
+    "db:status": "node db/migrate.js --status",
+    "db:verify": "node db/verify.js",
+    "db:import-legacy": "node db/import-legacy-json.js",
+    "db:import-documents": "node db/import-tenant-documents.js",
+    "db:encrypt-credentials": "node db/encrypt-shop-credentials.js",
+    "db:migrate:p2": "node db/p2-data-migration.js",
+    "db:backup": "powershell -NoProfile -ExecutionPolicy Bypass -File db/backup-postgres.ps1",
+    "db:backup:verify": "powershell -NoProfile -ExecutionPolicy Bypass -File db/verify-postgres-backup.ps1",
+    "db:backup:replica": "powershell -NoProfile -ExecutionPolicy Bypass -File db/sync-backup-replica.ps1",
+    "check:syntax": "node --check server.js && node --check cluster.js && node --check auth/postgres-store.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "nodemailer": "^10.0.15",
+    "pg": "^8.23.0"
+  },
+  "overrides": {
+    "uuid": "^11.1.1",
+    "minimatch@3.1.5": {
+      "brace-expansion": "1.1.21"
+    },
+    "minimatch@5.1.9": {
+      "brace-expansion": "2.1.7"
+    }
+  },
+  "devDependencies": {
+    "jszip": "^3.10.1",
+    "playwright": "^1.63.0",
+    "playwright-core": "^1.63.0"
+  },
+  "license": "AGPL-3.0-only"
+}
