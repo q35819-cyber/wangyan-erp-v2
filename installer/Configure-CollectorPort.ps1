@@ -18,7 +18,7 @@ $new=':'+$AppPort
 $changed=0
 foreach($file in $files){
  $text=[IO.File]::ReadAllText($file.FullName,[Text.UTF8Encoding]::new($false))
- $replaced=$text.Replace('http://127.0.0.1:8765','http://127.0.0.1'+$new).Replace('http://localhost:8765','http://localhost'+$new)
+ $replaced=$text.Replace("url.port === '8765'","url.port === '"+$AppPort+"'").Replace('http://127.0.0.1:8765','http://127.0.0.1'+$new).Replace('http://localhost:8765','http://localhost'+$new)
  if($text -cne $replaced){
   [IO.File]::WriteAllText($file.FullName,$replaced,[Text.UTF8Encoding]::new($false))
   $changed++
