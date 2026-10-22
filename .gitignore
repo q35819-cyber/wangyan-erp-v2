@@ -34,3 +34,6 @@
 
 # Generated release archives
 dist/
+
+installer/WyerpERP-Manager.exe
+installer/WyerpERP-Service.exe

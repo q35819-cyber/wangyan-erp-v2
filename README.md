@@ -68,3 +68,5 @@ Windows 建议安装 Node.js 24、PostgreSQL 16+ 和 PowerShell 5.1。当前启�
 
 开发者打包运行 tools/Build-CollectorPackage.ps1，文件名自动使用manifest版本，绝不能混用版本。
 **目前尚未发布正式ERP EXE一键安装器**；未来集成要求见 docs/INSTALLER_PLUGIN_INTEGRATION.md。
+
+Windows EXE单机版预览：安装层源码及隔离验收详情请阅读installer/README.md。已验证EXE解包、新PostgreSQL17的67项迁移、随机admin、手动Windows服务启动/重启/停止及数据保护；图形安装真实点击、浏览器采集和正式卸载仍未完成。不可宣称正式安装包已通过全部验收。

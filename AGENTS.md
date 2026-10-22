@@ -50,3 +50,5 @@ erp/scripts/doctor-local.ps1 -CheckDatabase → erp/start.ps1 →
 - 后续EXE安装器应自动把插件放到长期固定目录，通过安装页面「安装浏览器插件」按钮调用 tools/Install-Collector.ps1 -PluginDir 该目录；不可把ZIP文件名的版本加入安装后的插件路径。
 - 不得把插件版本打包检查PASS，写成浏览器中实际安装PASS或1688/Ozon真实采集PASS。见 docs/EXTENSION_INSTALL.md 和 docs/INSTALLER_PLUGIN_INTEGRATION.md。
 2026-10-22实测发现：迁移003和后续SQL要求wyerp_app与wyerp_migrator固定角色。独立PG集群须先创建NOLOGIN兼容角色并授权给当前运行和迁移账号。setup-local.ps1的PUBLIC_ORIGIN必须在本机模式留空，避免图片公网发布模块拒绝HTTP本机地址，公网HTTPS生产部署需要独立验收。
+
+Windows EXE单机版预览：安装层源码及隔离验收详情请阅读installer/README.md。已验证EXE解包、新PostgreSQL17的67项迁移、随机admin、手动Windows服务启动/重启/停止及数据保护；图形安装真实点击、浏览器采集和正式卸载仍未完成。不可宣称正式安装包已通过全部验收。
