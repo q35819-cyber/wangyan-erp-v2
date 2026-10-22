@@ -21,16 +21,21 @@ class WyerpManager : Form {
    bool created=false;
    single=new Mutex(true, qaUiManager?"Local\\WyerpCommunityManagerQA20261022":"Local\\WyerpCommunityManager",out created);
    if(!created) {
-     try {
-       string dataDir=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"WyerpERP-Community");
-       string settingsFile=Path.Combine(dataDir,"install-settings.json");
-       string url="http://127.0.0.1:8765";
-       if(File.Exists(settingsFile)){
-         Match m=Regex.Match(File.ReadAllText(settingsFile),"\"AppPort\"\\s*:\\s*(\\d+)");
-         if(m.Success)url="http://127.0.0.1:"+m.Groups[1].Value;
+     // A second click must not open a stale/offline browser URL.
+     // Ask the same instance-specific readiness gate to start the service first.
+     try{
+       string installedRoot=AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
+       string privateData=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"WyerpERP-Community");
+       if(qaUiManager)privateData=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa7-20261023\data";
+       string control=Path.Combine(installedRoot,"installer","Control.ps1");
+       if(File.Exists(control)&&File.Exists(Path.Combine(privateData,"install-settings.json"))){
+         var startInfo=new ProcessStartInfo("powershell.exe"){
+           Arguments="-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \""+control+"\" -Action Open -InstallRoot \""+installedRoot+"\" -DataRoot \""+privateData+"\"",
+           UseShellExecute=false,CreateNoWindow=true
+         };
+         using(var existing=Process.Start(startInfo)){if(existing!=null)existing.WaitForExit(90000);}
        }
-       Process.Start(new ProcessStartInfo(url){UseShellExecute=true});
-     } catch {}
+     }catch(Exception err){MessageBox.Show("无法启动单机服务："+err.Message,"网研ERP");}
      return 0;
    }
    try {
@@ -44,7 +49,7 @@ class WyerpManager : Form {
    root=AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
    data=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"WyerpERP-Community");
    if(qaUiManager){
-     string b=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa6-20261023";
+     string b=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa7-20261023";
      if(!root.Equals(Path.Combine(b,"program"),StringComparison.OrdinalIgnoreCase))throw new Exception("QA UI manager must run from verified isolated instance");
      data=Path.Combine(b,"data");
    }
@@ -65,7 +70,7 @@ class WyerpManager : Form {
    password=MakeButton("查看初始管理员密码",30,264,462,43,(s,e)=>OpenPassword());
    var hint=new Label{Text="关闭管理器时会先结束本实例后台。请先保存网页中的操作。",Bounds=new Rectangle(30,324,465,27),ForeColor=Color.FromArgb(95,104,120)};
    Controls.Add(hint);
-   Shown+=(s,e)=>RunAction("Status",true);
+   Shown+=(s,e)=>{if(qaUiManager)RunAction("Status",true);else RunAction("Start",false);};
    FormClosing+=ClosingManager;
  }
  Button MakeButton(string label,int x,int y,int w,int h,EventHandler action) {
@@ -108,12 +113,12 @@ class WyerpManager : Form {
        p.Arguments="-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \""+tool+"\" -Action "+action+" -InstallRoot \""+root+"\" -DataRoot \""+data+"\"";
        p.UseShellExecute=false;
        p.CreateNoWindow=true;p.RedirectStandardOutput=true;p.RedirectStandardError=true;
-       using(var process=Process.Start(p)) {
+        using(var process=Process.Start(p)) {
          if(process==null)throw new Exception("Windows后台进程未成功启动");
          var stdoutTask=process.StandardOutput.ReadToEndAsync();
          var stderrTask=process.StandardError.ReadToEndAsync();
          if(!process.WaitForExit(90000)){try{process.Kill();}catch{}throw new Exception("控制操作超过90秒");}
-         Task.WaitAll(stdoutTask,stderrTask);
+          Task.WaitAll(stdoutTask,stderrTask);
          output=stdoutTask.Result+Environment.NewLine+stderrTask.Result;
          if(process.ExitCode!=0)throw new Exception(output.Length>800?output.Substring(output.Length-800):output);
        }
