@@ -44,7 +44,7 @@ class WyerpManager : Form {
    root=AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
    data=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"WyerpERP-Community");
    if(qaUiManager){
-     string b=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa3-20261022";
+     string b=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa6-20261023";
      if(!root.Equals(Path.Combine(b,"program"),StringComparison.OrdinalIgnoreCase))throw new Exception("QA UI manager must run from verified isolated instance");
      data=Path.Combine(b,"data");
    }
@@ -109,8 +109,12 @@ class WyerpManager : Form {
        p.UseShellExecute=false;
        p.CreateNoWindow=true;p.RedirectStandardOutput=true;p.RedirectStandardError=true;
        using(var process=Process.Start(p)) {
-         if(!process.WaitForExit(90000)) {try{process.Kill();}catch{}throw new Exception("控制操作超过90秒");}
-         output=process.StandardOutput.ReadToEnd()+Environment.NewLine+process.StandardError.ReadToEnd();
+         if(process==null)throw new Exception("Windows后台进程未成功启动");
+         var stdoutTask=process.StandardOutput.ReadToEndAsync();
+         var stderrTask=process.StandardError.ReadToEndAsync();
+         if(!process.WaitForExit(90000)){try{process.Kill();}catch{}throw new Exception("控制操作超过90秒");}
+         Task.WaitAll(stdoutTask,stderrTask);
+         output=stdoutTask.Result+Environment.NewLine+stderrTask.Result;
          if(process.ExitCode!=0)throw new Exception(output.Length>800?output.Substring(output.Length-800):output);
        }
        BeginInvoke((Action)(()=>{

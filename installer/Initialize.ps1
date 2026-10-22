@@ -63,6 +63,8 @@ try{
 $envText+=[Environment]::NewLine+'ERP_CLUSTER_BASE_PORT='+$clusterBase+[Environment]::NewLine
  if($envText -notmatch '(?m)^PUBLIC_ORIGIN=\r?$'){throw '本机PUBLIC_ORIGIN配置必须留空'}
  [IO.File]::WriteAllText($envfile,$envText,[Text.UTF8Encoding]::new($false))
+ & (Join-Path $root 'installer/Configure-CollectorPort.ps1') -PluginDir (Join-Path $root 'collector/wyerp-collector') -AppPort $AppPort
+ if($LASTEXITCODE -ne 0){throw '采集插件端口配置失败，拒绝继续安装'}
  foreach($sub in @('run','logs','runtime')){New-Item -ItemType Directory -Path (Join-Path $data $sub) -Force|Out-Null}
  $pgdata=Join-Path $data 'runtime/postgresql'
  $superfile=Join-Path $data 'secrets/pg-superuser.pass'

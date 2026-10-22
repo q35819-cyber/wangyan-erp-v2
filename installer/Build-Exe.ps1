@@ -12,7 +12,7 @@ $deps=[IO.Path]::GetFullPath($DependenciesPath)
 $pg=[IO.Path]::GetFullPath($PostgresRoot)
 $node=[IO.Path]::GetFullPath($NodeExecutable)
 $dest=[IO.Path]::GetFullPath($OutputDir)
-$releaseName='WyerpERP-Community-Setup-v0.1.0-preview8.exe'
+$releaseName='WyerpERP-Community-Setup-v0.1.0-preview13.exe'
 $csc=Join-Path $env:windir 'Microsoft.NET\Framework64/v4.0.30319/csc.exe'
 if(!(Test-Path -LiteralPath $csc)){throw 'Windows .NET Framework C#编译器不可用'}
 & $csc '/nologo' '/target:winexe' ('/out:'+(Join-Path $PSScriptRoot 'WyerpERP-Manager.exe')) ('/win32manifest:'+(Join-Path $PSScriptRoot 'manager.manifest')) '/r:System.Windows.Forms.dll' '/r:System.Drawing.dll' (Join-Path $PSScriptRoot 'WyerpManager.cs')
@@ -56,7 +56,7 @@ try {
  Copy-Item -LiteralPath (Join-Path $repo 'extensions/wyerp-collector') -Destination (Join-Path $plugin 'wyerp-collector') -Recurse
  $launcher=Join-Path $stage 'installer'
  New-Item -ItemType Directory -Path $launcher -Force|Out-Null
- foreach($name in @('Initialize.ps1','Control.ps1','Run-Server.ps1','Test-Installed.ps1')){Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $launcher}
+ foreach($name in @('Initialize.ps1','Recover-Existing.ps1','Control.ps1','Run-Server.ps1','Test-Installed.ps1','Configure-CollectorPort.ps1')){Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $launcher}
  $helper=Join-Path $stage 'tools'
  New-Item -ItemType Directory -Path $helper -Force|Out-Null
  Copy-Item -LiteralPath (Join-Path $repo 'tools/Install-Collector.ps1') -Destination $helper

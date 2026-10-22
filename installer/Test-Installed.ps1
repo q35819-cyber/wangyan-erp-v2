@@ -21,6 +21,17 @@ foreach($k in @('credentials.key','csrf.key','private-object.key')){
 }
 $m=Get-Content -LiteralPath $manifest -Raw -Encoding UTF8|ConvertFrom-Json
 if($m.manifest_version -ne 3){throw '采集插件Manifest不正确'}
+$installedSettings=Get-Content -LiteralPath $settings -Raw -Encoding UTF8|ConvertFrom-Json
+$appPort=[int]$installedSettings.AppPort
+if($appPort -lt 1024 -or $appPort -gt 65535){throw 'ERP安装实例端口无效'}
+foreach($allowedOrigin in @(('http://127.0.0.1:'+$appPort+'/*'),('http://localhost:'+$appPort+'/*'))){
+ if($m.host_permissions -notcontains $allowedOrigin){throw '采集插件未被授权访问本实例ERP端口'}
+}
+$pluginRoot=Split-Path -Parent $manifest
+foreach($file in @(Get-ChildItem -LiteralPath $pluginRoot -Recurse -File|Where-Object {$_.Extension -in @('.js','.json','.html')})){
+ $text=[IO.File]::ReadAllText($file.FullName,[Text.UTF8Encoding]::new($false))
+ if($appPort -ne 8765 -and ($text.Contains('http://127.0.0.1:8765') -or $text.Contains('http://localhost:8765'))){throw '发现错误指向8765的采集插件地址'}
+}
 foreach($item in @($m.background.service_worker,$m.side_panel.default_path)){
  if($item -and !(Test-Path -LiteralPath (Join-Path (Split-Path -Parent $manifest) $item))){throw ('采集插件缺少：'+$item)}
 }

@@ -32,6 +32,14 @@ function Start-Own {
  if($alreadyRunning -and (Health)){Write-Output 'PASS ERP已就绪，无需重复启动';return}
  if(!$alreadyRunning){
   if(@(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue|Where-Object{$_.LocalPort -eq $appPort}).Count){throw 'ERP端口已被其他程序占用，拒绝关闭其他软件'}
+  $basePort=[int]$settings.ClusterBasePort
+  if($basePort -lt 1024 -or $basePort -gt 65530){throw '内部集群端口配置无效'}
+  $internalPorts=@($basePort,($basePort+1),($basePort+2))
+  $occupied=@(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue|Where-Object{$_.LocalPort -in $internalPorts})
+  if($occupied.Count){
+   $details=($occupied|ForEach-Object{[string]$_.LocalPort+'(PID '+[string]$_.OwningProcess+')'}) -join ', '
+   throw ('ERP内部集群端口已被其他实例占用：'+$details+'。请先从其管理器正常关闭；本程序不会结束其他软件进程')
+  }
   if($pg.Status -ne 'Running'){Start-Service -Name $pgName -ErrorAction Stop}
   $dbSockets=@(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue|Where-Object{$_.LocalPort -eq $dbPort -and $_.LocalAddress -in @('127.0.0.1','::1')})
   if(!$dbSockets.Count){throw '专用数据库端口未准备好'}

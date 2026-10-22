@@ -14,7 +14,7 @@ using System.Reflection;
 class WyerpUninstall : Form {
  static bool qa=false;
  static int qaExit=3;
- static readonly string qaBase=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa3-20261022";
+ static readonly string qaBase=@"D:\WyerpIsolatedDeployQA-20261022\gui-installer-qa6-20261023";
  string root,data;
  Button remove;
  Label label;

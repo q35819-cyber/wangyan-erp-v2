@@ -35,3 +35,5 @@ API配置专项静态审查：店铺/Performance密钥和GRS AI可在ERP界面�
 Windows EXE单机版预览：安装层源码及隔离验收详情请阅读installer/README.md。已验证EXE解包、新PostgreSQL17的67项迁移、随机admin、手动Windows服务启动/重启/停止及数据保护；图形安装真实点击、浏览器采集和正式卸载仍未完成。不可宣称正式安装包已通过全部验收。
 
 2026-10-22预览7已完成GUI安装/管理器真实按钮启动重启关闭/GUI卸载及保留数据的独立QA；预览8仅修改启动器API/Worker就绪检查，已由QA3实测readiness通过、并核对新EXE资源与SHA256，未重复进行完整GUI首次安装测试。正式新机安装、采集插件入库、旧数据重装恢复、退出进行中业务任务的一致性仍待测试。安装、构建及换AI操作详见 installer/README.md。
+
+preview13全量隔离回归：Windows GUI安装/启动/重启/退出/卸载/原数据恢复已PASS，密钥和数据库保持不变，内部端口冲突阻断已PASS。真实1688/Ozon采集入库、正式Windows全新机及在途订单任务无损退出仍未PASS；详见 installer/README.md 和D盘隔离测试报告。
