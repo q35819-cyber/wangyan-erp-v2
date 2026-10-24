@@ -1,9 +1,10 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 [CmdletBinding()]
 param(
  [ValidateSet('Edge','Chrome')][string]$Browser='Edge',
  [string]$PluginDir='',
- [switch]$CheckOnly
+ [switch]$CheckOnly,
+ [string]$ErpUrl='http://127.0.0.1:8765'
 )
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -60,5 +61,5 @@ Write-Output ('已打开'+$Browser+'插件管理页，请完成三步：')
 Write-Output '1. 开启「开发人员模式」。'
 Write-Output '2. 点击「加载解压缩的扩展」或「加载已解压的扩展程序」。'
 Write-Output '3. 在选择文件夹窗口粘贴路径，确认。安装完成后固定插件图标。'
-Write-Output '登录 http://127.0.0.1:8765 后手动采集1688/Ozon商品，回采集箱核实成功。'
+Write-Output ('登录 '+$ErpUrl+' 后手动采集1688/Ozon商品，回采集箱核实成功。')
 Write-Output '本工具不会修改浏览器企业策略，也不能绕过浏览器对插件安装的确认。'

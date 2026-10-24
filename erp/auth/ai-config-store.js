@@ -11,10 +11,10 @@ function hasEncryptedApiKey(value) {
   if (!value) return false;
   return typeof value === 'object' ? Boolean(String(value.ciphertext || '').trim()) : Boolean(String(value).trim());
 }
-function canUseAiConfiguration(row, requiredCapabilities, { isOwner = false } = {}) {
+function canUseAiConfiguration(row, requiredCapabilities, { isOwner = false, allowCustom = false } = {}) {
   const required = Array.isArray(requiredCapabilities) ? requiredCapabilities : [requiredCapabilities];
   return Boolean(row && (isOwner || row.ai_allowed !== false)
-    && String(row.template || '').startsWith('grsai-')
+    && (String(row.template || '').startsWith('grsai-') || (allowCustom && ['custom-product', 'custom-image'].includes(String(row.template || ''))))
     && row.enabled && hasEncryptedApiKey(row.encrypted_api_key)
     && required.every(capability => Array.isArray(row.capabilities) && row.capabilities.includes(capability)));
 }
@@ -35,7 +35,7 @@ function invitationUrl(template, value) {
   if (url.protocol !== 'https:' || url.username || url.password || url.hash || (url.hostname !== expectedHost && !url.hostname.endsWith(`.${expectedHost}`))) throw error('invalid_ai_invitation_url', '邀请链接格式不正确，请粘贴供应商官方的HTTPS邀请链接。', 400);
   return url.toString();
 }
-function createAiConfigStore(pool, writeAudit) {
+function createAiConfigStore(pool, writeAudit, { standaloneMode = false } = {}) {
   async function ownerContext(account, client = pool) {
     const result = await client.query(
       `SELECT user_id::text FROM tenant_members WHERE tenant_id=$1 AND member_type='owner' AND status='active' ORDER BY joined_at,user_id LIMIT 1`,
@@ -67,7 +67,7 @@ function createAiConfigStore(pool, writeAudit) {
         if (row.preferred_capability && !existing.preferred_capabilities.includes(row.preferred_capability)) existing.preferred_capabilities.push(row.preferred_capability);
       } else rows.push({ ...row, default_capabilities: row.default_capability ? [row.default_capability] : [], preferred_capabilities: row.preferred_capability ? [row.preferred_capability] : [] });
     }
-    return { ...context, rows };
+    return { ...context, allowCustom: standaloneMode, rows };
   }
   async function listSubaccounts(account) {
     const context = await ownerContext(account);
@@ -175,7 +175,7 @@ function createAiConfigStore(pool, writeAudit) {
       const row = await getOwner(account, id, client);
       const next = Boolean(enabled);
       if (next && !row.encrypted_api_key) throw error('ai_configuration_missing_key', '该AI服务配置还没有填写API密钥，请先补齐密钥后再使用。', 409);
-      if (next) {
+      if (next && !standaloneMode) {
         const overlapCaps = row.capabilities.filter(capability => AI_CAPABILITIES.includes(capability));
         if (overlapCaps.length) {
           // 只要与本条任一实际能力（不含纯登记的视频标签）重叠，同组其它启用行一并停用。
@@ -256,6 +256,17 @@ function createAiConfigStore(pool, writeAudit) {
     if (!row) throw Object.assign(error('ai_configuration_unavailable', '当前AI服务配置不可用，请检查启用状态、密钥与该项能力的授权后重试。', 403), { message: '请先保存已启用、有密钥且能力匹配的 GRS AI 配置，并确认当前账号已获授权' });
     return row;
   }
+  async function availableDefault(account, capabilities) {
+    if (!standaloneMode) throw error('ai_configuration_unavailable', '默认自定义模型仅单机版支持', 403);
+    const required = Array.isArray(capabilities) ? capabilities : [capabilities];
+    const listed = await list(account);
+    const matched = listed.rows.filter(row => canUseAiConfiguration(row, required, listed));
+    const chosen = matched.find(row => required.every(key => row.preferred_capabilities.includes(key)))
+      || matched.find(row => required.every(key => row.default_capabilities.includes(key)))
+      || (matched.length === 1 ? matched[0] : null);
+    if (!chosen) throw error('ai_configuration_unavailable', '没有匹配功能的默认AI模型，请在AI配置页面分配模型用途', 409);
+    return chosen;
+  }
   // 官方任务不接受客户端配置 ID：仅系统管理员拥有的唯一已启用 GRS 配置可被解析。
   async function availableOfficial(account, capabilities) {
     const context = await ownerContext(account);
@@ -324,7 +335,7 @@ function createAiConfigStore(pool, writeAudit) {
       return { template, invitationUrl: url, published: Boolean(published) };
     } catch (cause) { await client.query('ROLLBACK'); throw cause; } finally { client.release(); }
   }
-  return { ownerContext, list, listSubaccounts, getOwner, save, saveMany, remove, removeMany, markTest, setEnabled, setDefault, setPreference, setSubaccount, available, availableOfficial, getUiPreferences, setUiPreference, listRegistrationOverrides, listPublishedRegistrationOverrides, setRegistrationOverride };
+  return { ownerContext, list, listSubaccounts, getOwner, save, saveMany, remove, removeMany, markTest, setEnabled, setDefault, setPreference, setSubaccount, available, availableDefault, availableOfficial, getUiPreferences, setUiPreference, listRegistrationOverrides, listPublishedRegistrationOverrides, setRegistrationOverride };
 }
 
 module.exports = { createAiConfigStore, invitationUrl, canUseAiConfiguration };

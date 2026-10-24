@@ -1,8 +1,9 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 [CmdletBinding()]
 param(
   [Parameter(Mandatory=$true)][string]$DataRoot,
-  [switch]$PromptForPassword
+  [switch]$PromptForPassword,
+  [switch]$LocalDefaultPassword
 )
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath($DataRoot)
@@ -23,7 +24,12 @@ $generated = $false
 $success = $false
 $password = $null
 try {
-  if ($PromptForPassword) {
+  if ($LocalDefaultPassword -and $PromptForPassword) { throw '不可同时使用本机默认密码与手工密码模式' }
+  if ($LocalDefaultPassword) {
+    if ($env:WYERP_STANDALONE_MODE -ne '1') { throw '只允许单机安装器明确启用本机默认密码' }
+    if (Test-Path -LiteralPath $record) { throw '已有管理员凭据文件，拒绝重复初始化' }
+    $password = '123456'
+  } elseif ($PromptForPassword) {
     $secure = Read-Host -Prompt '请输入全新admin密码（至少12位，输入不显示）' -AsSecureString
     $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     $password = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
@@ -53,10 +59,11 @@ try {
       throw '管理员密码文件访问权限设置失败；拒绝创建管理员'
     }
   }
-  if ([string]::IsNullOrWhiteSpace($password) -or $password.Length -lt 12 -or $password.Length -gt 128) {
+  if ([string]::IsNullOrWhiteSpace($password) -or ($password.Length -lt 12 -and -not ($LocalDefaultPassword -and $password -eq '123456')) -or $password.Length -gt 128) {
     throw '管理员密码应为12-128字符，未执行任何管理员创建操作'
   }
   $env:WYERP_BOOTSTRAP_ADMIN_PASSWORD = $password
+  if ($LocalDefaultPassword) { $env:WYERP_BOOTSTRAP_LOCAL_DEFAULT = '1' }
   $scriptFile = Join-Path $PSScriptRoot 'bootstrap-admin.js'
   & $node.Source "--env-file-if-exists=$envFile" $scriptFile '--confirm-empty-database'
   if ($LASTEXITCODE -ne 0) {
@@ -67,11 +74,15 @@ try {
   if ($generated) {
     Write-Output ('管理员密码已随机生成，**仅保存在本机**：'+$record)
     Write-Output '请在新机由使用者本人查看此文件并妥善保存。确认登录成功后删除一次性密码文件，不要上传或发到聊天中'
+  } elseif ($LocalDefaultPassword) {
+    Write-Output '首次单机登录：admin / 123456（仅新安装，已有账号绝不重置）'
+    Write-Warning '此密码为公开弱口令，建议登录后立即修改；ERP只允许127.0.0.1本机访问'
   } else {
     Write-Output '使用刚才人工输入的密码登录；脚本未保存或显示该密码'
   }
 } finally {
   Remove-Item Env:\WYERP_BOOTSTRAP_ADMIN_PASSWORD -ErrorAction SilentlyContinue
+  Remove-Item Env:\WYERP_BOOTSTRAP_LOCAL_DEFAULT -ErrorAction SilentlyContinue
   $password = $null
   if ($ptr -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
   if ($null -ne $secure) { $secure.Dispose() }

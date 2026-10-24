@@ -24,8 +24,10 @@ async function main(){
  }
  const password=String(process.env.WYERP_BOOTSTRAP_ADMIN_PASSWORD||'');
  delete process.env.WYERP_BOOTSTRAP_ADMIN_PASSWORD;
- if(password.length<12||password.length>128||password.toLowerCase()==='admin'||password.toLowerCase()==='password'){
-  throw new Error('新管理员口令至少12位，不能使用默认弱口令；不会把明文写入数据库或Git');
+ const localDefault=(password==='123456'&&process.env.WYERP_BOOTSTRAP_LOCAL_DEFAULT==='1'&&process.env.WYERP_STANDALONE_MODE==='1');
+ delete process.env.WYERP_BOOTSTRAP_LOCAL_DEFAULT;
+ if((password.length<12&&!localDefault)||password.length>128||password.toLowerCase()==='admin'||password.toLowerCase()==='password'){
+  throw new Error('社区管理员需12位以上密码；仅在隔离的单机安装器明确启用时允许一次性初始口令123456');
  }
  const {Client}=require('pg');
  const {createDatabaseConfig}=require('../db/config');

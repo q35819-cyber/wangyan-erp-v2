@@ -2,6 +2,7 @@
 
 const crypto = require('crypto');
 const { encryptValue, decryptValue } = require('./credential-crypto');
+const vendorAdapter = require('./ai-vendor-adapter');
 
 const PRODUCT_CAPABILITIES = new Set(['product-translation', 'title-optimization', 'description-optimization', 'selling-point-generation', 'attribute-text-optimization']);
 const IMAGE_CAPABILITIES = new Set(['image-translation', 'image-redraw', 'image-repair']);
@@ -21,7 +22,7 @@ function groupsForCapabilities(capabilities) {
   if (set.has(VIDEO_CAPABILITY)) groups.push('video');
   return groups;
 }
-const PROTOCOLS = new Set(['openai-chat-completions', 'openai-image', 'dashscope-native', 'grsai-gemini-generate', 'grsai-generate']);
+const PROTOCOLS = new Set(['openai-chat-completions', 'openai-image', 'dashscope-native', 'grsai-gemini-generate', 'grsai-generate', 'custom-structured']);
 const GRS_TEXT_PROTOCOL = 'grsai-gemini-generate';
 const GRS_IMAGE_PROTOCOL = 'grsai-generate';
 // GRS AI 国内节点固定；全球节点 https://grsaiapi.com 按用户决定不开放选择。
@@ -77,7 +78,8 @@ function publicHttps(value, code = 'invalid_ai_base_url', { allowEmpty = false, 
   if (allowEmpty && !String(value || '').trim()) return '';
   let url;
   try { url = new URL(String(value || '').trim()); } catch (_) { throw fail(code, '仅允许公开 HTTPS 地址'); }
-  if (url.protocol !== 'https:' || url.username || url.password || url.hash || !allowPrivate && /^(localhost|0(?:\.0){3}|127\.|10\.|192\.168\.|169\.254\.|172\.(?:1[6-9]|2\d|3[01])\.|\[?::(?:1)?\]?)$/i.test(url.hostname)) throw fail(code, '仅允许公开 HTTPS 地址');
+  const localHost = /^(?:localhost|0\.0\.0\.0|127\.|10\.|192\.168\.|169\.254\.|172\.(?:1[6-9]|2\d|3[01])\.|\[?::1\]?|\[?::\]?)|^\[?(?:fc|fd|fe80):/i.test(url.hostname);
+  if (url.protocol !== 'https:' || url.username || url.password || url.hash || (!allowPrivate && localHost)) throw fail(code, '仅允许公开 HTTPS 地址');
   return url.toString().replace(/\/$/, '');
 }
 function normalizeModel(value, existing) {
@@ -85,6 +87,7 @@ function normalizeModel(value, existing) {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : existing || {};
   const result = {};
   for (const [key, item] of Object.entries(source)) {
+    if (key === 'adapter') { result.adapter = item; continue; }
     if (!['name', ...IMAGE_CAPABILITIES].includes(key) || typeof item !== 'string') throw fail('invalid_ai_model', '模型配置格式不正确');
     if (item.trim()) result[key] = item.trim().slice(0, 160);
   }
@@ -104,7 +107,7 @@ function grsaiModelSelection(section, value, existing) {
   if (Object.keys(result).length) return result;
   return { ...TEMPLATE_DEFINITIONS[section === 'product' ? 'grsai-product' : 'grsai-image'].model };
 }
-function normalize(input, { key, tenantId, ownerUserId, existing } = {}) {
+function normalize(input, { key, tenantId, ownerUserId, existing, allowCustom = false } = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw fail('invalid_ai_configuration', 'AI 配置格式不正确');
   const apiKey = input.apiKey == null ? '' : String(input.apiKey).trim();
   if (apiKey.length > 8192) throw fail('invalid_ai_api_key', 'API 密钥长度不正确');
@@ -117,12 +120,12 @@ function normalize(input, { key, tenantId, ownerUserId, existing } = {}) {
   let capabilities = Array.from(new Set(Array.isArray(input.capabilities) ? input.capabilities.map(String) : existing?.capabilities || []));
   if (capabilities.some(capability => !allowed.has(capability)) || hasCredential && !capabilities.some(capability => capability !== VIDEO_CAPABILITY)) throw fail('invalid_ai_capabilities', '配置能力与配置区不匹配');
   const protocol = String(input.protocol || existing?.protocol || '');
-  const allowedProtocols = section === 'product' ? new Set(['openai-chat-completions', GRS_TEXT_PROTOCOL]) : new Set(['openai-image', 'dashscope-native', GRS_IMAGE_PROTOCOL]);
+  const allowedProtocols = section === 'product' ? new Set(['openai-chat-completions', GRS_TEXT_PROTOCOL, 'custom-structured']) : new Set(['openai-image', 'dashscope-native', GRS_IMAGE_PROTOCOL, 'custom-structured']);
   if (!PROTOCOLS.has(protocol) || !allowedProtocols.has(protocol)) throw fail('invalid_ai_protocol', '该配置区不支持此协议');
   const templateId = String(input.template || existing?.template || (section === 'product' ? 'custom-product' : 'custom-image')).slice(0, 64);
   const definition = TEMPLATE_DEFINITIONS[templateId];
-  if (!definition || definition.section !== section || definition.protocol !== protocol) throw fail('invalid_ai_template', '模板、配置区和接口协议不匹配');
-  if (!templateId.startsWith('grsai-')) throw fail('invalid_ai_template', '第一阶段只允许保存 GRS AI 配置');
+  if (!definition || definition.section !== section || (definition.protocol !== protocol && !(allowCustom && protocol === 'custom-structured' && ['custom-product','custom-image'].includes(templateId)))) throw fail('invalid_ai_template', '模板、配置区和接口协议不匹配');
+  if (!templateId.startsWith('grsai-') && !(allowCustom && ['custom-product', 'custom-image'].includes(templateId))) throw fail('invalid_ai_template', '仅单机版允许自定义AI平台及模型');
   const fixedPreset = templateId.startsWith('grsai-');
   if (fixedPreset) capabilities = [...definition.capabilities];
   const supportsVideo = input.supportsVideo === undefined ? capabilities.includes(VIDEO_CAPABILITY) : input.supportsVideo === true;
@@ -131,12 +134,14 @@ function normalize(input, { key, tenantId, ownerUserId, existing } = {}) {
   const name = String(input.name || existing?.name || '').trim();
   if (!name || name.length > 120) throw fail('invalid_ai_name', '配置名称长度必须为 1-120');
   const model = fixedPreset ? grsaiModelSelection(section, input.model, existing?.model) : normalizeModel(input.model, existing?.model);
+  if (protocol === 'custom-structured') model.adapter = vendorAdapter.validate(model.adapter, section);
+  else if (model.adapter !== undefined) throw fail('invalid_ai_vendor_adapter', '该协议不接受可编程供应商适配器');
   if (hasCredential && capabilities.some(capability => !modelForCapability(model, capability))) throw fail('invalid_ai_model', '每项能力都必须配置模型');
   if (apiKey && !key) throw fail('ai_credential_encryption_unavailable', '服务器尚未配置受保护凭证密钥', 503);
   const id = existing?.id || crypto.randomUUID();
   const timeoutMs = fixedPreset ? 180000 : Number(input.timeoutMs ?? existing?.timeout_ms ?? 30000);
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 180000) throw fail('invalid_ai_timeout', '请求超时必须为 1-180 秒');
-  const baseUrl = publicHttps(input.baseUrl || existing?.base_url || existing?.baseUrl, 'invalid_ai_base_url', { allowEmpty: !hasCredential, allowPrivate: true });
+  const baseUrl = publicHttps(input.baseUrl || existing?.base_url || existing?.baseUrl, 'invalid_ai_base_url', { allowEmpty: !hasCredential, allowPrivate: fixedPreset });
   if (definition.baseUrl && baseUrl !== definition.baseUrl) throw fail('invalid_ai_base_url', '内置官方模板不能修改服务地址');
   return {
     id, tenantId: String(tenantId), ownerUserId: String(ownerUserId), name, section,
