@@ -26,7 +26,8 @@
       limit: limit,
       unlimited: unlimited,
       remaining: unlimited ? null : Math.max(0, limit - usage),
-      overLimit: !unlimited && usage > limit
+      overLimit: !unlimited && usage > limit,
+      localOnly: value.localOnly === true
     };
   }
 
@@ -43,7 +44,7 @@
 
   function metaText(value) {
     var item = normalize(value);
-    if (item.unlimited) return '已用 ' + item.usage + item.unit + ' · 当前会员不限额度';
+    if (item.unlimited) return '已用 ' + item.usage + item.unit + (item.localOnly ? ' · 单机版不限额度' : ' · 当前会员不限额度');
     if (item.overLimit) return '已用 ' + item.usage + item.unit + ' · 历史数据超出当前额度 ' + (item.usage - item.limit) + item.unit;
     return '剩余 ' + item.remaining + item.unit;
   }
@@ -109,12 +110,27 @@
     var requester = root && root.erpStorage && typeof root.erpStorage.request === 'function'
       ? root.erpStorage.request.bind(root.erpStorage)
       : function (url) { return fetch(url, { credentials: 'same-origin' }); };
-    return requester(currentUrl()).then(function (response) {
-      return response.json().catch(function () { return {}; }).then(function (payload) {
-        if (!response.ok) throw new Error(payload.message || '会员额度读取失败，请稍后重试。');
-        return payload;
+    function loadMembership() {
+      return requester(currentUrl()).then(function (response) {
+        return response.json().catch(function () { return {}; }).then(function (payload) {
+          if (!response.ok) throw new Error(payload.message || '会员额度读取失败，请稍后重试。');
+          return payload;
+        });
       });
-    });
+    }
+    // The standalone edition disables all membership endpoints. Local-only
+    // collection and SKU creation must not depend on unavailable SaaS quotas.
+    return requester('/api/local/standalone-mode').then(function (response) {
+      if (!response.ok) return loadMembership();
+      return response.json().catch(function () { return {}; }).then(function (mode) {
+        if (mode.standalone !== true) return loadMembership();
+        var quotas = {};
+        ORDER.forEach(function (key) {
+          quotas[key] = { key: key, usage: 0, limit: null, unlimited: true, localOnly: true };
+        });
+        return { localOnly: true, quotas: quotas };
+      });
+    }, function () { return loadMembership(); });
   }
 
   return {

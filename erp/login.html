@@ -260,24 +260,6 @@
     }).catch(function () { message.textContent = '图形验证码加载失败，请刷新。'; });
   }
 
-  // The admin endpoint requires a valid captcha on the FIRST request.
-  // Show and request the challenge when entering "admin", not after a failed login.
-  function showAdminCaptchaOnTyping() {
-    var admin = isAdminIdentifier();
-    var currentlyHidden = captchaWrap.classList.contains('auth-hidden');
-    if (admin) {
-      if (currentlyHidden || !captchaId) {
-        setHidden(captchaWrap, false);
-        loadCaptcha();
-      }
-    } else if (!currentlyHidden) {
-      setHidden(captchaWrap, true);
-      captchaId = '';
-      captchaAnswer.value = '';
-      captchaImage.removeAttribute('src');
-    }
-  }
-  identifier.addEventListener('input', showAdminCaptchaOnTyping);
   function jsonRequest(url, body) {
     return fetch(url, {
       method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body || {})

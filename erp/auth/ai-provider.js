@@ -4,6 +4,7 @@ const dns = require('node:dns').promises;
 const https = require('node:https');
 const net = require('node:net');
 const { modelForCapability, grsaiModel } = require('./ai-config');
+const vendorAdapter = require('./ai-vendor-adapter');
 
 const MAX_RESPONSE_BYTES = 256 * 1024;
 const MAX_IMAGE_INPUT_BYTES = 10 * 1024 * 1024;
@@ -69,15 +70,15 @@ function stripJsonFence(value) {
   const match = /^```(?:json)?\s*([\s\S]*?)\s*```$/.exec(text);
   return match ? match[1].trim() : text;
 }
-function parseJsonBuffer(buffer) {  if (buffer.length > MAX_RESPONSE_BYTES) throw fail('ai_response_too_large', 'AI 返回内容过大');
+function parseJsonBuffer(buffer, limit = MAX_RESPONSE_BYTES) {  if (buffer.length > limit) throw fail('ai_response_too_large', 'AI 返回内容过大');
   try { return JSON.parse(buffer.toString('utf8')); } catch (_) { throw fail('ai_response_invalid', 'AI 返回格式无效'); }
 }
-async function readJson(response) {
+async function readJson(response, limit = MAX_RESPONSE_BYTES) {
   const declared = Number(response.headers?.get?.('content-length') || 0);
-  if (declared > MAX_RESPONSE_BYTES) throw fail('ai_response_too_large', 'AI 返回内容过大');
-  return parseJsonBuffer(Buffer.from(await response.arrayBuffer()));
+  if (declared > limit) throw fail('ai_response_too_large', 'AI 返回内容过大');
+  return parseJsonBuffer(Buffer.from(await response.arrayBuffer()), limit);
 }
-async function secureJsonRequest(url, { method = 'GET', headers = {}, body, timeoutMs = 30000, lookup = dns.lookup } = {}) {
+async function secureJsonRequest(url, { method = 'GET', headers = {}, body, timeoutMs = 30000, lookup = dns.lookup, maxResponseBytes = MAX_RESPONSE_BYTES } = {}) {
   const target = new URL(url);
   if (target.protocol !== 'https:' || target.username || target.password || target.hash) throw fail('invalid_ai_base_url', 'AI服务地址必须为公开HTTPS地址', 400);
   return new Promise((resolve, reject) => {
@@ -93,11 +94,11 @@ async function secureJsonRequest(url, { method = 'GET', headers = {}, body, time
     }, response => {
       if (response.statusCode >= 300 && response.statusCode < 400) { response.resume(); return reject(fail('ai_redirect_denied', 'AI 服务重定向已被拒绝')); }
       const chunks = []; let size = 0;
-      response.on('data', chunk => { size += chunk.length; if (size > MAX_RESPONSE_BYTES) req.destroy(fail('ai_response_too_large', 'AI 返回内容过大')); else chunks.push(chunk); });
+      response.on('data', chunk => { size += chunk.length; if (size > maxResponseBytes) req.destroy(fail('ai_response_too_large', 'AI 返回内容过大')); else chunks.push(chunk); });
       response.on('end', () => {
         const ok = response.statusCode >= 200 && response.statusCode < 300;
         if (!ok) return resolve({ ok, status: response.statusCode, headers: response.headers, payload: {} });
-        try { resolve({ ok, status: response.statusCode, headers: response.headers, payload: parseJsonBuffer(Buffer.concat(chunks)) }); } catch (error) { reject(error); }
+        try { resolve({ ok, status: response.statusCode, headers: response.headers, payload: parseJsonBuffer(Buffer.concat(chunks), maxResponseBytes) }); } catch (error) { reject(error); }
       });
     });
     req.on('timeout', () => req.destroy(fail('ai_timeout', 'AI 请求超时，未修改商品草稿')));
@@ -113,7 +114,7 @@ async function requestJson(url, options, fetchImpl, lookup) {
   const timer = setTimeout(() => controller.abort(), options.timeoutMs);
   try {
     const response = await fetchImpl(url, { method: options.method, redirect: 'error', signal: controller.signal, headers: options.headers, body: options.body });
-    return { ok: response.ok, status: response.status, payload: response.ok ? await readJson(response) : {} };
+    return { ok: response.ok, status: response.status, payload: response.ok ? await readJson(response, options.maxResponseBytes || MAX_RESPONSE_BYTES) : {} };
   } catch (error) {
     if (error.name === 'AbortError') throw fail('ai_timeout', 'AI 请求超时，未修改商品草稿');
     throw error;
@@ -136,7 +137,7 @@ function setChatDiagnostic(target, values) {
 }
 function diagnosticError(error) { return String(error && (error.publicCode || error.message) || 'ai_provider_failed').slice(0, 120); }
 async function chat({ configuration, apiKey, system, input, capabilities = ['product-translation'], fetchImpl, lookup, timeoutMs, trace, diagnostic }) {
-  if (!configuration || !apiKey || !['openai-chat-completions', 'grsai-gemini-generate'].includes(configuration.protocol)) throw fail('ai_configuration_unavailable', '所选商品优化配置不可用', 409);
+  if (!configuration || !apiKey || !['openai-chat-completions', 'grsai-gemini-generate', 'custom-structured'].includes(configuration.protocol)) throw fail('ai_configuration_unavailable', '所选商品优化配置不可用', 409);
   const base = String(configuration.base_url || configuration.baseUrl || '').replace(/\/$/, '');
   const resolvedModels = capabilities.map(capability => modelForCapability(configuration.model, capability));
   if (resolvedModels.some(model => !model)) throw fail('ai_configuration_unavailable', '所选配置没有可用模型', 409);
@@ -144,6 +145,12 @@ async function chat({ configuration, apiKey, system, input, capabilities = ['pro
   if (models.length > 1) throw fail('ai_multiple_models_required', '本次字段需要不同模型，请分开生成候选', 409);
   const model = models[0];
   setChatDiagnostic(diagnostic, { actualModel: model, protocol: configuration.protocol });
+  if (configuration.protocol === 'custom-structured') {
+    const run = await vendorAdapter.call({ configuration, apiKey, adapter:configuration.model.adapter, vars: { model, system, inputJson: JSON.stringify(input), prompt: String(input?.prompt || ''), image: '', images: [], mask: '', taskId: '' }, requestJson, fetchImpl, lookup });
+    const value = vendorAdapter.pathValue(run.data, run.response.textPath);
+    if (typeof value !== 'string' || !value.trim()) throw fail('ai_response_invalid', '供应商响应中没有文本结果');
+    return value.trim();
+  }
   if (configuration.protocol === 'grsai-gemini-generate') {
     const geminiTarget = `${base}/v1beta/models/${encodeURIComponent(model)}:generateContent`;
     const geminiBody = { contents: [{ role: 'user', parts: [{ text: `${system}\n\n${JSON.stringify(input)}` }] }], generationConfig: {} };
@@ -192,6 +199,7 @@ async function testConnection({ configuration, apiKey, fetchImpl, lookup }) {
   if (!configuration || !apiKey) throw fail('ai_configuration_unavailable', 'AI 配置不可用', 409);
   const base = String(configuration.base_url || configuration.baseUrl || '').replace(/\/$/, '');
   const timeoutMs = configuration.timeout_ms || 10000;
+  if (configuration.protocol === 'custom-structured') throw fail('ai_connection_test_unsupported', '可编程适配器无法保证有免费的连接探针；请使用明确确认收费风险的功能测试', 409);
   if (String(configuration.template || '').startsWith('grsai-')) {
     // GRS AI 的 getModelStatus 免密钥，只证明模型存在；密钥是否有效必须再用 getCredits 验证。
     const models = Array.from(new Set((configuration.capabilities || []).map(capability => modelForCapability(configuration.model, capability)).filter(Boolean)));
@@ -241,6 +249,23 @@ async function functionalTest({ configuration, apiKey, confirmed, fetchImpl, loo
     const content = await chat({ configuration, apiKey, system: '这是 AI 连通性测试，请用一句简短中文回复，不要输出其他内容。', input: { message: '你好' }, capabilities: [configuration.capabilities?.[0] || 'title-optimization'], fetchImpl, lookup, timeoutMs, trace });
     if (!content.trim()) throw fail('ai_response_invalid', 'AI 文字模型没有返回回复');
     return { ok: true, kind: 'functional', resultType: 'text-reply', model: modelForCapability(configuration.model, configuration.capabilities?.[0] || 'title-optimization'), replyChars: content.trim().length };
+  }
+  if (configuration.protocol === 'custom-structured') {
+    // Paid functional test uses a synthetic one-pixel image, never a customer asset.
+    const sample='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jxI8AAAAASUVORK5CYII=';
+    const submitted=await submitImage({configuration,apiKey,input:{capability:'image-redraw',image:sample,prompt:'检测图片接口：请返回一张简单的测试图'},fetchImpl,lookup,timeoutMs});
+    const model=modelForCapability(configuration.model,'image-redraw');
+    if (submitted.state === 'succeeded') return {ok:true,kind:'functional',resultType:'image-generated',model,capability:'image-redraw'};
+    if(!submitted.taskId||!configuration.model?.adapter?.poll)throw fail('ai_image_result_pending','适配器没有可验证的图片结果或任务轮询协议',409);
+    let elapsed=0;
+    while(elapsed<maxWaitMs){
+      await new Promise(done=>setTimeout(done,pollIntervalMs));
+      elapsed+=pollIntervalMs;
+      const result=await pollImage({configuration,apiKey,taskId:submitted.taskId,fetchImpl,lookup});
+      if(result.state==='succeeded')return {ok:true,kind:'functional',resultType:'image-generated',model,capability:'image-redraw'};
+      if(result.state==='failed')throw fail('ai_image_generate_failed','供应商报告生成失败');
+    }
+    throw fail('ai_image_result_pending','自定义图片供应商超时，无法确认结果',504);
   }
   const model = modelForCapability(configuration.model, 'image-redraw');
   if (!grsaiModel('image', model)) throw fail('invalid_ai_model', 'GRS AI 图片模型不在内置清单中，请重新选择', 400);
@@ -340,6 +365,11 @@ async function submitImage({ configuration, apiKey, input, fetchImpl, lookup, ti
   const model = modelForCapability(configuration.model, checked.capability);
   if (!model) throw fail('ai_configuration_unavailable', '所选配置没有对应图片模型', 409);
   setChatDiagnostic(diagnostic, { actualModel: model, protocol: configuration.protocol });
+  if (configuration.protocol === 'custom-structured') {
+    const images = [checked.source.dataUrl,...(checked.references || []).map(x=>x.dataUrl)].slice(0,8);
+    const run = await vendorAdapter.call({configuration,apiKey,adapter:configuration.model.adapter,vars:{model,system:'',inputJson:'',prompt:checked.prompt||'',image:checked.source.dataUrl,images,mask:checked.mask?.dataUrl||'',taskId:''},requestJson,fetchImpl,lookup});
+    return {...vendorAdapter.imageResult(run.data,run.response),protocol:configuration.protocol,model,capability:checked.capability};
+  }
   const base = String(configuration.base_url || configuration.baseUrl || '').replace(/\/$/, '');
   let target; let body; const headers = { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' };
   if (configuration.protocol === 'dashscope-native') {
@@ -363,17 +393,31 @@ async function submitImage({ configuration, apiKey, input, fetchImpl, lookup, ti
   } else throw fail('ai_configuration_unavailable', '所选协议不支持AI图片', 409);
   let result;
   try {
-    result = await requestJson(target, { method: 'POST', timeoutMs: Math.min(Number(timeoutMs || configuration.timeout_ms || configuration.timeoutMs) || 30000, 180000), headers, body }, fetchImpl, lookup);
+    result = await requestJson(target, { method: 'POST', timeoutMs: Math.min(Number(timeoutMs || configuration.timeout_ms || configuration.timeoutMs) || 30000, 180000), headers, body,
+      maxResponseBytes: configuration.protocol === 'openai-image' ? 15 * 1024 * 1024 : MAX_RESPONSE_BYTES }, fetchImpl, lookup);
   } catch (error) { setChatDiagnostic(diagnostic, { httpSucceeded: false, httpStatus: 0, providerRequestId: 'unavailable', errorCode: diagnosticError(error) }); throw error; }
   setChatDiagnostic(diagnostic, { httpSucceeded: result.ok === true, httpStatus: Number(result.status) || 0, providerRequestId: providerRequestId(result.payload) });
   if (!result.ok) throw rejection(result.status, '图片功能请求');
   if (configuration.protocol === 'grsai-generate') return grsaiImageResult(result.payload, model, checked.capability);
   const taskId = result.payload?.output?.task_id || result.payload?.task_id || result.payload?.id || null;
-  const resultUrl = result.payload?.output?.image_url || result.payload?.data?.[0]?.url || null;
+  const resultUrl = result.payload?.output?.image_url || result.payload?.data?.[0]?.url || (result.payload?.data?.[0]?.b64_json ? 'data:image/png;base64,' + result.payload.data[0].b64_json : null);
   if (!taskId && !resultUrl) throw fail('ai_response_invalid', 'AI图片服务未返回任务或候选结果');
   return { state: resultUrl ? 'succeeded' : 'submitted', taskId: taskId && String(taskId), resultUrl: resultUrl && String(resultUrl), protocol: configuration.protocol, model, capability: checked.capability };
 }
 async function generateImage({ configuration, apiKey, input, fetchImpl, lookup }) {
+  if (configuration?.protocol === 'custom-structured') {
+    if (configuration.section !== 'image' || !apiKey) throw fail('ai_configuration_unavailable', '自定义图片配置不可用', 409);
+    const prompt=String(input?.prompt||'').trim();
+    if(!prompt||prompt.length>8000)throw fail('invalid_ai_image_prompt','图片提示词长度必须为1-8000',400);
+    const capability=String(input.capability||'image-redraw');
+    if(!configuration.capabilities?.includes(capability))throw fail('ai_configuration_unavailable','当前图片配置未授权该能力',409);
+    const model=modelForCapability(configuration.model,capability);
+    if(!model)throw fail('ai_configuration_unavailable','图片模型尚未配置',409);
+    const refs=(Array.isArray(input.referenceImages)&&input.referenceImages.length?input.referenceImages:[input.image]).filter(Boolean).slice(0,8).map(x=>imageData(x,'参考图片').dataUrl);
+    const run=await vendorAdapter.call({configuration,apiKey,adapter:configuration.model.adapter,vars:{model,system:'',inputJson:'',prompt,image:refs[0]||'',images:refs,mask:'',taskId:''},requestJson,fetchImpl,lookup});
+    return {...vendorAdapter.imageResult(run.data,run.response),protocol:configuration.protocol,model,capability};
+  }
+  if (configuration?.protocol === 'openai-image') return submitImage({ configuration, apiKey, input, fetchImpl, lookup });
   if (!configuration || configuration.section !== 'image' || !apiKey || configuration.protocol !== 'grsai-generate') throw fail('ai_configuration_unavailable', '所选AI图片配置不可用', 409);
   const prompt = String(input.prompt || '').trim();
   if (!prompt || prompt.length > 8000) throw fail('invalid_ai_image_prompt', '图片提示词长度必须为1-8000', 400);
@@ -397,6 +441,10 @@ async function generateImage({ configuration, apiKey, input, fetchImpl, lookup }
 }
 async function pollImage({ configuration, apiKey, taskId, fetchImpl, lookup, diagnostic }) {
   if (!/^[A-Za-z0-9._:-]{1,200}$/.test(String(taskId || ''))) throw fail('invalid_ai_image_task', 'AI图片任务编号不正确', 400);
+  if (configuration?.protocol === 'custom-structured') {
+    const run = await vendorAdapter.call({configuration,apiKey,adapter:configuration.model.adapter,vars:{taskId},stage:'poll',requestJson,fetchImpl,lookup});
+    return vendorAdapter.imageResult(run.data,run.response,String(taskId));
+  }
   const base = String(configuration.base_url || configuration.baseUrl || '').replace(/\/$/, '');
   let target; let options;
   if (configuration.protocol === 'dashscope-native') {
@@ -440,6 +488,10 @@ function validImageBuffer(buffer, mime) {
   return false;
 }
 async function downloadImage(value, { lookup = dns.lookup, requestImpl = https.request, timeoutMs = 30000, allowSourceFormats = false, diagnostic } = {}) {
+  if (typeof value === 'string' && value.startsWith('data:image/')) {
+    const original = imageData(value, 'AI候选图');
+    return { buffer: original.body, mime: original.mime, extension: original.extension };
+  }
   let target;
   try { target = new URL(value); } catch (_) { throw fail('invalid_ai_image_url', 'AI候选图片地址无效', 400); }
   if (target.protocol !== 'https:' || target.username || target.password || target.hash) throw fail('invalid_ai_image_url', 'AI候选图片必须使用公开HTTPS地址', 400);

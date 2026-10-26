@@ -1461,7 +1461,7 @@ async function buildTrustedSkuImageRedrawTask(account, input, options = {}) {
     if (String(proof.ruleHash || '') !== sellingPointRuleHash) throw Object.assign(new Error('卖点规则已变更，请重新解析或改为手动卖点后再开始生图。'), { publicCode: 'sku_redraw_analysis_required', status: 409 });
   }
   const configuration = options.configuration || await aiConfigStore.availableOfficial(account, ['image-redraw']);
-  const customizationAllowed = options.customizationAllowed === undefined ? await authStore.canUseCustomConfigurations(account) : options.customizationAllowed;
+  const customizationAllowed = options.customizationAllowed === undefined ? (STANDALONE_MODE || await authStore.canUseCustomConfigurations(account)) : options.customizationAllowed;
   const promptCacheKey = templateKey + '|' + (customizationAllowed ? 'custom' : 'official');
   let promptBody;
   if (options.promptBodies instanceof Map && options.promptBodies.has(promptCacheKey)) promptBody = await options.promptBodies.get(promptCacheKey);
@@ -3024,7 +3024,7 @@ async function handleApi(req, res, pathname) {
       if (items.length < 1 || items.length > 1380 || !['ai', 'manual'].includes(sellingPointsSource)) return sendJson(res, 400, { error: 'invalid_sku_image_ai_batch_request', message: '请勾选不超过1380个图片和模板组合，并选择已确认的卖点来源后再开始。' });
       const sellingPoints = String(input.sellingPoints || '').trim();
       const configuration = await aiConfigStore.availableOfficial(account, ['image-redraw']);
-      const customizationAllowed = await authStore.canUseCustomConfigurations(account);
+      const customizationAllowed = (STANDALONE_MODE || await authStore.canUseCustomConfigurations(account));
       const promptBodies = new Map();
       const sourceCache = new Map();
       const referenceCache = new Map();
@@ -3067,7 +3067,7 @@ async function handleApi(req, res, pathname) {
     try {
       const taskId = new URL(req.url, 'http://' + HOST + ':' + PORT).searchParams.get('taskId');
       const job = await authStore.getSkuImageAiPromptTask(account, taskId);
-      const canReadPromptContents = account.isSystemAdmin === true || await authStore.canUseCustomConfigurations(account);
+      const canReadPromptContents = account.isSystemAdmin === true || (STANDALONE_MODE || await authStore.canUseCustomConfigurations(account));
       const snapshots = {};
       const types = { template: 'template', sellingPoints: 'selling_points', rawResponse: 'raw_response', finalPrompt: 'final_prompt' };
       for (const [name, type] of Object.entries(types)) {
@@ -3098,7 +3098,7 @@ async function handleApi(req, res, pathname) {
       if (commonInvalid) return sendJson(res, 400, { error: 'invalid_sku_image_ai_request', message: 'AI图片请求参数不完整，请重新选择图片后再试。' });
       if (capability === 'image-redraw' && (billingChannel !== 'official' || !['image-main','image-scene','image-selling','image-accessory','image-white-base','image-size'].includes(String(input.templateKey)))) return sendJson(res, 400, { error: 'invalid_sku_image_ai_request', message: 'AI重绘模板或通道不正确，请重新选择模板后再试。' });
       if (capability === 'image-translation' && (!['official','own'].includes(billingChannel) || !['zh','en'].includes(String(input.sourceLanguage || '')) || String(input.targetLanguage || '') !== 'ru' || billingChannel === 'own' && !UUID_PATTERN.test(String(input.configurationId || '')))) return sendJson(res, 400, { error: 'invalid_sku_image_ai_request', message: '图片翻译方向或AI通道不正确，请重新选择后再试。' });
-      if (billingChannel === 'own') await authStore.requireAiEditEntitlement(account);
+      if (billingChannel === 'own') if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account);
       const scoped = { clientId: String(input.clientId), productId: String(input.productId), variantRef: String(input.variantRef), linkId: String(input.linkId), associationVersion: Number(input.associationVersion) };
       const productScope = { clientId: scoped.clientId, productId: scoped.productId, variantRef: scoped.variantRef };
       await authStore.assertSkuImageTarget(account, scoped);
@@ -3135,7 +3135,7 @@ async function handleApi(req, res, pathname) {
       }
       const configuration = await aiConfigStore.availableOfficial(account, ['image-redraw']);
       const sellingPointResultHash = skuImageAnalysisProof.digest(sellingPoints);
-      const promptBody = await aiPromptStore.effective(account, String(input.templateKey), { officialOnly: !(await authStore.canUseCustomConfigurations(account)) });
+      const promptBody = await aiPromptStore.effective(account, String(input.templateKey), { officialOnly: !((STANDALONE_MODE || await authStore.canUseCustomConfigurations(account))) });
       requireSkuImagePromptReady(promptBody);
       const promptHash = skuImageAnalysisProof.digest(promptBody);
       const fingerprint = skuImageAnalysisProof.digest([account.tenantId, account.userId, scoped.clientId, scoped.productId, scoped.variantRef, scoped.linkId, scoped.associationVersion, sourceHash, input.templateKey, promptHash, sellingPointsSource, sellingPointResultHash].join('|'));
@@ -5044,7 +5044,7 @@ async function handleApi(req, res, pathname) {
         account: dataAccount,
         payload: body.payload,
         operationSource: action === 'refresh' ? 'refresh' : action === 'package-facts' ? 'product_create_user' : 'collector',
-        withQuota: action === 'package-facts' ? undefined : (nextPayload, writer) => membershipQuota.withCollectionBoxGate(authStore, dataAccount, nextPayload, writer)
+        withQuota: (STANDALONE_MODE || action === 'package-facts') ? undefined : (nextPayload, writer) => membershipQuota.withCollectionBoxGate(authStore, dataAccount, nextPayload, writer)
       });
       const projectedItem = (await projectBusinessIdentityDisplay('erp_collected_products', result.item ? [result.item] : [], dataAccount))[0] || null;
       return sendJson(res, result.created ? 201 : 200, { ...result, item: projectedItem });
@@ -6296,7 +6296,7 @@ async function handleApi(req, res, pathname) {
     const dataAccount = tenantScopedReadAccount(req, res, account);
     if (!dataAccount) return;
     try {
-      const customizationAllowed = await authStore.canUseCustomConfigurations(account);
+      const customizationAllowed = (STANDALONE_MODE || await authStore.canUseCustomConfigurations(account));
       const [sources, preferenceDocument, profileDocument] = await Promise.all([
         loadLogisticsSources(account, dataAccount, customizationAllowed),
         customizationAllowed ? authStore.getDocument(dataAccount, logisticsPreferenceKey(account)) : Promise.resolve(null),
@@ -6600,7 +6600,7 @@ async function handleApi(req, res, pathname) {
     if (!account) return sendJson(res, 401, { error: 'unauthorized', message: '登录状态已失效或未登录，请重新登录后再试。' });
     const dataAccount = tenantScopedReadAccount(req, res, account);
     if (!dataAccount) return;
-    const customizationAllowed = await authStore.canUseCustomConfigurations(account);
+    const customizationAllowed = (STANDALONE_MODE || await authStore.canUseCustomConfigurations(account));
     // Free/expired members may USE official tariff rules, but cannot read
     // protected original Excel bytes even if they uploaded before expiry.
     if (!customizationAllowed) return sendJson(res, 403, {
@@ -6964,7 +6964,7 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
         const storedData = key === 'erp_shops_data'
           ? encryptShopCredentials(documentData, CREDENTIALS_KEY, dataAccount.tenantId)
           : documentData;
-        const saved = key === 'erp_collected_products'
+        const saved = key === 'erp_collected_products' && !STANDALONE_MODE
           ? await membershipQuota.withCollectionBoxGate(authStore, dataAccount, documentData, function () { return authStore.putDocument(dataAccount, key, storedData, expectedVersion); })
           : await authStore.putDocument(dataAccount, key, storedData, expectedVersion);
         if (key === CATEGORY_ATTRIBUTE_KEY) invalidateCategoryMatchCompiledCache(dataAccount);
@@ -7043,7 +7043,7 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
     if (req.method === 'POST' && !requireCsrf(req, res)) return;
     try {
       if (req.method === 'GET') {
-        const customizationAllowed = await authStore.canUseCustomConfigurations(account);
+        const customizationAllowed = (STANDALONE_MODE || await authStore.canUseCustomConfigurations(account));
         const data = await aiPromptStore.list(account);
         const canReadPromptBodies = account.isSystemAdmin === true || data.owner === true;
         if (canReadPromptBodies && (customizationAllowed || account.isSystemAdmin)) return sendJson(res, 200, { ...data, customizationAllowed: true });
@@ -7074,7 +7074,7 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
       }
       // 读取对租户全体成员开放（AI重绘弹窗要用管理员保存的模板）；新增/修改仅管理员
       if (account.memberType !== 'owner') return sendJson(res, 403, { error: 'ai_prompt_owner_required', message: '只有该提示词的所有者可以修改或删除它，请用自己的账号操作。' });
-      await authStore.requireAiEditEntitlement(account);
+      if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account);
       const body = await readJsonBody(req, res, 16 * 1024); if (!body) return;
       if (body.id && !UUID_PATTERN.test(String(body.id))) return sendJson(res, 400, { error: 'invalid_ai_prompt_id', message: '未找到要操作的提示词，请刷新列表后重试。' });
       const saved = await aiPromptStore.save(account, body); return sendJson(res, 200, { prompt: { id: saved.id, name: saved.name, functionKey: saved.function_key, body: saved.body, enabled: saved.enabled, officialKey: saved.official_key, officialVersion: saved.official_version } });
@@ -7084,14 +7084,14 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
   if (aiPromptMatch && req.method === 'DELETE') {
     const account = await authenticate(req); if (!account) return sendJson(res, 401, { error: 'unauthorized', message: '登录状态已失效或未登录，请重新登录后再试。' }); if (!requireCsrf(req, res)) return;
       if (account.memberType !== 'owner' && !account.isSystemAdmin) return sendJson(res, 403, { error: 'ai_prompt_owner_required', message: '只有该提示词的所有者可以修改或删除它，请用自己的账号操作。' });
-    try { await authStore.requireAiEditEntitlement(account); await aiPromptStore.remove(account, aiPromptMatch[1]); return sendJson(res, 200, { removed: true }); }
+    try { if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account); await aiPromptStore.remove(account, aiPromptMatch[1]); return sendJson(res, 200, { removed: true }); }
     catch (error) { return sendJson(res, error.status || (error.publicCode ? 400 : 500), { error: error.publicCode || 'ai_prompt_delete_failed', message: error.publicCode ? error.message : '提示词删除失败' }); }
   }
   const aiPromptSelectionMatch = pathname.match(/^\/api\/integrations\/ai\/prompt-selections\/([a-z0-9-]{3,64})$/);
   if (aiPromptSelectionMatch && req.method === 'PUT') {
     const account = await authenticate(req); if (!account) return sendJson(res, 401, { error: 'unauthorized', message: '登录状态已失效或未登录，请重新登录后再试。' }); if (!requireCsrf(req, res)) return;
       if (account.memberType !== 'owner' && !account.isSystemAdmin) return sendJson(res, 403, { error: 'ai_prompt_owner_required', message: '只有该提示词的所有者可以修改或删除它，请用自己的账号操作。' });
-    try { await authStore.requireAiEditEntitlement(account); const body = await readJsonBody(req, res, 4 * 1024); if (!body) return; if (body.promptId && !UUID_PATTERN.test(String(body.promptId))) return sendJson(res, 400, { error: 'invalid_ai_prompt_id', message: '未找到要操作的提示词，请刷新列表后重试。' }); await aiPromptStore.select(account, aiPromptSelectionMatch[1], body.promptId || null); return sendJson(res, 200, { saved: true }); }
+    try { if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account); const body = await readJsonBody(req, res, 4 * 1024); if (!body) return; if (body.promptId && !UUID_PATTERN.test(String(body.promptId))) return sendJson(res, 400, { error: 'invalid_ai_prompt_id', message: '未找到要操作的提示词，请刷新列表后重试。' }); await aiPromptStore.select(account, aiPromptSelectionMatch[1], body.promptId || null); return sendJson(res, 200, { saved: true }); }
     catch (error) { return sendJson(res, error.status || (error.publicCode ? 400 : 500), { error: error.publicCode || 'ai_prompt_selection_failed', message: error.publicCode ? error.message : '生效提示词保存失败' }); }
   }
 
@@ -7123,7 +7123,7 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
     if (!account) return sendJson(res, 401, { error: 'unauthorized', message: '登录状态已失效或未登录，请重新登录后再试。' });
     if (account.memberType !== 'owner') return sendJson(res, 403, { error: 'ai_configuration_owner_required', message: '只有该配置的所有者可以修改或删除它，请用自己的账号操作。' });
     try {
-      await authStore.requireAiEditEntitlement(account);
+      if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account);
       const listed = await aiConfigStore.list(account);
       const row = listed.rows.find(item => item.template === 'grsai-product' && item.encrypted_api_key);
       if (!row) return sendJson(res, 409, { error: 'ai_configuration_unavailable', message: '请先保存 GRS AI 密钥' });
@@ -7164,7 +7164,7 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
     if (!requireCsrf(req, res)) return;
     if (account.memberType !== 'owner') return sendJson(res, 403, { error: 'ai_configuration_owner_required', message: '只有该配置的所有者可以修改或删除它，请用自己的账号操作。' });
     try {
-      await authStore.requireAiEditEntitlement(account);
+      if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account);
       const listed = await aiConfigStore.list(account);
       const existingFor = template => listed.rows.find(row => row.template === template);
       if (req.method === 'DELETE') {
@@ -7216,20 +7216,20 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
     if (req.method === 'POST' && !requireCsrf(req, res)) return;
     try {
       if (req.method === 'GET') {
-        const customizationAllowed = await authStore.canUseCustomConfigurations(account);
+        const customizationAllowed = STANDALONE_MODE || (STANDALONE_MODE || await authStore.canUseCustomConfigurations(account));
         const [listed, subaccounts, registrationOverrides] = await Promise.all([aiConfigStore.list(account), aiConfigStore.listSubaccounts(account), aiConfigStore.listPublishedRegistrationOverrides()]);
         const configurations = customizationAllowed ? listed.rows.map(row => aiConfig.redact(row, !listed.isOwner)) : [];
         const covered = group => configurations.some(row => row.enabled && row.credentialsConfigured && row.groups.includes(group));
         const coverage = { text: covered('text'), image: covered('image'), video: covered('video') };
-        return sendJson(res, 200, { owner: listed.isOwner, systemAdmin: Boolean(account.isSystemAdmin), customizationAllowed, configurations, coverage, subaccounts: customizationAllowed ? subaccounts : [], registrationOverrides });
+        return sendJson(res, 200, { owner: listed.isOwner, systemAdmin: Boolean(account.isSystemAdmin), standalone: STANDALONE_MODE, customizationAllowed, configurations, coverage, subaccounts: customizationAllowed ? subaccounts : [], registrationOverrides });
       }
       if (account.memberType !== 'owner') return sendJson(res, 403, { error: 'ai_configuration_owner_required' });
-      await authStore.requireAiEditEntitlement(account);
-      const body = await readJsonBody(req, res, 32 * 1024); if (!body) return;
+      if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account);
+      const body = await readJsonBody(req, res, STANDALONE_MODE ? 48 * 1024 : 32 * 1024); if (!body) return;
       if (String(body.template || '').startsWith('grsai-')) return sendJson(res, 400, { error: 'grsai_quick_setup_required', message: '请使用 GRS AI 一键配置' });
       if (body.id && !UUID_PATTERN.test(String(body.id))) return sendJson(res, 400, { error: 'invalid_ai_configuration_id', message: '未找到要操作的AI配置，请刷新列表后重试。' });
       const existing = body.id ? await aiConfigStore.getOwner(account, String(body.id)) : null;
-      const saved = await aiConfigStore.save(account, aiConfig.normalize(body, { key: CREDENTIALS_KEY, tenantId: account.tenantId, ownerUserId: account.userId, existing }));
+      const saved = await aiConfigStore.save(account, aiConfig.normalize(body, { key: CREDENTIALS_KEY, tenantId: account.tenantId, ownerUserId: account.userId, existing, allowCustom: STANDALONE_MODE }));
       return sendJson(res, 200, { configuration: aiConfig.redact(saved) });
     } catch (error) {
       return sendJson(res, error.status || (error.publicCode ? 400 : 500), { error: error.publicCode || 'ai_configuration_failed', message: error.publicCode ? error.message : 'AI 配置保存失败' });
@@ -7284,7 +7284,7 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
     const account = await authenticate(req);
     if (!account) return sendJson(res, 401, { error: 'unauthorized', message: '登录状态已失效或未登录，请重新登录后再试。' });
     if (!requireCsrf(req, res)) return;
-    try { await authStore.requireAiEditEntitlement(account);
+    try { if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account);
       await aiConfigStore.remove(account, aiConfigurationMatch[1]); return sendJson(res, 200, { removed: true }); }
     catch (error) { return sendJson(res, error.status || (error.publicCode ? 400 : 500), { error: error.publicCode || 'ai_configuration_delete_failed', message: error.publicCode ? error.message : 'AI 配置删除失败' }); }
   }
@@ -7296,7 +7296,7 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
     if (!requireCsrf(req, res)) return;
     if (account.memberType !== 'owner') return sendJson(res, 403, { error: 'ai_configuration_owner_required', message: '只有该配置的所有者可以修改或删除它，请用自己的账号操作。' });
     try {
-      await authStore.requireAiEditEntitlement(account);
+      if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account);
       const body = await readJsonBody(req, res, 4 * 1024); if (!body || typeof body.enabled !== 'boolean') return sendJson(res, 400, { error: 'invalid_ai_enabled_flag', message: '启用状态不正确' });
       const saved = await aiConfigStore.setEnabled(account, aiConfigurationEnableMatch[1], body.enabled);
       return sendJson(res, 200, { configuration: aiConfig.redact(saved) });
@@ -7310,7 +7310,7 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
     if (!account) return sendJson(res, 401, { error: 'unauthorized', message: '登录状态已失效或未登录，请重新登录后再试。' });
     if (!requireCsrf(req, res)) return;
     try {
-      await authStore.requireAiEditEntitlement(account);
+      if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account);
       const body = await readJsonBody(req, res, 8 * 1024); if (!body) return;
       if (!['connection', 'functional'].includes(body.kind)) return sendJson(res, 400, { error: 'ai_test_kind_invalid', message: '测试类型无效' });
       if (body.kind === 'functional' && body.confirmed !== true) return sendJson(res, 409, { error: 'ai_paid_test_confirmation_required', message: '功能测试可能产生费用，请先明确确认' });
@@ -7332,7 +7332,7 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
   const aiDefaultMatch = pathname.match(/^\/api\/integrations\/ai\/defaults\/([a-z-]{3,80})$/);
   if (aiDefaultMatch && req.method === 'PUT') {
     const account = await authenticate(req); if (!account) return sendJson(res, 401, { error: 'unauthorized' }); if (!requireCsrf(req, res)) return;
-    try { await authStore.requireAiEditEntitlement(account);
+    try { if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account);
       const body = await readJsonBody(req, res, 8 * 1024); if (!body) return; if (!UUID_PATTERN.test(String(body.configurationId || ''))) return sendJson(res, 400, { error: 'invalid_ai_configuration_id' }); await aiConfigStore.setDefault(account, aiDefaultMatch[1], String(body.configurationId)); return sendJson(res, 200, { saved: true }); }
     catch (error) { return sendJson(res, error.status || (error.publicCode ? 400 : 500), { error: error.publicCode || 'ai_default_save_failed', message: error.publicCode ? error.message : 'AI 默认方案保存失败' }); }
   }
@@ -7340,7 +7340,7 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
   const aiPreferenceMatch = pathname.match(/^\/api\/integrations\/ai\/preferences\/([a-z-]{3,80})$/);
   if (aiPreferenceMatch && req.method === 'PUT') {
     const account = await authenticate(req); if (!account) return sendJson(res, 401, { error: 'unauthorized' }); if (!requireCsrf(req, res)) return;
-    try { await authStore.requireAiEditEntitlement(account);
+    try { if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account);
       const body = await readJsonBody(req, res, 8 * 1024); if (!body) return; if (!UUID_PATTERN.test(String(body.configurationId || ''))) return sendJson(res, 400, { error: 'invalid_ai_configuration_id' }); await aiConfigStore.setPreference(account, aiPreferenceMatch[1], String(body.configurationId)); return sendJson(res, 200, { saved: true }); }
     catch (error) { return sendJson(res, error.status || (error.publicCode ? 400 : 500), { error: error.publicCode || 'ai_preference_save_failed', message: error.publicCode ? error.message : 'AI 使用偏好保存失败' }); }
   }
@@ -7348,7 +7348,7 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
   if (pathname === '/api/integrations/ai/ui-preferences' && (req.method === 'GET' || req.method === 'PUT')) {
     const account = await authenticate(req); if (!account) return sendJson(res, 401, { error: 'unauthorized', message: '登录状态已失效或未登录，请重新登录后再试。' });
     try {
-      const customizationAllowed = await authStore.canUseCustomConfigurations(account);
+      const customizationAllowed = (STANDALONE_MODE || await authStore.canUseCustomConfigurations(account));
       if (req.method === 'GET') {
         const preferences = await aiConfigStore.getUiPreferences(account);
         const savedChannel = preferences['billing-channel'] === 'own' || preferences['billing-channel'] === 'official' ? preferences['billing-channel'] : null;
@@ -7358,7 +7358,7 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
       const body = await readJsonBody(req, res, 4 * 1024); if (!body) return;
       const channel = body.billingChannel === 'own' || body.billingChannel === 'official' ? String(body.billingChannel) : '';
       if (!channel) return sendJson(res, 400, { error: 'invalid_billing_channel', message: '费用通道只能是“官方通道”或“自己的密钥”' });
-      if (channel === 'own') await authStore.requireAiEditEntitlement(account);
+      if (channel === 'own') if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account);
       await aiConfigStore.setUiPreference(account, 'billing-channel', channel);
       return sendJson(res, 200, { saved: true, billingChannel: channel, customizationAllowed });
     } catch (error) { return sendJson(res, error.status || 500, { error: error.publicCode || 'ai_ui_preference_save_failed', message: error.publicCode ? error.message : '界面偏好保存失败，本次仍可正常使用' }); }
@@ -7367,7 +7367,7 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
   const aiSubaccountMatch = pathname.match(/^\/api\/integrations\/ai\/subaccounts\/(\d+)$/);
   if (aiSubaccountMatch && req.method === 'PUT') {
     const account = await authenticate(req); if (!account) return sendJson(res, 401, { error: 'unauthorized' }); if (!requireCsrf(req, res)) return;
-    try { await authStore.requireAiEditEntitlement(account);
+    try { if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account);
       const body = await readJsonBody(req, res, 8 * 1024); if (!body || typeof body.allowed !== 'boolean') return sendJson(res, 400, { error: 'invalid_ai_subaccount_permission' }); await aiConfigStore.setSubaccount(account, aiSubaccountMatch[1], body.allowed, body.capabilities); return sendJson(res, 200, { saved: true }); }
     catch (error) { return sendJson(res, error.status || (error.publicCode ? 400 : 500), { error: error.publicCode || 'ai_subaccount_save_failed', message: error.publicCode ? error.message : 'AI 子账号授权保存失败' }); }
   }
@@ -7425,7 +7425,7 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
     try {
       const rawInput = await readJsonBody(req, res, 96 * 1024);
       const skuRedrawSellingPoints = rawInput?.intent === 'sku_redraw_selling_points';
-      const customizationAllowed = await authStore.canUseCustomConfigurations(account);
+      const customizationAllowed = (STANDALONE_MODE || await authStore.canUseCustomConfigurations(account));
       const useOfficial = skuRedrawSellingPoints || !customizationAllowed;
       const input = aiCandidate.request(useOfficial ? { ...rawInput, configurationId: '00000000-0000-4000-8000-000000000000' } : rawInput);
       const row = useOfficial
@@ -7591,12 +7591,12 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
       if (!functionKey) return sendJson(res, 400, { error: 'unsupported_translation_direction', message: '当前仅支持中文→俄文、英文→俄文、俄文→中文。' });
       const contentRule = translationInput.fieldKey === 'attribute' ? await aiProductRuleStore.attributeRule() : await aiProductRuleStore.effective(translationInput.fieldKey, { requireGlobal: true, includeMetadata: true, requirePolicy: true });
       contentRuleAudit = aiContent.ruleAuditMetadata({ [translationInput.fieldKey]: contentRule });
-      const customizationAllowed = await authStore.canUseCustomConfigurations(account);
+      const customizationAllowed = (STANDALONE_MODE || await authStore.canUseCustomConfigurations(account));
       let row;
       if (customizationAllowed) {
         const listed = await aiConfigStore.list(account);
         const matched = listed.rows.find(item => item.template === 'grsai-product');
-        row = matched ? await aiConfigStore.available(account, matched.id, ['product-translation']) : await aiConfigStore.availableOfficial(account, ['product-translation']);
+        row = STANDALONE_MODE ? await aiConfigStore.availableDefault(account, ['product-translation']) : matched ? await aiConfigStore.available(account, matched.id, ['product-translation']) : await aiConfigStore.availableOfficial(account, ['product-translation']);
       } else row = await aiConfigStore.availableOfficial(account, ['product-translation']);
       const selectedPrompt = await aiPromptStore.effective(account, functionKey, { officialOnly: !customizationAllowed });
       const adminRule = aiPrompts.render(selectedPrompt, { title: text, text, sourceLanguage: source, targetLanguage: target });
@@ -7666,13 +7666,13 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
       const body = await readJsonBody(req, res, 24 * 1024); if (!body) return;
       const input = aiContent.request(body);
       const capabilities = Array.from(new Set(input.keys.map(key => aiContent.ITEMS[key].capability)));
-      const customizationAllowed = await authStore.canUseCustomConfigurations(account);
+      const customizationAllowed = (STANDALONE_MODE || await authStore.canUseCustomConfigurations(account));
       let row;
       if (customizationAllowed) {
         const listed = await aiConfigStore.list(account);
         const matched = listed.rows.find(item => item.template === 'grsai-product');
-        const wanted = String(body.configurationId || '') || (matched ? matched.id : '');
-        row = wanted ? await aiConfigStore.available(account, wanted, capabilities) : await aiConfigStore.availableOfficial(account, capabilities);
+        const wanted = String(body.configurationId || '') || (STANDALONE_MODE ? '' : (matched ? matched.id : ''));
+        row = wanted ? await aiConfigStore.available(account, wanted, capabilities) : STANDALONE_MODE ? await aiConfigStore.availableDefault(account, capabilities) : await aiConfigStore.availableOfficial(account, capabilities);
       } else row = await aiConfigStore.availableOfficial(account, capabilities);
       const ruleSnapshot = await aiProductRuleStore.rows(undefined, true);
       const rulesByKey = {};
@@ -7718,14 +7718,14 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
     if (!account) return sendJson(res, 401, { error: 'unauthorized', message: '登录状态已失效或未登录，请重新登录后再试。' });
     if (!requireCsrf(req, res)) return;
     if (!authStore.hasPermission(account, 'products.write')) return sendJson(res, 403, { error: 'permission_denied', message: '当前账号没有该操作的权限，请联系管理员授权。' });
-    await authStore.requireAiEditEntitlement(account);
+    if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account);
     try {
       const body = await readJsonBody(req, res, 64 * 1024); if (!body) return;
       const template = String(body.template || '').trim();
       if (!template || template.length > 6000) return sendJson(res, 400, { error: 'ai_fuse_template_invalid', message: '主图提示词模板为空或超过 6000 字' });
       const listed = await aiConfigStore.list(account);
       const configured = listed.rows.find(item => item.template === 'grsai-product');
-      const row = configured ? await aiConfigStore.available(account, configured.id, ['title-optimization']) : await aiConfigStore.availableOfficial(account, ['title-optimization']);
+      const row = STANDALONE_MODE ? await aiConfigStore.availableDefault(account, ['title-optimization']) : configured ? await aiConfigStore.available(account, configured.id, ['title-optimization']) : await aiConfigStore.availableOfficial(account, ['title-optimization']);
       const limited = consumeWindow(aiContentWindows, `${account.tenantId}|${account.userId}|fuse`, 60 * 1000, 8);
       if (limited) return sendJson(res, 429, { error: 'ai_content_rate_limited', message: '融合请求过于频繁，请稍后再试' }, { 'Retry-After': String(limited) });
       const slots = Array.from(template.matchAll(/\[([^\]\n]{1,60})\]/g)).map(item => item[1].trim());
@@ -7766,15 +7766,15 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
       if (!prompt || prompt.length > 8000) return sendJson(res, 400, { error: 'invalid_ai_image_prompt', message: '请先在「图片提示词」填写主图并读取卖点提炼，组合出 1-8000 字的提示词' });
       const images = Array.isArray(body.images) ? body.images.slice(0, 8).map(String) : [];
       if (!images.length) return sendJson(res, 400, { error: 'invalid_ai_reference_images', message: '请先上传至少 1 张参考图' });
-      await authStore.requireAiEditEntitlement(account);
+      if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account);
       console.log('[ai-image-generate] 收到请求', account.tenantId, '提示词', prompt.length, '字，参考图', images.length, '张');
       const listed = await aiConfigStore.list(account);
       const configured = listed.rows.find(item => item.template === 'grsai-image');
-      if (!configured) return sendJson(res, 409, { error: 'ai_configuration_unavailable', message: '请先保存已启用、已通过功能测试且有密钥的 GRS AI 配置' });
-      const row = await aiConfigStore.available(account, configured.id, ['image-redraw']);
+      if (!configured && !STANDALONE_MODE) return sendJson(res, 409, { error: 'ai_configuration_unavailable', message: '请先保存已启用、已通过功能测试且有密钥的 GRS AI 配置' });
+      const row = STANDALONE_MODE ? await aiConfigStore.availableDefault(account, ['image-redraw']) : await aiConfigStore.available(account, configured.id, ['image-redraw']);
       const apiKey = aiConfig.decrypt(row, CREDENTIALS_KEY);
       const model = aiConfig.modelForCapability(row.model, 'image-redraw');
-      const exchanges = [{ kind: '生图请求', method: 'POST', url: String(row.base_url || '') + '/v1/api/generate', request: '模型：' + model + '\n参考图：' + images.length + ' 张\n完整提示词：\n' + prompt, status: 0, response: '等待提交…' }];
+      const exchanges = [{ kind: '生图请求', method: 'POST', url: String(row.base_url || '') + (row.protocol === 'openai-image' ? '/images/edits' : '/v1/api/generate'), request: '模型：' + model + '\n参考图：' + images.length + ' 张\n完整提示词：\n' + prompt, status: 0, response: '等待提交…' }];
       const input = { capability: 'image-redraw', image: images[0], prompt: prompt, options: { aspectRatio: String(body.aspectRatio || '1:1') } };
       if (images.length > 1) input.referenceImages = images;
       const started = await aiProvider.generateImage({ configuration: row, apiKey, input });
@@ -7812,11 +7812,11 @@ function stampBugReportCreators(previousPayload, incomingPayload, account) {
       const body = await readJsonBody(req, res, 8 * 1024); if (!body) return;
       const taskId = String(body.taskId || '').trim();
       if (!/^[A-Za-z0-9._:-]{1,200}$/.test(taskId)) return sendJson(res, 400, { error: 'invalid_ai_image_task', message: '任务号格式不正确' });
-      await authStore.requireAiEditEntitlement(account);
+      if (!STANDALONE_MODE) await authStore.requireAiEditEntitlement(account);
       const listed = await aiConfigStore.list(account);
       const configured = listed.rows.find(item => item.template === 'grsai-image');
-      if (!configured) return sendJson(res, 409, { error: 'ai_configuration_unavailable', message: '请先保存已启用、已通过功能测试且有密钥的 GRS AI 配置' });
-      const row = await aiConfigStore.available(account, configured.id, ['image-redraw']);
+      if (!configured && !STANDALONE_MODE) return sendJson(res, 409, { error: 'ai_configuration_unavailable', message: '请先保存已启用、已通过功能测试且有密钥的 GRS AI 配置' });
+      const row = STANDALONE_MODE ? await aiConfigStore.availableDefault(account, ['image-redraw']) : await aiConfigStore.available(account, configured.id, ['image-redraw']);
       const outcome = await aiProvider.pollImage({ configuration: row, apiKey: aiConfig.decrypt(row, CREDENTIALS_KEY), taskId });
       if (outcome.state !== 'succeeded' || !outcome.resultUrl) return sendJson(res, 409, { error: 'ai_image_task_not_ready', message: '该任务还没有可用结果（状态：' + outcome.state + (outcome.progress ? '，进度 ' + outcome.progress + '%' : '') + '）' });
       const downloaded = await aiProvider.downloadImage(outcome.resultUrl);
@@ -7990,7 +7990,7 @@ authStore = new PostgresAuthStore({
   sessionIdleMs: SESSION_IDLE_MS,
   csrfSecret: CSRF_SECRET_CONFIG.secret
 });
-aiConfigStore = createAiConfigStore(authStore.pool, authStore.writeAudit.bind(authStore));
+aiConfigStore = createAiConfigStore(authStore.pool, authStore.writeAudit.bind(authStore), { standaloneMode: STANDALONE_MODE });
 aiBeanStore = createAiBeanStore(authStore.pool);
 aiPricingStore = createAiPricingStore(authStore.pool, authStore.writeAudit.bind(authStore));
 skuImageAiEnqueuer = createSkuImageAiEnqueuer({ authStore, aiBeanStore, imageCostBean: () => aiPricingStore.effective('image'), createJobId: createSkuImageJobId });

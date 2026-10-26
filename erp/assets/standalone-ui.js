@@ -18,6 +18,17 @@
       hide(document.getElementById('emailCodeWrap'));
       hide(document.getElementById('inviteCodeWrap'));
       hide(document.getElementById('tenantSelectWrap'));
+      // The legacy login page only requests CAPTCHA after a failed admin login.
+      // Desktop mode must show and request it on first load instead.
+      var challenge = document.getElementById('captchaWrap');
+      if (challenge) {
+        challenge.classList.remove('auth-hidden');
+        if (challenge.dataset.standaloneCaptchaInit !== '1') {
+          challenge.dataset.standaloneCaptchaInit = '1';
+          var refreshChallenge = document.getElementById('refreshCaptcha');
+          if (refreshChallenge) refreshChallenge.click();
+        }
+      }
       var identifier = document.getElementById('identifier');
       if (identifier) {
         identifier.placeholder = '管理员账号 admin';
@@ -27,7 +38,7 @@
       var subtitle = document.getElementById('formSub');
       if (subtitle) subtitle.textContent = '本机管理员 · 密码登录';
       var hint = document.getElementById('formHint');
-      if (hint) hint.textContent = '单机版不需要邮箱、注册、会员或合同。请使用安装时创建的管理员密码和图形验证码登录。';
+      if (hint) hint.textContent = '单机版不需要邮箱、会员、代理或合同。全新安装初始账号 admin、密码 123456；修改过密码请使用修改后的密码，并填写图形验证码。';
     }
     var excluded = /(?:membership|ai-beans|contract-terms|agent-|agent\/|activation|referral|invite|email\/send|register|\/accounts\.html|user-monitor)/i;
     document.querySelectorAll('a[href], button[data-href], [data-page], [data-route]').forEach(function (node) {

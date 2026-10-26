@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 [CmdletBinding()]
 param(
  [Parameter(Mandatory=$true)][string]$InstallRoot,
@@ -10,6 +10,12 @@ param(
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath($InstallRoot)
 $data=[IO.Path]::GetFullPath($DataRoot)
+# QA-only isolated desktop installs must not collide with the regular WyerpCommunityPG service.
+# Regular Windows installs continue to use the original default service name.
+if($ServiceName -eq 'WyerpCommunityPG'){
+ $qaMatch=[regex]::Match($data,'(?i)[\\/]gui-installer-qa([0-9]+)-[0-9]{8}[\\/]data$')
+ if($qaMatch.Success){$ServiceName='WyerpCommunityPGUIQA'+$qaMatch.Groups[1].Value}
+}
 if($data.StartsWith($root.TrimEnd('\')+'\',[StringComparison]::OrdinalIgnoreCase)){throw '业务数据必须位于软件安装目录之外'}
 if(Test-Path -LiteralPath $data){throw '检测到已有数据目录，首次初始化拒绝覆盖。请使用现有管理器启动或核查旧数据'}
 if($ServiceName -notmatch '^WyerpCommunityPG[A-Za-z0-9]*$'){throw '数据库服务名称不符合独立实例要求'}
@@ -38,13 +44,8 @@ if($AppPort -and $PgPort -and $AppPort -eq $PgPort){throw 'ERP端口和PG端口�
 $AppPort=Choose-Port $AppPort 8765 8799
 $PgPort=Choose-Port $PgPort 55441 55499
 if($AppPort -eq $PgPort){throw '端口选择冲突'}
+# 仅单机ERP与独立PostgreSQL端口；0为旧元数据兼容值。
 $clusterBase=0
-for($base=28765;$base -le 28980;$base+=5){
- $check=@($base,($base+1),($base+2),($base+3),($base+4))
- if($check -contains $AppPort -or $check -contains $PgPort){continue}
- if(@($check|Where-Object{(-not (Test-FreePort $_))}).Count -eq 0){$clusterBase=$base;break}
-}
-if($clusterBase -eq 0){throw '没有可用的独立集群端口区间'}
 Write-Output ('检查通过：ERP端口 '+$AppPort+'；数据库端口 '+$PgPort)
 $appPw=[Guid]::NewGuid().ToString('N')+[Guid]::NewGuid().ToString('N')
 $migPw=[Guid]::NewGuid().ToString('N')+[Guid]::NewGuid().ToString('N')
@@ -60,7 +61,6 @@ try{
  $envText=[IO.File]::ReadAllText($envfile)
  if(!$envText.Contains('ERP_PORT=8765')){throw '未找到默认ERP端口，拒绝静默覆盖配置'}
  $envText=$envText.Replace('ERP_PORT=8765','ERP_PORT='+$AppPort)
-$envText+=[Environment]::NewLine+'ERP_CLUSTER_BASE_PORT='+$clusterBase+[Environment]::NewLine
  if($envText -notmatch '(?m)^PUBLIC_ORIGIN=\r?$'){throw '本机PUBLIC_ORIGIN配置必须留空'}
  [IO.File]::WriteAllText($envfile,$envText,[Text.UTF8Encoding]::new($false))
  & (Join-Path $root 'installer/Configure-CollectorPort.ps1') -PluginDir (Join-Path $root 'collector/wyerp-collector') -AppPort $AppPort
@@ -107,8 +107,14 @@ $envText+=[Environment]::NewLine+'ERP_CLUSTER_BASE_PORT='+$clusterBase+[Environm
   if($LASTEXITCODE -ne 0){throw '数据库迁移后校验失败'}
  }finally{Pop-Location}
  $env:PATH=(Join-Path $root 'runtime/node')+';'+$env:PATH
- & (Join-Path $app 'scripts/bootstrap-admin.ps1') -DataRoot $data
- if($LASTEXITCODE -ne 0){throw '唯一管理员创建失败'}
+ $env:WYERP_STANDALONE_MODE='1'
+ try {
+  & (Join-Path $app 'scripts/bootstrap-admin.ps1') -DataRoot $data -LocalDefaultPassword
+  if($LASTEXITCODE -ne 0){throw '唯一管理员创建失败'}
+  & $node "--env-file-if-exists=$envfile" (Join-Path $app 'scripts/verify-standalone-admin.js')
+  if($LASTEXITCODE -ne 0){throw '初始管理员密码校验失败，停止安装，不能将错误密码交给用户'}
+ } finally { Remove-Item Env:\WYERP_STANDALONE_MODE -ErrorAction SilentlyContinue }
+ Write-Output '本机新安装管理员：admin / 123456；请登录后尽快修改密码'
  $appServiceName=$ServiceName.Replace('WyerpCommunityPG','WyerpCommunityERP')
  if(Get-Service -Name $appServiceName -ErrorAction SilentlyContinue){throw '已有同名ERP服务，拒绝接管'}
  $svcExe=Join-Path $root 'WyerpERP-Service.exe'
@@ -118,6 +124,9 @@ $envText+=[Environment]::NewLine+'ERP_CLUSTER_BASE_PORT='+$clusterBase+[Environm
  if($LASTEXITCODE -ne 0){throw '注册独立ERP服务失败'}
  $settings=[ordered]@{AppPort=$AppPort;PgPort=$PgPort;ClusterBasePort=$clusterBase;ServiceName=$ServiceName;AppServiceName=$appServiceName;InstallRoot=$root;DbName='wyerp_community_local';CreatedAt=(Get-Date).ToString('o')}
  [IO.File]::WriteAllText((Join-Path $data 'install-settings.json'),($settings|ConvertTo-Json -Depth 4)+[Environment]::NewLine,[Text.UTF8Encoding]::new($false))
+ # Bind this manager to its own data directory, without storing credentials.
+ $instance=[ordered]@{InstallRoot=$root;DataRoot=$data}
+ [IO.File]::WriteAllText((Join-Path $root 'installer/instance-location.json'),($instance|ConvertTo-Json -Depth 3)+[Environment]::NewLine,[Text.UTF8Encoding]::new($false))
  & (Join-Path $root 'installer/Test-Installed.ps1') -InstallRoot $root -DataRoot $data -CheckDatabase 2>&1|Select-Object -Last 6
  if($LASTEXITCODE -ne 0){throw '安装后健康检查失败'}
  Write-Output 'PASS 首次数据库、67项迁移、管理员及软件配置完成'

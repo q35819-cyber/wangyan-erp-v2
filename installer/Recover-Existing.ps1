@@ -24,9 +24,6 @@ if((Get-Content -LiteralPath (Join-Path $pgdata 'PG_VERSION') -Encoding ASCII -R
 if(Get-Service $service -ErrorAction SilentlyContinue){throw '原PostgreSQL服务仍存在，不属于卸载后恢复；拒绝重复注册'}
 if(Get-Service $appService -ErrorAction SilentlyContinue){throw '原ERP服务仍存在，拒绝接管'}
 $portList=@([int]$settings.AppPort,[int]$settings.PgPort)
-if($settings.ClusterBasePort){
- $portList+=@(0..4|ForEach-Object{[int]$settings.ClusterBasePort+$_})
-}
 foreach($port in $portList){
  $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,[int]$port)
  try{$listener.Start()}catch{throw ('原端口被其他进程占用，不修改历史数据或抢占端口：'+$port)}finally{$listener.Stop()}
@@ -57,7 +54,9 @@ try {
  if(!$?){throw '恢复后真实数据库自检失败，不允许跳过'}
  Stop-Service -Name $service -ErrorAction Stop
  $started=$false
- Write-Output ('PASS 恢复原数据：没有重置管理员、密钥、端口和PostgreSQL用户数据库；保留原集群实例 '+$service)
+ $instance=[ordered]@{InstallRoot=$root;DataRoot=$data}
+ [IO.File]::WriteAllText((Join-Path $root 'installer/instance-location.json'),($instance|ConvertTo-Json -Depth 3)+[Environment]::NewLine,[Text.UTF8Encoding]::new($false))
+ Write-Output ('PASS 恢复原数据：没有重置管理员、密钥、端口和PostgreSQL用户数据库；保留原单机实例 '+$service)
 }catch{
  if($started){Stop-Service -Name $service -ErrorAction SilentlyContinue}
  if($appCreated){& sc.exe delete $appService 2>&1|Out-Null}

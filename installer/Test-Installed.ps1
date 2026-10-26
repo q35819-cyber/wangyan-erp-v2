@@ -9,7 +9,7 @@ $pg=Join-Path $root 'runtime/postgresql/bin/pg_ctl.exe'
 $envfile=Join-Path $data 'secrets/wyerp.env'
 $manifest=Join-Path $root 'collector/wyerp-collector/manifest.json'
 $settings=Join-Path $data 'install-settings.json'
-foreach($f in @($node,$pg,$envfile,$manifest,$settings,(Join-Path $root 'erp/node_modules/pg/package.json'))){
+foreach($f in @($node,$pg,$envfile,$manifest,$settings,(Join-Path $root 'erp/node_modules/pg/package.json'),(Join-Path $root 'erp/assets/standalone-ui.js'),(Join-Path $root 'erp/scripts/verify-standalone-admin.js'))){
  if(!(Test-Path -LiteralPath $f -PathType Leaf)){throw ('安装包或配置缺少：'+$f)}
 }
 $cfg=[IO.File]::ReadAllText($envfile)

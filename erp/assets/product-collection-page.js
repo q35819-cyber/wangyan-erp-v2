@@ -45,7 +45,7 @@
       return;
     }
     collectionQuota.usage = products.length;
-    quotaApi.render(host, collectionQuota, { compact: true, label: '采集箱会员额度', note: '按商品条目计数，不按SKU数量计数' });
+    quotaApi.render(host, collectionQuota, { compact: true, label: collectionQuota.localOnly ? '采集箱商品' : '采集箱会员额度', note: '按商品条目计数，不按SKU数量计数' });
     var full = collectionQuotaFull();
     createButton.disabled = full;
     createButton.title = full ? '采集箱会员额度已用完，请先清理不再需要的商品或升级会员' : '手动创建采集商品';

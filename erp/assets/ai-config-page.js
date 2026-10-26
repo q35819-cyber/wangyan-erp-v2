@@ -25,7 +25,7 @@
     if (className) node.className = className;
     return node;
   }
-  let configState = { loaded: false, configurations: [], coverage: { text: false, image: false, video: false }, systemAdmin: false, owner: false, customizationAllowed: false, subaccounts: [] };
+  let configState = { loaded: false, standalone: false, configurations: [], coverage: { text: false, image: false, video: false }, systemAdmin: false, owner: false, customizationAllowed: false, subaccounts: [] };
   function selectModule(name) {
     const target = document.querySelector('#aiModuleNav [data-module="' + name + '"]');
     // AI图片、数据分析规则只对系统管理员开放；其他人点链接或手动改地址也进不去。
@@ -121,6 +121,13 @@
     configState.customizationAllowed = data.customizationAllowed === true;
     configState.subaccounts = Array.isArray(data.subaccounts) ? data.subaccounts : [];
     configState.loaded = true;
+    configState.standalone = data.standalone === true;
+    if (configState.standalone) {
+      const serviceHelp = document.querySelector('[data-panel="services"] .ai-panel-head p');
+      if (serviceHelp) serviceHelp.textContent = '按需添加多个AI服务商，自定义API地址、模型及密钥；分别指定文本和图片的默认模型。';
+      const generateButton = byId('aiGenerateAll');
+      if (generateButton) generateButton.textContent = '全部生成（供应商可能收费）';
+    }
     applyAdminTabs();
     applyOwnerAccess();
     applyCustomizationAccess();
@@ -148,6 +155,10 @@
     const allowed = configState.customizationAllowed || configState.systemAdmin;
     const add = byId('aiConfigAdd');
     if (add) { add.disabled = !allowed; add.title = allowed ? '' : '免费用户可以使用官方AI服务和官方模板。\n配置自己的AI服务需要付费会员。'; }
+    const quick = byId('aiQuickImport');
+    if (quick) { quick.hidden = !configState.standalone; quick.disabled = !allowed || !configState.owner; }
+    const adapter = byId('aiVendorNew');
+    if (adapter) { adapter.hidden = !configState.standalone; adapter.disabled = !allowed || !configState.owner; }
     ['cfgSaveBtn','cfgTestBtn','cfgFunctionalTestBtn'].forEach(function (id) { const button = byId(id); if (button) button.disabled = !allowed; });
     const status = byId('aiConfigListError');
     if (status && configState.owner && !allowed) {
@@ -348,7 +359,8 @@
     const switchBox = el('div', 'ai-switch-stack');
     switchBox.append(miniSwitch('该配置', Boolean(row.enabled), !row.credentialsConfigured, function (next) { toggleRow(row, next); }));
     const actions = rowActions([
-      actionButton('连接测试', '', function (button) { runCardConnectionTests([row], button); }),
+      ...(configState.standalone ? [actionButton('编辑', '', function () { if(row.protocol==='custom-structured')openVendorDialog(row);else openLocalAiDialog(row); })] : []),
+      ...(row.protocol==='custom-structured' ? [] : [actionButton('连接测试', '', function (button) { runCardConnectionTests([row], button); })]),
       actionButton('功能测试(付费)', '', function (button) { functionalTest([row], button); }),
       actionButton('删除', 'is-danger', function () { deleteRow(row); })
     ]);
@@ -423,6 +435,267 @@
 
   // ── 新增/编辑 AI 配置弹窗 ──
 
+  // Local-only provider profiles: model IDs and API addresses are user-supplied,
+  // while server-side validation/encrypted storage remain authoritative.
+  const LOCAL_PROVIDER_URLS = Object.freeze({
+    custom: '', openai: 'https://api.openai.com/v1',
+    deepseek: 'https://api.deepseek.com',
+    qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    zhipu: 'https://open.bigmodel.cn/api/paas/v4',
+    moonshot: 'https://api.moonshot.cn/v1'
+  });
+  const LOCAL_AI_CAPABILITIES = Object.freeze({
+    product: ['product-translation', 'title-optimization', 'description-optimization', 'selling-point-generation', 'attribute-text-optimization'],
+    image: ['image-translation', 'image-redraw', 'image-repair']
+  });
+  let localAiEditingId = null;
+  function openLocalAiDialog(row) {
+    if (!configState.standalone || !configState.owner) return;
+    localAiEditingId = row ? row.id : null;
+    byId('aiLocalDialogTitle').textContent = row ? '编辑 AI 平台' : '新增 AI 平台';
+    byId('localAiName').value = row ? row.name : '';
+    byId('localAiType').value = row ? row.section : 'product';
+    byId('localAiType').disabled = Boolean(row);
+    byId('localAiUrl').value = row ? row.baseUrl : '';
+    byId('localAiModel').value = row ? String(row.model && row.model.name || '') : '';
+    byId('localAiKey').value = '';
+    byId('localAiKey').placeholder = row && row.credentialsConfigured ? '留空表示保留现有密钥' : '填写平台提供的 API Key';
+    byId('localAiEnabled').checked = row ? Boolean(row.enabled) : true;
+    byId('localAiDefault').checked = !row;
+    byId('localAiPlatform').value = 'custom';
+    byId('localAiError').hidden = true;
+    showModal('aiLocalConfigDialog');
+  }
+  async function saveLocalAiDialog() {
+    if (!configState.standalone || !configState.owner) return;
+    const button = byId('localAiSave');
+    const section = byId('localAiType').value;
+    const name = byId('localAiName').value.trim();
+    const baseUrl = byId('localAiUrl').value.trim();
+    const model = byId('localAiModel').value.trim();
+    const apiKey = byId('localAiKey').value.trim();
+    const enabled = byId('localAiEnabled').checked;
+    const assigned = byId('localAiDefault').checked;
+    const existing = configState.configurations.find(function (r) { return r.id === localAiEditingId; });
+    if (!name || !baseUrl || !model || (!apiKey && !(existing && existing.credentialsConfigured))) {
+      flashIn('localAiError', '请填写配置名称、HTTPS接口地址、模型ID和API Key', true);
+      return;
+    }
+    if (!/^https:\/\/[^/\s?#]+/i.test(baseUrl)) {
+      flashIn('localAiError', '目前仅支持公开 HTTPS 的 OpenAI 兼容 API 地址', true);
+      return;
+    }
+    setBusy(button, true, '正在保存…');
+    try {
+      const body = {
+        id: localAiEditingId || undefined, name: name, section: section,
+        template: section === 'product' ? 'custom-product' : 'custom-image',
+        protocol: section === 'product' ? 'openai-chat-completions' : 'openai-image',
+        baseUrl: baseUrl, model: { name: model },
+        capabilities: LOCAL_AI_CAPABILITIES[section],
+        enabled: enabled, allowSubaccounts: false,
+        timeoutMs: 30000
+      };
+      if (apiKey) body.apiKey = apiKey;
+      const saved = await api(CONFIGURATIONS_URL, { method: 'POST', body: JSON.stringify(body) });
+      if (assigned && enabled) {
+        for (const capability of LOCAL_AI_CAPABILITIES[section]) {
+          await api('/api/integrations/ai/defaults/' + capability, {
+            method: 'PUT', body: JSON.stringify({ configurationId: saved.configuration.id })
+          });
+        }
+        await api('/api/integrations/ai/ui-preferences', {
+          method: 'PUT', body: JSON.stringify({ billingChannel: 'own' })
+        });
+      }
+      byId('localAiKey').value = '';
+      closeModal('aiLocalConfigDialog');
+      await loadConfigurations();
+      flashIn('aiConfigListError', 'AI平台配置已加密保存，可使用“连接测试”验证配置', false);
+    } catch (error) {
+      flashIn('localAiError', message(error, 'AI平台保存或用途分配失败'), true);
+    } finally { setBusy(button, false); }
+  }
+
+
+  // Quick-import is deliberately declarative: external JS/TS is never evaluated.
+  // Each item is sent through the same authenticated, CSRF-protected encrypted save API.
+  let quickImportParsed = null;
+  const QUICK_JSON_EXAMPLE = {
+    providers: [
+      { name: '我的文本 AI', type: 'text', baseUrl: 'https://api.example.com/v1',
+        model: 'text-model-id', apiKey: '填写自己的密钥', default: true },
+      { name: '我的图片 AI', type: 'image', baseUrl: 'https://images.example.com/v1',
+        model: 'image-edit-model-id', apiKey: '填写自己的密钥', default: true }
+    ]
+  };
+  function resetQuickImportPreview() {
+    quickImportParsed = null;
+    byId('aiQuickApply').disabled = true;
+    byId('aiQuickPreviewOutput').hidden = true;
+    byId('aiQuickPreviewOutput').textContent = '';
+    flashIn('aiQuickError', '');
+  }
+  function quickImportPreview() {
+    resetQuickImportPreview();
+    try {
+      if (!configState.standalone || !configState.owner) throw new Error('仅允许单机版本机管理员导入');
+      const parser = window.wyerpAiQuickImport;
+      if (!parser) throw new Error('配置解析组件未加载，请刷新页面');
+      const rows = parser.parse(byId('aiQuickCode').value);
+      const existing = new Set(configState.configurations.map(function (row) { return row.name; }));
+      if (rows.some(function (row) { return existing.has(row.name); })) throw new Error('已有同名平台。为防止误覆盖已有密钥，请修改导入配置名称或使用编辑功能');
+      quickImportParsed = rows;
+      byId('aiQuickPreviewOutput').textContent = JSON.stringify(rows.map(parser.publicPreview), null, 2);
+      byId('aiQuickPreviewOutput').hidden = false;
+      byId('aiQuickApply').disabled = false;
+    } catch (error) {
+      flashIn('aiQuickError', String(error.message || '无法识别导入配置'), true);
+    }
+  }
+  async function applyQuickImport() {
+    if (!configState.standalone || !configState.owner || !Array.isArray(quickImportParsed) || !quickImportParsed.length) return;
+    const rows = quickImportParsed;
+    const button = byId('aiQuickApply');
+    setBusy(button, true, '正在导入…');
+    let savedCount = 0;
+    try {
+      for (const row of rows) {
+        const response = await api(CONFIGURATIONS_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: row.name, section: row.section, template: row.template,
+            protocol: row.protocol, baseUrl: row.baseUrl,
+            model: { name: row.model }, apiKey: row.apiKey,
+            enabled: row.enabled, allowSubaccounts: false,
+            capabilities: row.capabilities, timeoutMs: 30000
+          })
+        });
+        savedCount++;
+        if (row.makeDefault && row.enabled) {
+          for (const capability of row.capabilities) {
+            await api('/api/integrations/ai/defaults/' + capability, {
+              method: 'PUT', body: JSON.stringify({ configurationId: response.configuration.id })
+            });
+          }
+        }
+      }
+      if (rows.some(function (r) { return r.makeDefault && r.enabled; })) {
+        await api('/api/integrations/ai/ui-preferences', {
+          method: 'PUT', body: JSON.stringify({ billingChannel: 'own' })
+        });
+      }
+      byId('aiQuickCode').value = '';
+      byId('aiQuickFile').value = '';
+      quickImportParsed = null;
+      closeModal('aiQuickImportDialog');
+      await loadConfigurations();
+      flashIn('aiConfigListError', '已导入 ' + savedCount + ' 个模型并加密保存密钥；使用前建议连接测试', false);
+    } catch (error) {
+      await loadConfigurations().catch(function () {});
+      resetQuickImportPreview();
+      flashIn('aiQuickError', '已保存 ' + savedCount + ' 条，后续失败：' + message(error, '导入失败') + '。请先核对列表，避免再次导入重复模型。', true);
+    } finally { setBusy(button, false); }
+  }
+  function setupQuickImport() {
+    const button = byId('aiQuickImport');
+    if (!button) return;
+    button.addEventListener('click', function () {
+      if (!configState.standalone || !configState.owner) return;
+      byId('aiQuickCode').value = '';
+      resetQuickImportPreview();
+      showModal('aiQuickImportDialog');
+      byId('aiQuickCode').focus();
+    });
+    byId('aiQuickCode').addEventListener('input', resetQuickImportPreview);
+    byId('aiQuickPreview').addEventListener('click', quickImportPreview);
+    byId('aiQuickApply').addEventListener('click', applyQuickImport);
+    byId('aiQuickExample').addEventListener('click', function () {
+      byId('aiQuickCode').value = JSON.stringify(QUICK_JSON_EXAMPLE, null, 2);
+      resetQuickImportPreview();
+    });
+    byId('aiQuickCodeExample').addEventListener('click', function () {
+      byId('aiQuickCode').value = 'export default ' + JSON.stringify(QUICK_JSON_EXAMPLE, null, 2) + ';';
+      resetQuickImportPreview();
+    });
+    byId('aiQuickChooseFile').addEventListener('click', function () { byId('aiQuickFile').click(); });
+    byId('aiQuickFile').addEventListener('change', async function () {
+      const file = this.files && this.files[0];
+      if (!file) return;
+      if (file.size > 60000) return flashIn('aiQuickError', '文件不能超过60KB', true);
+      try {
+        byId('aiQuickCode').value = await file.text();
+        resetQuickImportPreview();
+        quickImportPreview();
+      } catch (_) { flashIn('aiQuickError', '文件读取失败，请复制文件内容粘贴', true); }
+    });
+  }
+
+  const VENDOR_TEXT_SAMPLE={version:1,request:{method:'POST',path:'/v2/custom/chat',auth:'x-api-key',body:{engine:'{{model}}',system:'{{system}}',input:'{{inputJson}}'}},response:{textPath:'result.answer'}};
+  const VENDOR_IMAGE_SAMPLE={version:1,request:{method:'POST',path:'/v2/media/submit',auth:'bearer',body:{engine:'{{model}}',prompt:'{{prompt}}',source:'{{image}}',references:'{{images}}'}},response:{imagePath:'data.url',taskPath:'data.taskId',statusPath:'data.status'},poll:{path:'/v2/media/result/{{taskId}}',response:{imagePath:'data.url',statusPath:'data.status'}}};
+  let vendorEditingId=null;
+  function vendorProgramInput(){
+    let raw=byId('vendorCode').value.trim();
+    const ticks=String.fromCharCode(96).repeat(3);
+    if(raw.startsWith(ticks))raw=raw.replace(new RegExp('^'+ticks+'(?:json|typescript|ts|javascript)?\\s*','i'),'').replace(new RegExp('\\s*'+ticks+'$'),'');
+    if(/^export\s+default\s+/i.test(raw))raw=raw.replace(/^export\s+default\s+/i,'').replace(/;\s*$/,'');
+    if(raw.length>30000)throw new Error('适配器代码超过30KB');
+    try{const obj=JSON.parse(raw);if(!obj||typeof obj!=='object'||Array.isArray(obj))throw new Error();return obj;}
+    catch(_){throw new Error('只支持严格JSON或export default+JSON；不执行任意JS/TS函数');}
+  }
+  function openVendorDialog(row){
+    if(!configState.standalone||!configState.owner)return;
+    vendorEditingId=row?.protocol==='custom-structured'?row.id:null;
+    byId('aiVendorTitle').textContent=vendorEditingId?'编辑供应商适配器':'新增供应商适配器';
+    byId('vendorName').value=row?.name||'';
+    byId('vendorSection').value=row?.section||'product';
+    byId('vendorSection').disabled=Boolean(vendorEditingId);
+    byId('vendorUrl').value=row?.baseUrl||'';
+    byId('vendorModel').value=row?.model?.name||'';
+    byId('vendorKey').value='';
+    byId('vendorKey').placeholder=row?.credentialsConfigured?'留空保留原密钥':'供应商API Key';
+    byId('vendorCode').value=JSON.stringify(row?.model?.adapter||(byId('vendorSection').value==='product'?VENDOR_TEXT_SAMPLE:VENDOR_IMAGE_SAMPLE),null,2);
+    byId('vendorEnabled').checked=row?.enabled!==false;
+    byId('vendorDefault').checked=!vendorEditingId;
+    byId('vendorError').hidden=true;
+    showModal('aiVendorAdapterDialog');
+  }
+  async function saveVendorDialog(){
+    if(!configState.standalone||!configState.owner)return;
+    const section=byId('vendorSection').value,key=byId('vendorKey').value.trim();
+    const existing=configState.configurations.find(x=>x.id===vendorEditingId);
+    if(!byId('vendorName').value.trim()||!byId('vendorUrl').value.trim()||!byId('vendorModel').value.trim()||(!key&&!existing?.credentialsConfigured)){
+      flashIn('vendorError','请填写名称、HTTPS服务地址、模型ID和密钥',true);return;
+    }
+    let program;try{program=vendorProgramInput();}catch(error){flashIn('vendorError',error.message,true);return;}
+    const button=byId('vendorSave');setBusy(button,true,'正在验证保存…');
+    try{
+      const data={id:vendorEditingId||undefined,name:byId('vendorName').value.trim(),section,
+        protocol:'custom-structured',template:section==='product'?'custom-product':'custom-image',
+        baseUrl:byId('vendorUrl').value.trim(),model:{name:byId('vendorModel').value.trim(),adapter:program},
+        capabilities:LOCAL_AI_CAPABILITIES[section],enabled:byId('vendorEnabled').checked,
+        allowSubaccounts:false,timeoutMs:30000};
+      if(key)data.apiKey=key;
+      const saved=await api(CONFIGURATIONS_URL,{method:'POST',body:JSON.stringify(data)});
+      if(byId('vendorDefault').checked&&data.enabled){
+        for(const capability of data.capabilities)await api('/api/integrations/ai/defaults/'+capability,{method:'PUT',body:JSON.stringify({configurationId:saved.configuration.id})});
+        await api('/api/integrations/ai/ui-preferences',{method:'PUT',body:JSON.stringify({billingChannel:'own'})});
+      }
+      byId('vendorKey').value='';byId('vendorCode').value='';
+      closeModal('aiVendorAdapterDialog');await loadConfigurations();
+      flashIn('aiConfigListError','供应商适配器已验证保存；无需重启即可使用',false);
+    }catch(error){flashIn('vendorError',message(error,'保存适配器失败'),true);}
+    finally{setBusy(button,false);}
+  }
+  function setupVendorDialog(){
+    const b=byId('aiVendorNew');if(!b)return;
+    b.addEventListener('click',()=>openVendorDialog(null));
+    byId('vendorSection').addEventListener('change',function(){byId('vendorCode').value=JSON.stringify(this.value==='product'?VENDOR_TEXT_SAMPLE:VENDOR_IMAGE_SAMPLE,null,2);});
+    byId('vendorTextExample').addEventListener('click',()=>{byId('vendorSection').value='product';byId('vendorCode').value=JSON.stringify(VENDOR_TEXT_SAMPLE,null,2);});
+    byId('vendorImageExample').addEventListener('click',()=>{byId('vendorSection').value='image';byId('vendorCode').value=JSON.stringify(VENDOR_IMAGE_SAMPLE,null,2);});
+    byId('vendorJsonCheck').addEventListener('click',()=>{try{const obj=vendorProgramInput();if(obj.version!==1||!obj.request||!obj.response)throw new Error('缺少v1、request或response');flashIn('vendorError','代码格式初检通过；服务器保存时执行最终协议校验',false);}catch(e){flashIn('vendorError',e.message,true);}});
+    byId('vendorSave').addEventListener('click',saveVendorDialog);
+  }
   const cfgDialogState = { editing: false, hasExistingKey: false };
   function cfgEls() {
     return {
@@ -1555,7 +1828,11 @@
       const sidebar = document.createElement('script');
       sidebar.src = '../assets/sidebar.js';
       document.body.appendChild(sidebar);
-      byId('aiConfigAdd').addEventListener('click', function () { if (!configState.customizationAllowed && !configState.systemAdmin) return flashIn('aiConfigListError', '免费用户可以使用官方AI服务和官方模板；配置自己的AI服务需要付费会员。', true); openConfigDialog(false); });
+      byId('aiConfigAdd').addEventListener('click', function () { if (!configState.customizationAllowed && !configState.systemAdmin) return flashIn('aiConfigListError', '当前权限不允许修改AI服务', true); if (configState.standalone) return openLocalAiDialog(null); openConfigDialog(false); });
+      byId('localAiPlatform').addEventListener('change', function () { const suggestion = LOCAL_PROVIDER_URLS[this.value]; if (suggestion) byId('localAiUrl').value = suggestion; });
+      byId('localAiSave').addEventListener('click', saveLocalAiDialog);
+      setupQuickImport();
+      setupVendorDialog();
       byId('cfgSaveBtn').addEventListener('click', async function () {
         const saved = await saveConfig();
         if (!saved) return;

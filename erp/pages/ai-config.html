@@ -4,7 +4,7 @@
 <header class="ai-hero"><div><h1>AI配置</h1><p>配置AI服务、图片提示词和子账号权限。</p></div></header>
 <div class="ai-notice" role="note"><strong>密钥安全</strong><span>密钥只在本页填写，由服务器加密保存且不回显。请勿通过聊天、邮件或工单发送密钥。</span></div>
 <nav id="aiModuleNav" class="ai-tabs" aria-label="AI配置模块"><button class="is-active" type="button" data-module="services" aria-selected="true">AI服务配置</button><button type="button" data-module="prompts" aria-selected="false">图片提示词</button><button type="button" data-module="access" aria-selected="false">子账号权限</button><button type="button" data-module="image" aria-selected="false" data-admin-only hidden>AI图片</button><button type="button" data-module="analysis" aria-selected="false" data-admin-only hidden>数据分析规则</button><button type="button" data-module="product" aria-selected="false" data-admin-only hidden>商品优化</button><button type="button" data-module="rules" aria-selected="false" hidden>系统管理员规则</button><button type="button" data-module="pricing" aria-selected="false" data-admin-only hidden>AI豆价格</button></nav>
-<section class="ai-panel is-active" data-panel="services" aria-labelledby="servicesTitle"><div class="ai-panel-head"><div><p class="ai-kicker">密钥管理</p><h2 id="servicesTitle">AI服务配置</h2><p>每个密钥可勾选支持文本、图片、视频；每类能力同时只有一个启用密钥，启用另一个会自动顶替。</p></div><button class="ai-button is-primary" type="button" id="aiConfigAdd">新增AI配置</button></div>
+<section class="ai-panel is-active" data-panel="services" aria-labelledby="servicesTitle"><div class="ai-panel-head"><div><p class="ai-kicker">密钥管理</p><h2 id="servicesTitle">AI服务配置</h2><p>每个密钥可勾选支持文本、图片、视频；每类能力同时只有一个启用密钥，启用另一个会自动顶替。</p></div><div class="ai-upload-actions"><button class="ai-button" type="button" id="aiVendorNew" hidden>自定义供应商适配器</button><button class="ai-button" type="button" id="aiQuickImport" hidden>代码 / cURL / 文件导入</button><button class="ai-button is-primary" type="button" id="aiConfigAdd">新增AI配置</button></div></div>
 <div class="ai-coverage" id="aiCoverage" role="status"></div>
 <div class="ai-config-list" id="aiConfigList"></div>
 <p class="ai-help" id="aiConfigListError" role="alert" hidden></p>
@@ -47,6 +47,63 @@
 </div>
 <footer class="ai-modal-foot"><button type="button" class="ai-button" id="cfgTestBtn">测试连接（不产生费用）</button><button type="button" class="ai-button" id="cfgFunctionalTestBtn">功能测试（可能产生费用）</button><span class="ai-modal-spacer"></span><button type="button" class="ai-button" data-modal-close>取消</button><button type="button" class="ai-button is-primary" id="cfgSaveBtn">保存</button></footer>
 </div></div>
+
+<div class="ai-modal" id="aiLocalConfigDialog" hidden role="dialog" aria-modal="true" aria-labelledby="aiLocalDialogTitle">
+  <div class="ai-modal-card">
+    <header class="ai-modal-head"><h3 id="aiLocalDialogTitle">新增 AI 平台</h3><button type="button" class="ai-modal-close" data-modal-close aria-label="关闭">×</button></header>
+    <div class="ai-modal-body">
+      <p class="ai-help">参考 ToonFlow 的“平台配置 + 模型用途分配”：先填写平台的兼容接口，再指定 ERP 用于文本还是图片。所有字段都能修改，没有强制绑定 GRS AI。</p>
+      <label class="ai-field"><span>配置名称</span><input id="localAiName" maxlength="120" placeholder="例如：我的 DeepSeek 文本模型"></label>
+      <label class="ai-field"><span>类型</span><select id="localAiType"><option value="product">文本（标题、翻译、商品描述）</option><option value="image">图片（生图、图片修改）</option></select></label>
+      <label class="ai-field"><span>平台（只用于填充建议地址，可以改）</span><select id="localAiPlatform"><option value="custom">其他 OpenAI 兼容平台</option><option value="openai">OpenAI</option><option value="deepseek">DeepSeek</option><option value="qwen">阿里云百炼</option><option value="zhipu">智谱 AI</option><option value="moonshot">Moonshot</option></select></label>
+      <label class="ai-field"><span>API Base URL（HTTPS）</span><input id="localAiUrl" type="url" maxlength="1000" placeholder="https://api.example.com/v1"></label>
+      <label class="ai-field"><span>模型 ID（可手动填写，不限制在固定名单）</span><input id="localAiModel" maxlength="160" placeholder="模型服务商控制台中的完整模型 ID"></label>
+      <label class="ai-field"><span>API Key</span><input id="localAiKey" type="password" autocomplete="new-password" maxlength="8192" placeholder="创建时必填，编辑时留空保留原密钥"><small>后端加密保存；保存后不回显；不要把密钥发到聊天或工单中。</small></label>
+      <label class="ai-check"><input id="localAiEnabled" type="checkbox" checked><span>启用此模型</span></label>
+      <label class="ai-check"><input id="localAiDefault" type="checkbox" checked><span>将此模型设为该类型所有功能的默认模型</span></label>
+      <p class="ai-help">仅支持符合 OpenAI Chat Completions / Images 接口协议的服务。视频 API 不同服务商差异很大，本版暂不接通，避免配置成功却无法调用。连接测试可能不扣费；功能测试或生成可能由供应商计费。</p>
+      <p class="ai-help" id="localAiError" role="alert" hidden></p>
+    </div>
+    <footer class="ai-modal-foot"><span class="ai-modal-spacer"></span><button type="button" class="ai-button" data-modal-close>取消</button><button type="button" class="ai-button is-primary" id="localAiSave">保存并应用</button></footer>
+  </div>
+</div>
+
+
+<div class="ai-modal" id="aiVendorAdapterDialog" hidden role="dialog" aria-modal="true" aria-labelledby="aiVendorTitle"><div class="ai-modal-card">
+<header class="ai-modal-head"><h3 id="aiVendorTitle">新增自定义供应商适配器</h3><button type="button" class="ai-modal-close" data-modal-close aria-label="关闭">×</button></header>
+<div class="ai-modal-body">
+<p class="ai-help">参考 ToonFlow 的可编程供应商体系。输入平台名称、模型、API密钥和请求/响应映射程序；适配器由ERP受控HTTP引擎执行，不允许任意JS/TS运行。无需改主程序、无需重启。</p>
+<label class="ai-field"><span>配置名称</span><input id="vendorName" maxlength="120" placeholder="例如：我的私有图片平台"></label>
+<label class="ai-field"><span>类型</span><select id="vendorSection"><option value="product">文本</option><option value="image">图片（同步或异步）</option></select></label>
+<label class="ai-field"><span>供应商HTTPS API Base URL</span><input id="vendorUrl" type="url" maxlength="900" placeholder="https://platform.example.com"></label>
+<label class="ai-field"><span>模型 ID</span><input id="vendorModel" maxlength="160" placeholder="模型名称/ID"></label>
+<label class="ai-field"><span>API Key（单独加密保存，不放在下方代码里）</span><input id="vendorKey" type="password" maxlength="8192" autocomplete="new-password" placeholder="新增时必填；编辑留空保留原密钥"></label>
+<label class="ai-field"><span>供应商请求/响应适配代码（严格 JSON）</span><textarea id="vendorCode" rows="12" maxlength="30000" spellcheck="false" placeholder='{"version":1,"request":{"method":"POST","path":"/v2/generate","auth":"bearer","body":{"model":"{{model}}","prompt":"{{prompt}}"}},"response":{"imagePath":"data.url"}}'></textarea></label>
+<div class="ai-upload-actions"><button type="button" class="ai-button" id="vendorTextExample">文本适配示例</button><button type="button" class="ai-button" id="vendorImageExample">异步图片适配示例</button><button type="button" class="ai-button" id="vendorJsonCheck">检查代码格式</button></div>
+<label class="ai-check"><input id="vendorEnabled" type="checkbox" checked>启用该模型</label>
+<label class="ai-check"><input id="vendorDefault" type="checkbox" checked>将其设为该类型的默认模型</label>
+<p class="ai-help">可定义POST/GET、平台内的接口路径、Bearer或X-API-Key认证、JSON请求体变量、响应字段、图片轮询。不能直接读取磁盘、运行任意TypeScript或向其他域名发送请求。功能测试或生成可能产生供应商费用。</p>
+<p id="vendorError" class="ai-help" role="alert" hidden></p>
+</div>
+<footer class="ai-modal-foot"><span class="ai-modal-spacer"></span><button type="button" class="ai-button" data-modal-close>取消</button><button type="button" class="ai-button is-primary" id="vendorSave">保存适配器并应用</button></footer>
+</div></div>
+<div class="ai-modal" id="aiQuickImportDialog" hidden role="dialog" aria-modal="true" aria-labelledby="aiQuickTitle"><div class="ai-modal-card">
+<header class="ai-modal-head"><h3 id="aiQuickTitle">快捷导入 AI 平台</h3><button type="button" class="ai-modal-close" data-modal-close aria-label="关闭">×</button></header>
+<div class="ai-modal-body">
+<p class="ai-help">支持三种入口：① 粘贴 JSON / 纯数据配置代码；② 粘贴 OpenAI 兼容的 cURL 请求；③ 从本机选择 .json 文件。一次最多导入 10 个模型，导入后可随时编辑。</p>
+<label class="ai-field"><span>粘贴配置代码或 cURL</span><textarea id="aiQuickCode" rows="10" maxlength="60000" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder='{"providers":[{"name":"文本AI","type":"text","baseUrl":"https://api.example.com/v1","model":"model-id","apiKey":"填写自己的密钥","default":true}]}'></textarea></label>
+<div class="ai-upload-actions">
+<button type="button" class="ai-button" id="aiQuickExample">填入 JSON 示例</button>
+<button type="button" class="ai-button" id="aiQuickCodeExample">填入配置代码示例</button>
+<button type="button" class="ai-button" id="aiQuickChooseFile">选择 JSON 文件</button>
+<input id="aiQuickFile" type="file" accept=".json,application/json,text/plain" hidden>
+<button type="button" class="ai-button" id="aiQuickPreview">检查配置</button>
+</div>
+<p class="ai-help">配置代码仅支持 export default 后接严格 JSON，不执行用户编写的 TypeScript/JavaScript 函数。特殊平台协议尚不能通过代码直接扩展。密钥仅留在当前输入框内，提交后按现有机制加密保存；导入成功会清除输入。</p>
+<pre id="aiQuickPreviewOutput" class="ai-help" style="white-space:pre-wrap;word-break:break-word" hidden></pre>
+<p id="aiQuickError" class="ai-help" role="alert" hidden></p>
+</div><footer class="ai-modal-foot"><span class="ai-modal-spacer"></span><button type="button" class="ai-button" data-modal-close>取消</button><button type="button" id="aiQuickApply" class="ai-button is-primary" disabled>确认导入并分配用途</button></footer>
+</div></div>
 <div class="ai-modal" id="aiPromptDialog" hidden role="dialog" aria-modal="true" aria-labelledby="aiPromptDialogTitle"><div class="ai-modal-card">
 <header class="ai-modal-head"><h3 id="aiPromptDialogTitle">新增提示词</h3><button type="button" class="ai-modal-close" data-modal-close aria-label="关闭">×</button></header>
 <div class="ai-modal-body">
@@ -57,4 +114,4 @@
 </div>
 <footer class="ai-modal-foot"><span class="ai-modal-spacer"></span><button type="button" class="ai-button" data-modal-close>取消</button><button type="button" class="ai-button is-primary" id="ptSaveBtn">保存</button></footer>
 </div></div>
-</main></div><script src="../assets/brand.js"></script><script src="../assets/identity-display.js?v=20261006-id01"></script><script src="../assets/storage.js"></script><script src="../assets/product-content-diagnostics.js?v=20260927-1"></script><script src="../assets/ai-config-page.js?v=20260928-prompt-permission01"></script></body></html>
+</main></div><script src="../assets/brand.js"></script><script src="../assets/identity-display.js?v=20261006-id01"></script><script src="../assets/storage.js"></script><script src="../assets/product-content-diagnostics.js?v=20260927-1"></script><script src="../assets/ai-quick-import.js?v=20261023-quick01"></script><script src="../assets/ai-config-page.js?v=20261023-quick01"></script></body></html>
